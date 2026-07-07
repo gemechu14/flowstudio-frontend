@@ -1,0 +1,118 @@
+/* ─── Design Tokens ─────────────────────────────────────────── */
+:root {
+  /* Backgrounds */
+  --bg-dark: #080C18;
+  --bg-dark-2: #0d1224;
+  --bg-light: #fafafb;
+  --bg-card: #ffffff;
+
+  /* Blues */
+  --blue: #1D5FFA;
+  --blue-hover: #1A55E0;
+  --blue-dim: rgba(29, 95, 250, 0.12);
+  --blue-border: rgba(29, 95, 250, 0.30);
+  --blue-secondary: #4580FF;
+  --blue-muted: #6E8BD6;
+
+  /* Text */
+  --text-light: #ffffff;
+  --text-light-muted: rgba(255, 255, 255, 0.50);
+  --text-light-subtle: rgba(255, 255, 255, 0.25);
+  --text-dark: #0B1020;
+  --text-body: #4A5163;
+
+  /* Borders */
+  --border-light: rgba(11, 16, 32, 0.08);
+  --border-dark: rgba(255, 255, 255, 0.07);
+  --border-blue: rgba(29, 95, 250, 0.30);
+
+  /* Status */
+  --verified: #22C55E;
+  --verified-dim: rgba(34, 197, 94, 0.12);
+  --untested: #F59E0B;
+  --untested-dim: rgba(245, 158, 11, 0.12);
+  --invalid: #EF4444;
+  --invalid-dim: rgba(239, 68, 68, 0.12);
+
+  /* Typography */
+  --font-mono: 'JetBrains Mono', 'Fira Mono', 'Cascadia Code', monospace;
+  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+  /* Spacing */
+  --sidebar-width: 240px;
+  --topbar-height: 60px;
+
+  /* Radius */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+
+  /* Shadows */
+  --shadow-card: 0 1px 3px rgba(11, 16, 32, 0.06), 0 1px 2px rgba(11, 16, 32, 0.04);
+  --shadow-card-hover: 0 4px 16px rgba(29, 95, 250, 0.10), 0 1px 3px rgba(11, 16, 32, 0.08);
+  --shadow-panel: -8px 0 32px rgba(8, 12, 24, 0.18);
+}
+
+/* ─── Reset ─────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+  font-size: 15px;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--bg-light);
+  color: var(--text-dark);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  height: 100%;
+  width: 100%;
+  display: flex;
+}
+
+/* ─── Utilities ─────────────────────────────────────────────── */
+.mono {
+  font-family: var(--font-mono);
+}
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* ─── Scrollbar ─────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(11, 16, 32, 0.15);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(11, 16, 32, 0.25);
+}
+
+/* Dark context scrollbar */
+.sidebar-dark ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+}
