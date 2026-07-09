@@ -5,6 +5,8 @@ import Dashboard from './pages/Dashboard'
 import Tools from './pages/Tools'
 import Agents from './pages/Agents'
 import Workflows from './pages/Workflows'
+import DataSources from './pages/DataSources'
+import Settings from './pages/Settings'
 
 export default function App() {
   return (
@@ -25,7 +27,9 @@ export default function App() {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/tools" element={<Tools />} />
             <Route path="/agents" element={<Agents />} />
+            <Route path="/data-sources" element={<DataSources />} />
             <Route path="/workflows" element={<Workflows />} />
+            <Route path="/settings" element={<Settings />} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </main>

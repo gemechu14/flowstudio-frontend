@@ -1,5 +1,32 @@
 import { apiFetch } from './client'
 
+// ---------------------------------------------------------------------------
+// Node & edge types
+// ---------------------------------------------------------------------------
+
+export type NodeType = 'agent' | 'orchestrator' | 'fan_out' | 'fan_in' | 'condition'
+export type ExecutionMode = 'sequential' | 'parallel' | 'hierarchical' | 'hybrid' | 'collaborative' | 'event_driven'
+
+export interface WorkflowNode {
+  node_id: string
+  node_type: NodeType
+  label: string
+  agent_id: string | null
+  position_x: number
+  position_y: number
+  // Free-form config; well-known keys: parallel_group (hybrid mode)
+  config: Record<string, unknown>
+}
+
+export interface WorkflowEdge {
+  edge_id: string
+  from_node_id: string
+  to_node_id: string
+  label: string
+  condition_expr: string
+}
+
+// Legacy step (still supported for backward compat)
 export interface WorkflowStep {
   step_id: string
   agent_id: string
@@ -11,35 +38,91 @@ export interface WorkflowRecord {
   workflow_id: string
   name: string
   description: string
+  execution_mode: ExecutionMode
+  nodes: WorkflowNode[]
+  edges: WorkflowEdge[]
   steps: WorkflowStep[]
   created_at: string
   updated_at: string
 }
 
-export interface StepResult {
-  step_order: number
-  agent_name: string
-  model_id: string
+// ---------------------------------------------------------------------------
+// Run / history types
+// ---------------------------------------------------------------------------
+
+export type NodeStatus = 'pending' | 'running' | 'completed' | 'failed' | 'skipped'
+export type RunStatus = 'running' | 'completed' | 'failed'
+
+export interface NodeRunResult {
+  result_id: string
+  node_id: string
+  node_label: string
+  node_type: string
+  status: NodeStatus
   input_text: string
   output_text: string
+  error_message: string
+  started_at: string | null
+  completed_at: string | null
   input_tokens: number
   output_tokens: number
 }
 
-export interface RunResult {
+export interface WorkflowRun {
   run_id: string
+  workflow_id: string
   workflow_name: string
-  steps: StepResult[]
+  status: RunStatus
+  execution_mode: string
+  initial_input: string
   final_output: string
+  error_message: string
+  started_at: string
+  completed_at: string | null
   total_input_tokens: number
   total_output_tokens: number
+  node_results: NodeRunResult[]
+  // Populated by backend during collaborative runs
+  blackboard?: Record<string, string>
 }
+
+// ---------------------------------------------------------------------------
+// Request bodies
+// ---------------------------------------------------------------------------
 
 export interface WorkflowBody {
   name: string
   description?: string
-  steps?: Array<{ step_id?: string; agent_id: string; label?: string; step_order?: number }>
+  execution_mode?: ExecutionMode
+  nodes?: Partial<WorkflowNode>[]
+  edges?: Partial<WorkflowEdge>[]
+  steps?: Partial<WorkflowStep>[]
+  loop_iterations?: number
 }
+
+// ---------------------------------------------------------------------------
+// Trigger types
+// ---------------------------------------------------------------------------
+
+export interface ScheduleTrigger {
+  trigger_id: string
+  workflow_id: string
+  cron_expr: string
+  enabled: boolean
+  last_run_at: string | null
+}
+
+export interface WebhookTrigger {
+  webhook_id: string
+  workflow_id: string
+  secret?: string
+  enabled: boolean
+  last_triggered_at: string | null
+}
+
+// ---------------------------------------------------------------------------
+// API functions
+// ---------------------------------------------------------------------------
 
 export async function listWorkflows(): Promise<WorkflowRecord[]> {
   const res = await apiFetch<{ workflows: WorkflowRecord[]; count: number }>('/workflows')
@@ -66,10 +149,76 @@ export async function deleteWorkflow(id: string): Promise<void> {
   await apiFetch(`/workflows/${encodeURIComponent(id)}`, { method: 'DELETE' })
 }
 
-export async function runWorkflow(id: string, initial_input: string, api_key: string): Promise<RunResult> {
-  return apiFetch<RunResult>(`/workflows/${encodeURIComponent(id)}/run`, {
+export async function runWorkflow(
+  id: string,
+  initial_input: string,
+  api_key: string,
+): Promise<WorkflowRun> {
+  return apiFetch<WorkflowRun>(`/workflows/${encodeURIComponent(id)}/run`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ initial_input, api_key }),
   })
+}
+
+export async function listRuns(workflow_id: string): Promise<WorkflowRun[]> {
+  const res = await apiFetch<{ runs: WorkflowRun[]; count: number }>(
+    `/workflows/${encodeURIComponent(workflow_id)}/runs`,
+  )
+  return res.runs
+}
+
+export async function getRun(workflow_id: string, run_id: string): Promise<WorkflowRun> {
+  return apiFetch<WorkflowRun>(
+    `/workflows/${encodeURIComponent(workflow_id)}/runs/${encodeURIComponent(run_id)}`,
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Trigger API functions — schedules
+// ---------------------------------------------------------------------------
+
+export async function listSchedules(workflow_id: string): Promise<ScheduleTrigger[]> {
+  const res = await apiFetch<{ schedules: ScheduleTrigger[] }>(
+    `/triggers/schedules?workflow_id=${encodeURIComponent(workflow_id)}`,
+  )
+  return res.schedules
+}
+
+export async function createSchedule(
+  workflow_id: string,
+  cron_expr: string,
+): Promise<ScheduleTrigger> {
+  return apiFetch<ScheduleTrigger>('/triggers/schedules', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ workflow_id, cron_expr }),
+  })
+}
+
+export async function deleteSchedule(trigger_id: string): Promise<void> {
+  await apiFetch(`/triggers/schedules/${encodeURIComponent(trigger_id)}`, { method: 'DELETE' })
+}
+
+// ---------------------------------------------------------------------------
+// Trigger API functions — webhooks
+// ---------------------------------------------------------------------------
+
+export async function listWebhooks(workflow_id: string): Promise<WebhookTrigger[]> {
+  const res = await apiFetch<{ webhooks: WebhookTrigger[] }>(
+    `/triggers/webhooks?workflow_id=${encodeURIComponent(workflow_id)}`,
+  )
+  return res.webhooks
+}
+
+export async function createWebhook(workflow_id: string): Promise<WebhookTrigger> {
+  return apiFetch<WebhookTrigger>('/triggers/webhooks', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ workflow_id }),
+  })
+}
+
+export async function deleteWebhook(webhook_id: string): Promise<void> {
+  await apiFetch(`/triggers/webhooks/${encodeURIComponent(webhook_id)}`, { method: 'DELETE' })
 }

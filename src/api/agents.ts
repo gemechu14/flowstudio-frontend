@@ -8,6 +8,7 @@ export interface AgentRecord {
   model_id: string
   provider: 'openai' | 'anthropic'
   tool_names: string[]
+  datasource_ids: string[]
   created_at: string
   updated_at: string
 }
@@ -19,6 +20,7 @@ export interface AgentBody {
   model_id?: string
   provider?: 'openai' | 'anthropic'
   tool_names?: string[]
+  datasource_ids?: string[]
 }
 
 export async function listAgents(): Promise<AgentRecord[]> {

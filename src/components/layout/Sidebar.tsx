@@ -34,6 +34,17 @@ const NAV_ITEMS = [
     ),
   },
   {
+    path: '/data-sources',
+    label: 'Data Sources',
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <ellipse cx="8" cy="4" rx="6" ry="2.5" stroke="currentColor" strokeWidth="1.5" />
+        <path d="M2 4v4c0 1.38 2.69 2.5 6 2.5S14 9.38 14 8V4" stroke="currentColor" strokeWidth="1.5" />
+        <path d="M2 8v4c0 1.38 2.69 2.5 6 2.5S14 13.38 14 12V8" stroke="currentColor" strokeWidth="1.5" />
+      </svg>
+    ),
+  },
+  {
     path: '/workflows',
     label: 'Workflows',
     icon: (

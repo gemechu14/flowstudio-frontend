@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
 import AgentPanel from '../components/agents/AgentPanel'
+import AgentChat from '../components/agents/AgentChat'
 import { AgentRecord, listAgents, deleteAgent } from '../api/agents'
 import { listTools } from '../api/tools'
 
@@ -29,6 +30,7 @@ export default function Agents() {
   const [availableTools, setAvailableTools] = useState<string[]>(BUILTIN_TOOLS)
   const [panel, setPanel] = useState<PanelState>({ open: false })
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [chatAgent, setChatAgent] = useState<AgentRecord | null>(null)
 
   useEffect(() => {
     listAgents().then(setAgents).catch(() => {})
@@ -202,6 +204,13 @@ export default function Agents() {
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 10, flexShrink: 0 }}>
                     <div style={{ display: 'flex', gap: 8 }}>
                       <Button
+                        variant="primary"
+                        size="sm"
+                        onClick={() => setChatAgent(agent)}
+                      >
+                        ▶ Test
+                      </Button>
+                      <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => setPanel({ open: true, mode: 'edit', agent })}
@@ -243,6 +252,14 @@ export default function Agents() {
           availableTools={availableTools}
           onSave={handleSave}
           onClose={() => setPanel({ open: false })}
+        />
+      )}
+
+      {/* Chat test panel */}
+      {chatAgent && (
+        <AgentChat
+          agent={chatAgent}
+          onClose={() => setChatAgent(null)}
         />
       )}
     </div>

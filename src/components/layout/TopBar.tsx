@@ -5,6 +5,7 @@ const PAGE_TITLES: Record<string, { title: string; subtitle: string }> = {
   '/tools': { title: 'Tool Library', subtitle: 'Manage built-in and custom tools available to your agents' },
   '/agents': { title: 'Agents', subtitle: 'Configure and monitor AI agents' },
   '/workflows': { title: 'Workflows', subtitle: 'Build and run agentic workflow pipelines' },
+  '/data-sources': { title: 'Data Sources', subtitle: 'Connect documents, databases, and websites to your agents' },
   '/settings': { title: 'Settings', subtitle: 'Platform configuration and preferences' },
 }
 

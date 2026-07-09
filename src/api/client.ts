@@ -1,6 +1,6 @@
 /// <reference types="vite/client" />
 
-const BASE_URL = (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:8000'
+export const BASE_URL = (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:8000'
 
 export class ApiError extends Error {
   constructor(public status: number, public detail: unknown) {

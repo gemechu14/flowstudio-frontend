@@ -32,7 +32,7 @@ export default function ToolUploader({ onUpload }: ToolUploaderProps) {
       const res = await uploadTool(file)
       setResult(res)
       setUploadState('success')
-      onUpload?.({ toolName: res.tool_name, warnings: res.warnings })
+      onUpload?.({ toolName: res.tool.name, warnings: res.warnings })
     } catch (err) {
       if (err instanceof ApiError) {
         const detail = err.detail as { errors?: string[] } | string
@@ -138,7 +138,7 @@ export default function ToolUploader({ onUpload }: ToolUploaderProps) {
                 </div>
                 <div style={{ fontSize: 11.5, marginTop: 2, color: uploadState === 'uploading' ? 'var(--untested)' : uploadState === 'success' ? 'var(--verified)' : 'var(--invalid)' }}>
                   {uploadState === 'uploading' && '⟳ Uploading and validating…'}
-                  {uploadState === 'success' && `✓ Registered as "${result?.tool_name}"`}
+                  {uploadState === 'success' && `✓ Submitted as "${result?.tool.name}" — pending review`}
                   {uploadState === 'error' && '✗ Validation failed'}
                 </div>
               </div>

@@ -1,561 +1,1545 @@
-import { useState, useEffect } from 'react'
-import Card from '../components/ui/Card'
-import Button from '../components/ui/Button'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { AgentRecord, listAgents } from '../api/agents'
 import {
-  WorkflowRecord, RunResult,
-  listWorkflows, createWorkflow, updateWorkflow, deleteWorkflow, runWorkflow,
+  WorkflowRecord, WorkflowNode, WorkflowEdge, WorkflowRun, NodeRunResult, ExecutionMode,
+  NodeStatus, ScheduleTrigger, WebhookTrigger,
+  listWorkflows, createWorkflow, updateWorkflow, deleteWorkflow, runWorkflow, listRuns,
+  listSchedules, createSchedule, deleteSchedule,
+  listWebhooks, createWebhook, deleteWebhook,
 } from '../api/workflows'
-import { ApiError } from '../api/client'
 
-// ─── helpers ────────────────────────────────────────────────────────────────
+// ─── constants ───────────────────────────────────────────────────────────────
 
-let _stepCounter = 0
-const newStepId = () => `step_${++_stepCounter}_${Math.random().toString(36).slice(2, 7)}`
-
-const MODEL_SHORT: Record<string, string> = {
-  'claude-sonnet-5': 'Sonnet 5', 'claude-sonnet-4-6': 'Sonnet 4.6',
-  'claude-opus-4-8': 'Opus 4.8', 'claude-haiku-4-5': 'Haiku 4.5',
-  'claude-fable-5': 'Fable 5',
-  'gpt-4.1': 'GPT-4.1', 'gpt-4.1-mini': 'GPT-4.1 mini',
-  'gpt-4o': 'GPT-4o', 'gpt-4o-mini': 'GPT-4o mini',
-}
-
-const fmt = (iso: string) => {
-  if (!iso) return '—'
-  try { return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) }
-  catch { return '—' }
-}
-
+const NODE_W = 200
+const NODE_H = 80
 const MONO = { fontFamily: 'var(--font-mono)' }
 
-// ─── types ──────────────────────────────────────────────────────────────────
-
-type View = { mode: 'list' } | { mode: 'detail'; workflow: WorkflowRecord }
-
-interface DraftStep {
-  step_id: string
-  agent_id: string
+const MODE_LABELS: Record<ExecutionMode, string> = {
+  sequential: 'Sequential — Pipeline',
+  parallel: 'Parallel — Fan-out',
+  hierarchical: 'Hierarchical — Orchestrator',
+  hybrid: 'Hybrid — DAG + Orchestrator',
+  collaborative: 'Collaborative — Review Loop',
+  event_driven: 'Event-Driven — Pub/Sub',
 }
 
-// ─── sub-components ─────────────────────────────────────────────────────────
 
-function SectionLabel({ children }: { children: string }) {
+const NODE_TYPE_COLORS: Record<string, string> = {
+  agent: '#1D5FFA',
+  orchestrator: '#7C3AED',
+  fan_out: '#F59E0B',
+  fan_in: '#10B981',
+  condition: '#EF4444',
+}
+
+const STATUS_COLORS: Record<NodeStatus, string> = {
+  pending: '#6B7280',
+  running: '#3B82F6',
+  completed: '#10B981',
+  failed: '#EF4444',
+  skipped: '#9CA3AF',
+}
+
+const STATUS_ICONS: Record<NodeStatus, string> = {
+  pending: '○', running: '◌', completed: '✓', failed: '✗', skipped: '–',
+}
+
+const TEAL = '#14b8a6'
+
+let _idCounter = 0
+const newId = (prefix = 'n') => `${prefix}_${++_idCounter}_${Math.random().toString(36).slice(2, 6)}`
+
+// ─── helpers ─────────────────────────────────────────────────────────────────
+
+const fmt = (iso: string | null | undefined) => {
+  if (!iso) return '—'
+  try {
+    return new Date(iso).toLocaleString('en-US', {
+      month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
+    })
+  } catch { return '—' }
+}
+
+const elapsed = (start: string | null, end: string | null): string => {
+  if (!start || !end) return ''
+  const ms = new Date(end).getTime() - new Date(start).getTime()
+  if (ms < 1000) return `${ms}ms`
+  return `${(ms / 1000).toFixed(1)}s`
+}
+
+// ─── sub-components ──────────────────────────────────────────────────────────
+
+function Chip({ label, color = '#1D5FFA' }: { label: string; color?: string }) {
   return (
-    <div style={{
-      ...MONO, fontSize: 10, fontWeight: 600,
-      letterSpacing: '0.12em', textTransform: 'uppercase',
-      color: 'var(--text-body)', marginBottom: 10,
+    <span style={{
+      ...MONO, fontSize: 10, padding: '2px 7px', borderRadius: 4,
+      background: `${color}22`, color, border: `1px solid ${color}44`,
+      fontWeight: 600, letterSpacing: '0.05em',
+    }}>{label}</span>
+  )
+}
+
+function StatusBadge({ status }: { status: NodeStatus }) {
+  const color = STATUS_COLORS[status]
+  return (
+    <span style={{
+      ...MONO, fontSize: 10, padding: '1px 6px', borderRadius: 3,
+      background: `${color}20`, color,
+      border: `1px solid ${color}40`, fontWeight: 700,
+      animation: status === 'running' ? 'pulse 1s infinite' : undefined,
     }}>
-      {children}
+      {STATUS_ICONS[status]} {status}
+    </span>
+  )
+}
+
+// ─── canvas node component ────────────────────────────────────────────────────
+
+interface CanvasNodeProps {
+  node: WorkflowNode
+  agents: AgentRecord[]
+  isSelected: boolean
+  isConnectingSource: boolean
+  nodeResult?: NodeRunResult
+  connectingFrom: string | null
+  execMode: ExecutionMode
+  onSelect: () => void
+  onDragStart: (e: React.MouseEvent) => void
+  onStartConnect: () => void
+  onCompleteConnect: () => void
+  onAgentChange: (agentId: string, label: string, type: string) => void
+  onConfigChange: (config: Record<string, unknown>) => void
+  onDelete: () => void
+}
+
+function CanvasNodeCard({
+  node, agents, isSelected, isConnectingSource, nodeResult, connectingFrom, execMode,
+  onSelect, onDragStart, onStartConnect, onCompleteConnect, onAgentChange, onConfigChange, onDelete,
+}: CanvasNodeProps) {
+  const accentColor = NODE_TYPE_COLORS[node.node_type] || '#1D5FFA'
+  const agentRecord = agents.find(a => a.agent_id === node.agent_id)
+  const status = nodeResult?.status as NodeStatus | undefined
+  const statusColor = status ? STATUS_COLORS[status] : undefined
+
+  const parallelGroup = (node.config.parallel_group as string | undefined) || ''
+  const hasTealGroup = execMode === 'hybrid' && parallelGroup.trim() !== ''
+
+  const borderColor = isConnectingSource
+    ? '#F59E0B'
+    : hasTealGroup
+    ? TEAL
+    : isSelected
+    ? accentColor
+    : statusColor || 'var(--border)'
+
+  const boxShadow = isSelected
+    ? `0 0 0 3px ${hasTealGroup ? TEAL : accentColor}33`
+    : hasTealGroup
+    ? `0 0 0 2px ${TEAL}44`
+    : '0 2px 8px rgba(0,0,0,0.3)'
+
+  return (
+    <div
+      onClick={() => {
+        if (connectingFrom && connectingFrom !== node.node_id) onCompleteConnect()
+        else onSelect()
+      }}
+      style={{
+        position: 'absolute',
+        left: node.position_x, top: node.position_y,
+        width: NODE_W, minHeight: NODE_H,
+        background: 'var(--bg-card)',
+        border: `2px solid ${borderColor}`,
+        borderRadius: 10,
+        boxShadow,
+        cursor: connectingFrom && connectingFrom !== node.node_id ? 'crosshair' : 'default',
+        userSelect: 'none',
+        transition: 'border-color 0.15s',
+        overflow: 'hidden',
+      }}
+    >
+      {/* Header drag handle */}
+      <div
+        onMouseDown={onDragStart}
+        style={{
+          background: `${accentColor}22`,
+          borderBottom: `1px solid ${accentColor}33`,
+          padding: '6px 10px',
+          display: 'flex', alignItems: 'center', gap: 6,
+          cursor: 'grab',
+        }}
+      >
+        <span style={{ fontSize: 11, fontWeight: 700, color: accentColor, flex: 1, ...MONO }}>
+          {node.node_type.toUpperCase()}
+        </span>
+        {status && <StatusBadge status={status} />}
+        <button
+          onMouseDown={e => e.stopPropagation()}
+          onClick={e => { e.stopPropagation(); onDelete() }}
+          style={{
+            background: 'none', border: 'none', color: '#EF4444',
+            cursor: 'pointer', fontSize: 13, padding: '0 2px', lineHeight: 1,
+          }}
+        >×</button>
+      </div>
+
+      {/* Body */}
+      <div style={{ padding: '8px 10px' }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-heading)', marginBottom: 4 }}>
+          {node.label || agentRecord?.name || 'Untitled Node'}
+        </div>
+
+        {/* Agent selector */}
+        <select
+          value={node.agent_id || ''}
+          onChange={e => {
+            const a = agents.find(ag => ag.agent_id === e.target.value)
+            onAgentChange(e.target.value, a?.name || node.label, node.node_type)
+          }}
+          onClick={e => e.stopPropagation()}
+          style={{
+            width: '100%', fontSize: 11, padding: '3px 6px',
+            background: 'var(--bg-page)', color: 'var(--text-body)',
+            border: '1px solid var(--border)', borderRadius: 5,
+            ...MONO,
+          }}
+        >
+          <option value="">— select agent —</option>
+          {agents.map(a => (
+            <option key={a.agent_id} value={a.agent_id}>{a.name}</option>
+          ))}
+        </select>
+
+        {/* Parallel group input — hybrid mode only */}
+        {execMode === 'hybrid' && (
+          <div style={{ marginTop: 6 }}>
+            <div style={{ ...MONO, fontSize: 9, color: 'var(--text-muted)', marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Parallel group
+            </div>
+            <input
+              value={parallelGroup}
+              onChange={e => {
+                onConfigChange({ ...node.config, parallel_group: e.target.value })
+              }}
+              onClick={e => e.stopPropagation()}
+              placeholder="group-name (leave blank for sequential)"
+              style={{
+                width: '100%', fontSize: 10, padding: '3px 6px',
+                background: 'var(--bg-page)', color: 'var(--text-body)',
+                border: `1px solid ${parallelGroup.trim() ? TEAL : 'var(--border)'}`,
+                borderRadius: 5, boxSizing: 'border-box',
+                ...MONO,
+              }}
+            />
+          </div>
+        )}
+
+        {/* Event-driven config — event_driven mode only */}
+        {execMode === 'event_driven' && (
+          <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 5 }}>
+            <div>
+              <div style={{ ...MONO, fontSize: 9, color: '#F59E0B', marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Subscribes to (comma-sep)
+              </div>
+              <input
+                value={((node.config.subscribes_to as string[] | undefined) || []).join(', ')}
+                onChange={e => {
+                  const evts = e.target.value.split(',').map(s => s.trim()).filter(Boolean)
+                  onConfigChange({ ...node.config, subscribes_to: evts })
+                }}
+                onClick={e => e.stopPropagation()}
+                placeholder="event-a, event-b  (blank = trigger node)"
+                style={{
+                  width: '100%', fontSize: 10, padding: '3px 6px',
+                  background: 'var(--bg-page)', color: 'var(--text-body)',
+                  border: `1px solid ${'#F59E0B'}`,
+                  borderRadius: 5, boxSizing: 'border-box', ...MONO,
+                }}
+              />
+            </div>
+            <div>
+              <div style={{ ...MONO, fontSize: 9, color: '#10B981', marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Emits event
+              </div>
+              <input
+                value={(node.config.emits_event as string | undefined) || ''}
+                onChange={e => onConfigChange({ ...node.config, emits_event: e.target.value })}
+                onClick={e => e.stopPropagation()}
+                placeholder="event-name  (blank = no emit)"
+                style={{
+                  width: '100%', fontSize: 10, padding: '3px 6px',
+                  background: 'var(--bg-page)', color: 'var(--text-body)',
+                  border: `1px solid ${'#10B981'}`,
+                  borderRadius: 5, boxSizing: 'border-box', ...MONO,
+                }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Node output preview */}
+        {nodeResult?.output_text && (
+          <div style={{
+            marginTop: 6, fontSize: 10, color: 'var(--text-muted)',
+            maxHeight: 40, overflow: 'hidden',
+            borderTop: '1px solid var(--border)', paddingTop: 4,
+          }}>
+            {nodeResult.output_text.slice(0, 120)}
+            {nodeResult.output_text.length > 120 ? '…' : ''}
+          </div>
+        )}
+
+        {/* Connect button */}
+        <div style={{ marginTop: 6, display: 'flex', gap: 4 }}>
+          <button
+            onMouseDown={e => e.stopPropagation()}
+            onClick={e => { e.stopPropagation(); onStartConnect() }}
+            style={{
+              ...MONO, fontSize: 10, padding: '2px 7px',
+              background: isConnectingSource ? '#F59E0B22' : 'var(--bg-page)',
+              border: `1px solid ${isConnectingSource ? '#F59E0B' : 'var(--border)'}`,
+              color: isConnectingSource ? '#F59E0B' : 'var(--text-muted)',
+              borderRadius: 4, cursor: 'pointer',
+            }}
+          >
+            {isConnectingSource ? '● connecting…' : '→ connect'}
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
 
-function RunPanel({
-  workflow, onClose,
-}: { workflow: WorkflowRecord; onClose: () => void }) {
-  const [input, setInput] = useState('')
-  const [apiKey, setApiKey] = useState('')
-  const [running, setRunning] = useState(false)
-  const [result, setResult] = useState<RunResult | null>(null)
-  const [error, setError] = useState('')
-  const [expanded, setExpanded] = useState<Set<number>>(new Set())
+// ─── run result panel ─────────────────────────────────────────────────────────
 
-  const toggle = (i: number) =>
-    setExpanded(p => { const n = new Set(p); n.has(i) ? n.delete(i) : n.add(i); return n })
-
-  const handleRun = async () => {
-    if (!input.trim()) { setError('Enter an initial input.'); return }
-    setRunning(true); setError(''); setResult(null)
-    try {
-      const r = await runWorkflow(workflow.workflow_id, input.trim(), apiKey)
-      setResult(r)
-      setExpanded(new Set(r.steps.map((_, i) => i)))
-    } catch (e) {
-      setError(e instanceof ApiError ? String(e.detail) : String(e))
-    } finally { setRunning(false) }
-  }
+function RunResultPanel({
+  run, onClose,
+}: { run: WorkflowRun; onClose: () => void }) {
+  const [expanded, setExpanded] = useState<string | null>(null)
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      <div>
-        <SectionLabel>Initial Input</SectionLabel>
-        <textarea
-          value={input}
-          onChange={e => setInput(e.target.value)}
-          placeholder="Enter the starting message for the pipeline…"
-          rows={3}
+    <div style={{
+      borderTop: '1px solid var(--border)',
+      background: 'var(--bg-card)',
+      maxHeight: 380,
+      overflow: 'auto',
+    }}>
+      <div style={{
+        padding: '12px 20px',
+        display: 'flex', alignItems: 'center', gap: 10,
+        position: 'sticky', top: 0, background: 'var(--bg-card)',
+        borderBottom: '1px solid var(--border)', zIndex: 1,
+      }}>
+        <span style={{
+          fontSize: 12, fontWeight: 700, color: 'var(--text-heading)', flex: 1,
+        }}>
+          Run result — {run.execution_mode}
+          <span style={{
+            ...MONO, fontSize: 10, marginLeft: 8,
+            color: run.status === 'completed' ? '#10B981' : '#EF4444',
+          }}>
+            {run.status === 'completed' ? '✓' : '✗'} {run.status}
+          </span>
+        </span>
+        <span style={{ ...MONO, fontSize: 10, color: 'var(--text-muted)' }}>
+          {run.total_input_tokens + run.total_output_tokens} tokens
+        </span>
+        <button
+          onClick={onClose}
           style={{
-            width: '100%', padding: '9px 12px', borderRadius: 8,
-            border: '1px solid var(--border-light)',
-            ...MONO, fontSize: 12.5, lineHeight: 1.7, resize: 'vertical',
-            color: 'var(--text-dark)', background: '#fff', outline: 'none',
-            boxSizing: 'border-box',
+            background: 'none', border: 'none', color: 'var(--text-muted)',
+            cursor: 'pointer', fontSize: 14,
           }}
-        />
-      </div>
-      <div>
-        <SectionLabel>API Key</SectionLabel>
-        <input
-          type="password"
-          value={apiKey}
-          onChange={e => setApiKey(e.target.value)}
-          placeholder="sk-… or anthropic key"
-          style={{
-            width: '100%', padding: '9px 12px', borderRadius: 8,
-            border: '1px solid var(--border-light)',
-            ...MONO, fontSize: 12.5,
-            color: 'var(--text-dark)', background: '#fff', outline: 'none',
-            boxSizing: 'border-box',
-          }}
-        />
-      </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <Button variant="primary" size="sm" onClick={handleRun} loading={running}>
-          {running ? 'Running pipeline…' : '▶ Run Workflow'}
-        </Button>
-        <Button variant="ghost" size="sm" onClick={onClose}>Cancel</Button>
-        {error && <span style={{ ...MONO, fontSize: 11, color: 'var(--invalid)', flex: 1 }}>{error}</span>}
+        >×</button>
       </div>
 
-      {result && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {/* Token summary */}
-          <div style={{
-            display: 'flex', gap: 16, padding: '10px 14px',
-            background: 'rgba(34,197,94,0.04)',
-            border: '1px solid rgba(34,197,94,0.2)',
-            borderRadius: 8,
-          }}>
-            {[
-              { label: 'Steps', value: result.steps.length },
-              { label: 'Input tokens', value: result.total_input_tokens.toLocaleString() },
-              { label: 'Output tokens', value: result.total_output_tokens.toLocaleString() },
-            ].map(m => (
-              <div key={m.label}>
-                <div style={{ ...MONO, fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-body)' }}>{m.label}</div>
-                <div style={{ ...MONO, fontSize: 15, fontWeight: 700, color: 'var(--text-dark)' }}>{m.value}</div>
-              </div>
-            ))}
+      {/* Node results */}
+      {run.node_results.map(nr => (
+        <div key={nr.result_id || nr.node_id} style={{
+          borderBottom: '1px solid var(--border)',
+        }}>
+          <div
+            onClick={() => setExpanded(expanded === nr.node_id ? null : nr.node_id)}
+            style={{
+              padding: '10px 20px', display: 'flex', alignItems: 'center',
+              gap: 8, cursor: 'pointer',
+              background: expanded === nr.node_id ? 'var(--bg-page)' : 'transparent',
+            }}
+          >
+            <StatusBadge status={nr.status as NodeStatus} />
+            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-heading)', flex: 1 }}>
+              {nr.node_label || nr.node_id}
+            </span>
+            {nr.started_at && nr.completed_at && (
+              <span style={{ ...MONO, fontSize: 10, color: 'var(--text-muted)' }}>
+                {elapsed(nr.started_at, nr.completed_at)}
+              </span>
+            )}
+            <span style={{ ...MONO, fontSize: 10, color: 'var(--text-muted)' }}>
+              {nr.input_tokens + nr.output_tokens} tok
+            </span>
+            <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>
+              {expanded === nr.node_id ? '▲' : '▼'}
+            </span>
           </div>
 
-          {/* Step results */}
-          {result.steps.map((step, i) => (
-            <div key={i} style={{
-              border: '1px solid var(--border-light)',
-              borderRadius: 10, overflow: 'hidden',
-            }}>
-              <button
-                onClick={() => toggle(i)}
-                style={{
-                  width: '100%', padding: '10px 14px',
-                  background: 'var(--bg-dark)',
-                  border: 'none', cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span style={{
-                    ...MONO, fontSize: 10, fontWeight: 700,
-                    background: 'var(--blue-dim)', border: '1px solid var(--blue-border)',
-                    color: 'var(--blue)', borderRadius: 4, padding: '1px 7px',
+          {expanded === nr.node_id && (
+            <div style={{ padding: '0 20px 14px', background: 'var(--bg-page)' }}>
+              {nr.error_message && (
+                <div style={{
+                  marginBottom: 8, padding: '8px 10px',
+                  background: '#EF444420', border: '1px solid #EF444440',
+                  borderRadius: 6, color: '#EF4444', fontSize: 12,
+                }}>
+                  {nr.error_message}
+                </div>
+              )}
+              {nr.input_text && (
+                <div style={{ marginBottom: 8 }}>
+                  <div style={{ ...MONO, fontSize: 10, color: 'var(--text-muted)', marginBottom: 4 }}>INPUT</div>
+                  <div style={{
+                    ...MONO, fontSize: 11, color: 'var(--text-body)',
+                    background: 'var(--bg-card)', padding: '8px 10px',
+                    borderRadius: 6, border: '1px solid var(--border)',
+                    whiteSpace: 'pre-wrap', maxHeight: 100, overflow: 'auto',
                   }}>
-                    {step.step_order + 1}
-                  </span>
-                  <span style={{ ...MONO, fontSize: 13, fontWeight: 600, color: '#fff' }}>
-                    {step.agent_name}
-                  </span>
-                  <span style={{ ...MONO, fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>
-                    {MODEL_SHORT[step.model_id] ?? step.model_id}
-                  </span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span style={{ ...MONO, fontSize: 10, color: 'rgba(255,255,255,0.35)' }}>
-                    {step.input_tokens + step.output_tokens} tok
-                  </span>
-                  <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12 }}>
-                    {expanded.has(i) ? '▲' : '▼'}
-                  </span>
-                </div>
-              </button>
-              {expanded.has(i) && (
-                <div style={{ padding: '14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  <div>
-                    <div style={{ ...MONO, fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-body)', marginBottom: 5 }}>Input</div>
-                    <pre style={{ ...MONO, fontSize: 11.5, color: 'var(--text-body)', background: 'rgba(11,16,32,0.04)', border: '1px solid var(--border-light)', borderRadius: 6, padding: '10px 12px', whiteSpace: 'pre-wrap', wordBreak: 'break-all', margin: 0 }}>
-                      {step.input_text}
-                    </pre>
+                    {nr.input_text}
                   </div>
-                  <div>
-                    <div style={{ ...MONO, fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--verified)', marginBottom: 5 }}>Output</div>
-                    <pre style={{ ...MONO, fontSize: 11.5, color: 'var(--text-dark)', background: 'rgba(34,197,94,0.03)', border: '1px solid rgba(34,197,94,0.2)', borderRadius: 6, padding: '10px 12px', whiteSpace: 'pre-wrap', wordBreak: 'break-all', margin: 0 }}>
-                      {step.output_text}
-                    </pre>
+                </div>
+              )}
+              {nr.output_text && (
+                <div>
+                  <div style={{ ...MONO, fontSize: 10, color: 'var(--text-muted)', marginBottom: 4 }}>OUTPUT</div>
+                  <div style={{
+                    ...MONO, fontSize: 11, color: 'var(--text-body)',
+                    background: 'var(--bg-card)', padding: '8px 10px',
+                    borderRadius: 6, border: '1px solid var(--border)',
+                    whiteSpace: 'pre-wrap', maxHeight: 160, overflow: 'auto',
+                  }}>
+                    {nr.output_text}
                   </div>
                 </div>
               )}
             </div>
-          ))}
+          )}
+        </div>
+      ))}
+
+      {/* Final output */}
+      {run.final_output && (
+        <div style={{ padding: '12px 20px' }}>
+          <div style={{ ...MONO, fontSize: 10, color: 'var(--text-muted)', marginBottom: 6 }}>FINAL OUTPUT</div>
+          <div style={{
+            ...MONO, fontSize: 11, color: 'var(--text-body)',
+            background: 'var(--bg-page)', padding: '10px 12px',
+            borderRadius: 6, border: '1px solid var(--border)',
+            whiteSpace: 'pre-wrap', maxHeight: 120, overflow: 'auto',
+          }}>
+            {run.final_output}
+          </div>
         </div>
       )}
+
+      {/* Shared Blackboard */}
+      <div style={{ padding: '12px 20px', borderTop: '1px solid var(--border)' }}>
+        <div style={{ ...MONO, fontSize: 10, color: 'var(--text-muted)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+          Shared Blackboard
+        </div>
+        {run.blackboard && Object.keys(run.blackboard).length > 0 ? (
+          <div style={{
+            display: 'flex', flexDirection: 'column', gap: 4,
+          }}>
+            {Object.entries(run.blackboard).map(([k, v]) => (
+              <div key={k} style={{
+                display: 'flex', gap: 8, alignItems: 'flex-start',
+                background: `${TEAL}10`, border: `1px solid ${TEAL}30`,
+                borderRadius: 5, padding: '5px 8px',
+              }}>
+                <span style={{ ...MONO, fontSize: 10, color: TEAL, fontWeight: 700, flexShrink: 0 }}>{k}</span>
+                <span style={{ ...MONO, fontSize: 10, color: 'var(--text-body)', flex: 1, wordBreak: 'break-all' }}>{v}</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div style={{
+            ...MONO, fontSize: 11, color: 'var(--text-muted)',
+            background: 'var(--bg-page)', padding: '10px 12px',
+            borderRadius: 6, border: '1px solid var(--border)',
+            fontStyle: 'italic',
+          }}>
+            Blackboard values will appear here during collaborative and hybrid runs.
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ─── run history panel ────────────────────────────────────────────────────────
+
+function RunHistoryPanel({
+  runs, onSelectRun, selectedRunId,
+}: { runs: WorkflowRun[]; onSelectRun: (r: WorkflowRun) => void; selectedRunId?: string }) {
+  if (runs.length === 0) {
+    return (
+      <div style={{ padding: 16, color: 'var(--text-muted)', fontSize: 12, textAlign: 'center' }}>
+        No runs yet
+      </div>
+    )
+  }
+  return (
+    <div>
+      {runs.map(run => (
+        <div
+          key={run.run_id}
+          onClick={() => onSelectRun(run)}
+          style={{
+            padding: '10px 14px',
+            borderBottom: '1px solid var(--border)',
+            cursor: 'pointer',
+            background: selectedRunId === run.run_id ? 'var(--bg-page)' : 'transparent',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+            <span style={{
+              ...MONO, fontSize: 11, fontWeight: 700,
+              color: run.status === 'completed' ? '#10B981' : '#EF4444',
+            }}>
+              {run.status === 'completed' ? '✓' : '✗'}
+            </span>
+            <Chip label={run.execution_mode} color={run.status === 'completed' ? '#10B981' : '#EF4444'} />
+          </div>
+          <div style={{ ...MONO, fontSize: 10, color: 'var(--text-muted)' }}>
+            {fmt(run.started_at)} · {run.total_input_tokens + run.total_output_tokens} tok
+          </div>
+          {run.initial_input && (
+            <div style={{
+              fontSize: 11, color: 'var(--text-body)', marginTop: 3,
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            }}>
+              {run.initial_input.slice(0, 60)}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// ─── triggers panel ───────────────────────────────────────────────────────────
+
+interface TriggersPanelProps {
+  workflowId: string
+  onClose: () => void
+}
+
+function TriggersPanel({ workflowId, onClose }: TriggersPanelProps) {
+  const [schedules, setSchedules] = useState<ScheduleTrigger[]>([])
+  const [webhooks, setWebhooks] = useState<WebhookTrigger[]>([])
+  const [loadingTriggers, setLoadingTriggers] = useState(true)
+  const [showAddSchedule, setShowAddSchedule] = useState(false)
+  const [newCronExpr, setNewCronExpr] = useState('')
+  const [savingSchedule, setSavingSchedule] = useState(false)
+  const [savingWebhook, setSavingWebhook] = useState(false)
+  const [copiedId, setCopiedId] = useState<string | null>(null)
+
+  useEffect(() => {
+    setLoadingTriggers(true)
+    Promise.all([
+      listSchedules(workflowId).catch(() => [] as ScheduleTrigger[]),
+      listWebhooks(workflowId).catch(() => [] as WebhookTrigger[]),
+    ]).then(([s, w]) => {
+      setSchedules(s)
+      setWebhooks(w)
+    }).finally(() => setLoadingTriggers(false))
+  }, [workflowId])
+
+  const handleAddSchedule = async () => {
+    if (!newCronExpr.trim()) return
+    setSavingSchedule(true)
+    try {
+      const s = await createSchedule(workflowId, newCronExpr.trim())
+      setSchedules(prev => [...prev, s])
+      setNewCronExpr('')
+      setShowAddSchedule(false)
+    } catch { /* ignore */ } finally { setSavingSchedule(false) }
+  }
+
+  const handleDeleteSchedule = async (triggerId: string) => {
+    await deleteSchedule(triggerId).catch(() => {})
+    setSchedules(prev => prev.filter(s => s.trigger_id !== triggerId))
+  }
+
+  const handleAddWebhook = async () => {
+    setSavingWebhook(true)
+    try {
+      const w = await createWebhook(workflowId)
+      setWebhooks(prev => [...prev, w])
+    } catch { /* ignore */ } finally { setSavingWebhook(false) }
+  }
+
+  const handleDeleteWebhook = async (webhookId: string) => {
+    await deleteWebhook(webhookId).catch(() => {})
+    setWebhooks(prev => prev.filter(w => w.webhook_id !== webhookId))
+  }
+
+  const webhookUrl = (id: string) =>
+    `http://localhost:8000/triggers/webhooks/${encodeURIComponent(id)}/trigger`
+
+  const copyToClipboard = (text: string, id: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedId(id)
+      setTimeout(() => setCopiedId(null), 1500)
+    }).catch(() => {})
+  }
+
+  return (
+    <div style={{
+      position: 'absolute', top: 44, right: 0, zIndex: 50,
+      width: 360, background: 'var(--bg-card)',
+      border: '1px solid var(--border)', borderRadius: 8,
+      boxShadow: '0 8px 32px rgba(0,0,0,0.25)',
+      overflow: 'hidden',
+    }}>
+      {/* Header */}
+      <div style={{
+        padding: '10px 14px',
+        borderBottom: '1px solid var(--border)',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        background: 'var(--bg-page)',
+      }}>
+        <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-heading)', ...MONO }}>
+          Triggers
+        </span>
+        <button
+          onClick={onClose}
+          style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 14 }}
+        >×</button>
+      </div>
+
+      <div style={{ maxHeight: 460, overflow: 'auto' }}>
+        {loadingTriggers ? (
+          <div style={{ padding: 14, color: 'var(--text-muted)', fontSize: 12 }}>Loading…</div>
+        ) : (
+          <>
+            {/* Schedules section */}
+            <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--border)' }}>
+              <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                marginBottom: 8,
+              }}>
+                <span style={{ ...MONO, fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                  Schedules
+                </span>
+                <button
+                  onClick={() => setShowAddSchedule(!showAddSchedule)}
+                  style={{
+                    ...MONO, fontSize: 10, padding: '2px 8px',
+                    background: '#1D5FFA22', border: '1px solid #1D5FFA44',
+                    color: '#1D5FFA', borderRadius: 4, cursor: 'pointer',
+                  }}
+                >+ Add schedule</button>
+              </div>
+
+              {schedules.length === 0 && !showAddSchedule && (
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', fontStyle: 'italic' }}>No schedules yet</div>
+              )}
+
+              {schedules.map(s => (
+                <div key={s.trigger_id} style={{
+                  display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4,
+                  background: 'var(--bg-page)', borderRadius: 5, padding: '5px 8px',
+                  border: '1px solid var(--border)',
+                }}>
+                  <span style={{ ...MONO, fontSize: 11, color: 'var(--text-body)', flex: 1 }}>{s.cron_expr}</span>
+                  <span style={{
+                    ...MONO, fontSize: 9, padding: '1px 5px', borderRadius: 3,
+                    background: s.enabled ? '#10B98120' : '#6B728020',
+                    color: s.enabled ? '#10B981' : '#6B7280',
+                    border: `1px solid ${s.enabled ? '#10B98140' : '#6B728040'}`,
+                  }}>{s.enabled ? 'on' : 'off'}</span>
+                  {s.last_run_at && (
+                    <span style={{ ...MONO, fontSize: 9, color: 'var(--text-muted)' }}>
+                      {fmt(s.last_run_at)}
+                    </span>
+                  )}
+                  <button
+                    onClick={() => handleDeleteSchedule(s.trigger_id)}
+                    style={{ background: 'none', border: 'none', color: '#EF4444', cursor: 'pointer', fontSize: 12, padding: '0 2px' }}
+                  >×</button>
+                </div>
+              ))}
+
+              {showAddSchedule && (
+                <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+                  <input
+                    value={newCronExpr}
+                    onChange={e => setNewCronExpr(e.target.value)}
+                    placeholder="0 9 * * 1-5"
+                    style={{
+                      flex: 1, ...MONO, fontSize: 11, padding: '4px 8px',
+                      background: 'var(--bg-page)', color: 'var(--text-body)',
+                      border: '1px solid var(--border)', borderRadius: 5,
+                    }}
+                  />
+                  <button
+                    onClick={handleAddSchedule}
+                    disabled={savingSchedule || !newCronExpr.trim()}
+                    style={{
+                      ...MONO, fontSize: 10, padding: '4px 10px',
+                      background: '#1D5FFA', color: '#fff', border: 'none',
+                      borderRadius: 5, cursor: 'pointer', opacity: savingSchedule ? 0.6 : 1,
+                    }}
+                  >{savingSchedule ? '…' : 'Add'}</button>
+                  <button
+                    onClick={() => { setShowAddSchedule(false); setNewCronExpr('') }}
+                    style={{
+                      ...MONO, fontSize: 10, padding: '4px 8px',
+                      background: 'var(--bg-page)', color: 'var(--text-muted)',
+                      border: '1px solid var(--border)', borderRadius: 5, cursor: 'pointer',
+                    }}
+                  >Cancel</button>
+                </div>
+              )}
+            </div>
+
+            {/* Webhooks section */}
+            <div style={{ padding: '10px 14px' }}>
+              <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                marginBottom: 8,
+              }}>
+                <span style={{ ...MONO, fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                  Webhooks
+                </span>
+                <button
+                  onClick={handleAddWebhook}
+                  disabled={savingWebhook}
+                  style={{
+                    ...MONO, fontSize: 10, padding: '2px 8px',
+                    background: '#7C3AED22', border: '1px solid #7C3AED44',
+                    color: '#7C3AED', borderRadius: 4, cursor: 'pointer',
+                    opacity: savingWebhook ? 0.6 : 1,
+                  }}
+                >{savingWebhook ? '…' : '+ Add webhook'}</button>
+              </div>
+
+              {webhooks.length === 0 && (
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', fontStyle: 'italic' }}>No webhooks yet</div>
+              )}
+
+              {webhooks.map(w => {
+                const url = webhookUrl(w.webhook_id)
+                return (
+                  <div key={w.webhook_id} style={{
+                    marginBottom: 6,
+                    background: 'var(--bg-page)', borderRadius: 5, padding: '7px 8px',
+                    border: '1px solid var(--border)',
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                      <span style={{
+                        ...MONO, fontSize: 9, padding: '1px 5px', borderRadius: 3,
+                        background: w.enabled ? '#10B98120' : '#6B728020',
+                        color: w.enabled ? '#10B981' : '#6B7280',
+                        border: `1px solid ${w.enabled ? '#10B98140' : '#6B728040'}`,
+                      }}>{w.enabled ? 'on' : 'off'}</span>
+                      {w.last_triggered_at && (
+                        <span style={{ ...MONO, fontSize: 9, color: 'var(--text-muted)' }}>
+                          last: {fmt(w.last_triggered_at)}
+                        </span>
+                      )}
+                      <div style={{ flex: 1 }} />
+                      <button
+                        onClick={() => handleDeleteWebhook(w.webhook_id)}
+                        style={{ background: 'none', border: 'none', color: '#EF4444', cursor: 'pointer', fontSize: 12, padding: '0 2px' }}
+                      >×</button>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <span style={{
+                        ...MONO, fontSize: 9, color: 'var(--text-muted)', flex: 1,
+                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                      }}>{url}</span>
+                      <button
+                        onClick={() => copyToClipboard(url, w.webhook_id)}
+                        style={{
+                          ...MONO, fontSize: 9, padding: '2px 7px', flexShrink: 0,
+                          background: copiedId === w.webhook_id ? '#10B98122' : 'var(--bg-card)',
+                          border: `1px solid ${copiedId === w.webhook_id ? '#10B98144' : 'var(--border)'}`,
+                          color: copiedId === w.webhook_id ? '#10B981' : 'var(--text-muted)',
+                          borderRadius: 4, cursor: 'pointer',
+                        }}
+                      >{copiedId === w.webhook_id ? 'Copied' : 'Copy'}</button>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </>
+        )}
+      </div>
     </div>
   )
 }
 
 // ─── main page ───────────────────────────────────────────────────────────────
 
-export default function Workflows() {
-  const [view, setView] = useState<View>({ mode: 'list' })
+export default function WorkflowsPage() {
   const [workflows, setWorkflows] = useState<WorkflowRecord[]>([])
   const [agents, setAgents] = useState<AgentRecord[]>([])
-  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [selected, setSelected] = useState<WorkflowRecord | null>(null)
+  const [loading, setLoading] = useState(true)
 
-  // detail/edit state
-  const [editName, setEditName] = useState('')
-  const [editDesc, setEditDesc] = useState('')
-  const [draftSteps, setDraftSteps] = useState<DraftStep[]>([])
+  // Canvas state
+  const [nodes, setNodes] = useState<WorkflowNode[]>([])
+  const [edges, setEdges] = useState<WorkflowEdge[]>([])
+  const [execMode, setExecMode] = useState<ExecutionMode>('sequential')
+  const [wfName, setWfName] = useState('')
+  const [wfDesc, setWfDesc] = useState('')
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
+  const [connectingFrom, setConnectingFrom] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
-  const [saveError, setSaveError] = useState('')
-  const [showRun, setShowRun] = useState(false)
+  const [saveMsg, setSaveMsg] = useState('')
 
-  // create form (list view)
-  const [showCreate, setShowCreate] = useState(false)
-  const [newName, setNewName] = useState('')
-  const [newDesc, setNewDesc] = useState('')
-  const [creating, setCreating] = useState(false)
+  // Drag state
+  const dragging = useRef<{
+    nodeId: string; startMX: number; startMY: number
+    startNX: number; startNY: number
+  } | null>(null)
 
+  // Run state
+  const [initialInput, setInitialInput] = useState('')
+  const [loopIterations, setLoopIterations] = useState(3)
+  const [running, setRunning] = useState(false)
+  const [currentRun, setCurrentRun] = useState<WorkflowRun | null>(null)
+  const [runError, setRunError] = useState('')
+
+  // History
+  const [runs, setRuns] = useState<WorkflowRun[]>([])
+  const [selectedHistoryRun, setSelectedHistoryRun] = useState<WorkflowRun | null>(null)
+
+  // Triggers panel
+  const [showTriggersPanel, setShowTriggersPanel] = useState(false)
+  const triggersRef = useRef<HTMLDivElement>(null)
+
+  const canvasRef = useRef<HTMLDivElement>(null)
+
+  // Close triggers panel on outside click
   useEffect(() => {
-    listWorkflows().then(setWorkflows).catch(() => {})
-    listAgents().then(setAgents).catch(() => {})
+    const handler = (e: MouseEvent) => {
+      if (triggersRef.current && !triggersRef.current.contains(e.target as Node)) {
+        setShowTriggersPanel(false)
+      }
+    }
+    if (showTriggersPanel) document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [showTriggersPanel])
+
+  // Load on mount
+  useEffect(() => {
+    Promise.all([listWorkflows(), listAgents()])
+      .then(([wfs, ags]) => {
+        setWorkflows(wfs)
+        setAgents(ags)
+        if (wfs.length > 0) loadWorkflow(wfs[0])
+      })
+      .catch(_err => {})
+      .finally(() => setLoading(false))
   }, [])
 
-  const agentMap = Object.fromEntries(agents.map(a => [a.agent_id, a]))
-
-  // ── list actions ──
-
-  const handleCreate = async () => {
-    if (!newName.trim()) return
-    setCreating(true)
-    try {
-      const w = await createWorkflow({ name: newName.trim(), description: newDesc, steps: [] })
-      setWorkflows(p => [w, ...p])
-      setNewName(''); setNewDesc(''); setShowCreate(false)
-      openDetail(w)
-    } catch { /* stay */ } finally { setCreating(false) }
+  const loadWorkflow = (wf: WorkflowRecord) => {
+    setSelected(wf)
+    setWfName(wf.name)
+    setWfDesc(wf.description || '')
+    setExecMode(wf.execution_mode || 'sequential')
+    setShowTriggersPanel(false)
+    // DAG nodes take precedence; convert legacy steps otherwise
+    if (wf.nodes && wf.nodes.length > 0) {
+      setNodes(wf.nodes)
+      setEdges(wf.edges || [])
+    } else {
+      const synth: WorkflowNode[] = (wf.steps || []).map((s, i) => ({
+        node_id: s.step_id,
+        node_type: 'agent',
+        label: s.label || '',
+        agent_id: s.agent_id,
+        position_x: 40 + i * 240,
+        position_y: 120,
+        config: {},
+      }))
+      setNodes(synth)
+      // Auto-create sequential edges
+      const synthEdges: WorkflowEdge[] = synth.slice(0, -1).map((n, i) => ({
+        edge_id: newId('e'),
+        from_node_id: n.node_id,
+        to_node_id: synth[i + 1].node_id,
+        label: '', condition_expr: '',
+      }))
+      setEdges(synthEdges)
+    }
+    setCurrentRun(null)
+    setRunError('')
+    listRuns(wf.workflow_id).then(setRuns).catch(() => setRuns([]))
   }
 
-  const handleDelete = async (workflow: WorkflowRecord) => {
-    setDeletingId(workflow.workflow_id)
-    try {
-      await deleteWorkflow(workflow.workflow_id)
-      setWorkflows(p => p.filter(w => w.workflow_id !== workflow.workflow_id))
-    } catch { /* stay */ } finally { setDeletingId(null) }
-  }
+  // ── canvas mouse events ──────────────────────────────────────────────────
 
-  // ── detail actions ──
-
-  const openDetail = (w: WorkflowRecord) => {
-    setEditName(w.name)
-    setEditDesc(w.description)
-    setDraftSteps(w.steps.map(s => ({ step_id: s.step_id, agent_id: s.agent_id })))
-    setSaveError('')
-    setShowRun(false)
-    setView({ mode: 'detail', workflow: w })
-  }
-
-  const addStep = (agentId: string) => {
-    setDraftSteps(p => [...p, { step_id: newStepId(), agent_id: agentId }])
-  }
-
-  const removeStep = (idx: number) => {
-    setDraftSteps(p => p.filter((_, i) => i !== idx))
-  }
-
-  const moveStep = (idx: number, dir: -1 | 1) => {
-    setDraftSteps(p => {
-      const next = [...p]
-      const target = idx + dir
-      if (target < 0 || target >= next.length) return p;
-      [next[idx], next[target]] = [next[target], next[idx]]
-      return next
-    })
-  }
-
-  const handleSave = async () => {
-    if (view.mode !== 'detail') return
-    if (!editName.trim()) { setSaveError('Name is required.'); return }
-    setSaving(true); setSaveError('')
-    try {
-      const updated = await updateWorkflow(view.workflow.workflow_id, {
-        name: editName.trim(),
-        description: editDesc,
-        steps: draftSteps.map((s, i) => ({ step_id: s.step_id, agent_id: s.agent_id, label: '', step_order: i })),
-      })
-      setWorkflows(p => p.map(w => w.workflow_id === updated.workflow_id ? updated : w))
-      setView({ mode: 'detail', workflow: updated })
-    } catch (e) {
-      setSaveError(e instanceof ApiError ? String(e.detail) : String(e))
-    } finally { setSaving(false) }
-  }
-
-  // ── render: list ──
-
-  if (view.mode === 'list') {
-    return (
-      <div style={{ padding: '40px 48px', width: '100%' }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 20, marginBottom: 28, flexWrap: 'wrap' }}>
-          <div>
-            <div style={{ ...MONO, fontSize: 10, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--blue)', marginBottom: 6 }}>Builder</div>
-            <h2 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-dark)' }}>Workflows</h2>
-            <p style={{ fontSize: 13.5, color: 'var(--text-body)', marginTop: 4 }}>
-              Chain agents into multi-step pipelines. Output of each step feeds into the next.
-            </p>
-          </div>
-          <Button variant="primary" size="md" onClick={() => setShowCreate(v => !v)} style={{ marginTop: 4 }}>
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <path d="M7 1V13M1 7H13" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-            </svg>
-            New Workflow
-          </Button>
-        </div>
-
-        {/* Quick-create form */}
-        {showCreate && (
-          <div style={{ marginBottom: 20, padding: '20px 24px', background: 'var(--bg-card)', border: '1px solid var(--blue-border)', borderRadius: 12 }}>
-            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-              <div style={{ flex: 2, minWidth: 180 }}>
-                <label style={{ ...MONO, fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-body)', display: 'block', marginBottom: 6 }}>Name</label>
-                <input
-                  autoFocus
-                  type="text"
-                  placeholder="e.g. research-pipeline"
-                  value={newName}
-                  onChange={e => setNewName(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && handleCreate()}
-                  style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border-light)', ...MONO, fontSize: 13, color: 'var(--text-dark)', boxSizing: 'border-box' }}
-                />
-              </div>
-              <div style={{ flex: 3, minWidth: 220 }}>
-                <label style={{ ...MONO, fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-body)', display: 'block', marginBottom: 6 }}>Description</label>
-                <input
-                  type="text"
-                  placeholder="What does this pipeline do?"
-                  value={newDesc}
-                  onChange={e => setNewDesc(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && handleCreate()}
-                  style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border-light)', fontFamily: 'var(--font-sans)', fontSize: 13, color: 'var(--text-dark)', boxSizing: 'border-box' }}
-                />
-              </div>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <Button variant="primary" size="sm" onClick={handleCreate} loading={creating}>Create</Button>
-                <Button variant="ghost" size="sm" onClick={() => { setShowCreate(false); setNewName(''); setNewDesc('') }}>Cancel</Button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Empty state */}
-        {workflows.length === 0 && !showCreate && (
-          <div style={{ textAlign: 'center', padding: '64px 24px', background: 'var(--bg-card)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-light)' }}>
-            <div style={{ fontSize: 36, marginBottom: 14 }}>⚡</div>
-            <div style={{ ...MONO, fontSize: 14, fontWeight: 600, color: 'var(--text-dark)', marginBottom: 6 }}>No workflows yet</div>
-            <p style={{ fontSize: 13, color: 'var(--text-body)', marginBottom: 20 }}>Create a workflow to chain agents into a multi-step pipeline.</p>
-            <Button variant="primary" size="sm" onClick={() => setShowCreate(true)}>Create Workflow</Button>
-          </div>
-        )}
-
-        {/* Workflow cards */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {workflows.map(w => (
-            <Card key={w.workflow_id} hoverable>
-              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 5 }}>
-                    <span style={{ ...MONO, fontSize: 14, fontWeight: 700, color: 'var(--text-dark)' }}>{w.name}</span>
-                    <span style={{ ...MONO, fontSize: 11, padding: '1px 8px', borderRadius: 4, background: 'rgba(11,16,32,0.06)', border: '1px solid var(--border-light)', color: 'var(--text-body)' }}>
-                      {w.steps.length} {w.steps.length === 1 ? 'step' : 'steps'}
-                    </span>
-                  </div>
-                  {w.description && <p style={{ fontSize: 13, color: 'var(--text-body)', marginBottom: 10, lineHeight: 1.55 }}>{w.description}</p>}
-                  {/* Agent chain preview */}
-                  {w.steps.length > 0 && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                      {w.steps.slice().sort((a, b) => a.step_order - b.step_order).map((s, i) => {
-                        const ag = agentMap[s.agent_id]
-                        return (
-                          <div key={s.step_id} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                            {i > 0 && <span style={{ color: 'var(--blue)', fontSize: 12, opacity: 0.5 }}>→</span>}
-                            <span style={{ ...MONO, fontSize: 11, padding: '2px 9px', borderRadius: 4, background: 'var(--blue-dim)', border: '1px solid var(--blue-border)', color: 'var(--blue)' }}>
-                              {ag?.name ?? s.agent_id.slice(0, 8)}
-                            </span>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  )}
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 10, flexShrink: 0 }}>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <Button variant="ghost" size="sm" onClick={() => openDetail(w)}>Edit</Button>
-                    <Button variant="danger" size="sm" loading={deletingId === w.workflow_id} onClick={() => handleDelete(w)}>Delete</Button>
-                  </div>
-                  <div style={{ fontSize: 11, color: 'var(--text-body)' }}>Created {fmt(w.created_at)}</div>
-                </div>
-              </div>
-            </Card>
-          ))}
-        </div>
-      </div>
+  const handleCanvasMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (!dragging.current) return
+    const rect = canvasRef.current?.getBoundingClientRect()
+    if (!rect) return
+    const dx = e.clientX - dragging.current.startMX
+    const dy = e.clientY - dragging.current.startMY
+    const newX = Math.max(0, dragging.current.startNX + dx)
+    const newY = Math.max(0, dragging.current.startNY + dy)
+    setNodes(prev =>
+      prev.map(n =>
+        n.node_id === dragging.current!.nodeId
+          ? { ...n, position_x: newX, position_y: newY }
+          : n
+      )
     )
+  }, [])
+
+  const handleCanvasMouseUp = useCallback(() => {
+    dragging.current = null
+  }, [])
+
+  const startDrag = useCallback((nodeId: string, e: React.MouseEvent) => {
+    e.preventDefault()
+    const node = nodes.find(n => n.node_id === nodeId)
+    if (!node) return
+    dragging.current = {
+      nodeId,
+      startMX: e.clientX, startMY: e.clientY,
+      startNX: node.position_x, startNY: node.position_y,
+    }
+  }, [nodes])
+
+  // ── add / delete nodes ───────────────────────────────────────────────────
+
+  const addNode = (type: string = 'agent') => {
+    const col = nodes.length % 4
+    const row = Math.floor(nodes.length / 4)
+    const newNode: WorkflowNode = {
+      node_id: newId('nd'),
+      node_type: type as any,
+      label: type === 'orchestrator' ? 'Coordinator' : 'Agent Node',
+      agent_id: null,
+      position_x: 40 + col * 240,
+      position_y: 40 + row * 140,
+      config: {},
+    }
+    setNodes(prev => [...prev, newNode])
   }
 
-  // ── render: detail ──
+  const deleteNode = (nodeId: string) => {
+    setNodes(prev => prev.filter(n => n.node_id !== nodeId))
+    setEdges(prev => prev.filter(e => e.from_node_id !== nodeId && e.to_node_id !== nodeId))
+    if (connectingFrom === nodeId) setConnectingFrom(null)
+  }
 
-  const wf = view.workflow
+  const updateNodeField = (nodeId: string, agent_id: string, label: string, type: string) => {
+    setNodes(prev => prev.map(n =>
+      n.node_id === nodeId ? { ...n, agent_id: agent_id || null, label, node_type: type as any } : n
+    ))
+  }
+
+  const updateNodeConfig = (nodeId: string, config: Record<string, unknown>) => {
+    setNodes(prev => prev.map(n =>
+      n.node_id === nodeId ? { ...n, config } : n
+    ))
+  }
+
+  // ── connect ──────────────────────────────────────────────────────────────
+
+  const startConnect = (nodeId: string) => {
+    if (connectingFrom === nodeId) { setConnectingFrom(null); return }
+    setConnectingFrom(nodeId)
+  }
+
+  const completeConnect = (toNodeId: string) => {
+    if (!connectingFrom || connectingFrom === toNodeId) {
+      setConnectingFrom(null); return
+    }
+    const alreadyExists = edges.some(
+      e => e.from_node_id === connectingFrom && e.to_node_id === toNodeId
+    )
+    if (!alreadyExists) {
+      setEdges(prev => [...prev, {
+        edge_id: newId('e'),
+        from_node_id: connectingFrom,
+        to_node_id: toNodeId,
+        label: '', condition_expr: '',
+      }])
+    }
+    setConnectingFrom(null)
+  }
+
+  const deleteEdge = (edgeId: string) => {
+    setEdges(prev => prev.filter(e => e.edge_id !== edgeId))
+  }
+
+  // ── auto-layout ──────────────────────────────────────────────────────────
+
+  const autoLayout = () => {
+    if (execMode === 'sequential' || execMode === 'collaborative') {
+      setNodes(prev => prev.map((n, i) => ({ ...n, position_x: 40 + i * 240, position_y: 120 })))
+      setEdges(() => {
+        const sorted = [...nodes]
+        const newEdges: WorkflowEdge[] = sorted.slice(0, -1).map((n, i) => ({
+          edge_id: newId('e'),
+          from_node_id: n.node_id,
+          to_node_id: sorted[i + 1].node_id,
+          label: '', condition_expr: '',
+        }))
+        return newEdges
+      })
+    } else if (execMode === 'parallel' || execMode === 'hybrid') {
+      setNodes(prev => prev.map((n, i) => ({
+        ...n, position_x: 40 + i * 240, position_y: 120,
+      })))
+      setEdges([])
+    } else if (execMode === 'hierarchical') {
+      // First node = orchestrator, rest = specialists fanned below
+      setNodes(prev => {
+        const [orch, ...specs] = prev
+        const layouted = [
+          { ...orch, node_type: 'orchestrator' as any, position_x: 40 + specs.length * 120, position_y: 30 },
+          ...specs.map((s, i) => ({ ...s, position_x: 40 + i * 240, position_y: 200 })),
+        ]
+        return layouted
+      })
+      setEdges([])
+    }
+  }
+
+  // ── save ─────────────────────────────────────────────────────────────────
+
+  const saveWorkflow = async () => {
+    setSaving(true); setSaveMsg('')
+    try {
+      const body = {
+        name: wfName || 'Untitled Workflow',
+        description: wfDesc,
+        execution_mode: execMode,
+        nodes, edges, steps: [],
+        ...(execMode === 'collaborative' ? { loop_iterations: loopIterations } : {}),
+      }
+      let wf: WorkflowRecord
+      if (selected) {
+        wf = await updateWorkflow(selected.workflow_id, body)
+      } else {
+        wf = await createWorkflow(body)
+      }
+      setSelected(wf)
+      setWorkflows(prev => {
+        const idx = prev.findIndex(w => w.workflow_id === wf.workflow_id)
+        return idx >= 0 ? prev.map((w, i) => i === idx ? wf : w) : [wf, ...prev]
+      })
+      setSaveMsg('Saved')
+      setTimeout(() => setSaveMsg(''), 2000)
+    } catch (e) {
+      setSaveMsg(`Error: ${e}`)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  // ── new workflow ──────────────────────────────────────────────────────────
+
+  const newWorkflow = () => {
+    setSelected(null)
+    setWfName('New Workflow')
+    setWfDesc('')
+    setExecMode('sequential')
+    setNodes([])
+    setEdges([])
+    setCurrentRun(null)
+    setRuns([])
+    setShowTriggersPanel(false)
+  }
+
+  // ── delete workflow ───────────────────────────────────────────────────────
+
+  const doDeleteWorkflow = async (wfId: string) => {
+    if (!confirm('Delete this workflow and all its run history?')) return
+    await deleteWorkflow(wfId)
+    const remaining = workflows.filter(w => w.workflow_id !== wfId)
+    setWorkflows(remaining)
+    if (selected?.workflow_id === wfId) {
+      if (remaining.length > 0) loadWorkflow(remaining[0])
+      else newWorkflow()
+    }
+  }
+
+  // ── run ───────────────────────────────────────────────────────────────────
+
+  const doRun = async () => {
+    if (!selected) { alert('Save the workflow first.'); return }
+    if (!initialInput.trim()) { alert('Enter an initial prompt.'); return }
+    setRunning(true); setRunError(''); setCurrentRun(null)
+    try {
+      const run = await runWorkflow(selected.workflow_id, initialInput, '')
+      setCurrentRun(run)
+      setRuns(prev => [run, ...prev])
+    } catch (e: any) {
+      setRunError(e.message || String(e))
+    } finally {
+      setRunning(false)
+    }
+  }
+
+  // ── edge SVG paths ────────────────────────────────────────────────────────
+
+  const nodeMap = Object.fromEntries(nodes.map(n => [n.node_id, n]))
+
+  const edgePaths = edges.map(edge => {
+    const from = nodeMap[edge.from_node_id]
+    const to = nodeMap[edge.to_node_id]
+    if (!from || !to) return null
+    const x1 = from.position_x + NODE_W
+    const y1 = from.position_y + NODE_H / 2
+    const x2 = to.position_x
+    const y2 = to.position_y + NODE_H / 2
+    const cx = (x1 + x2) / 2
+    const d = `M ${x1} ${y1} C ${cx} ${y1} ${cx} ${y2} ${x2} ${y2}`
+    return { edge, d, midX: cx, midY: (y1 + y2) / 2 }
+  }).filter(Boolean) as { edge: WorkflowEdge; d: string; midX: number; midY: number }[]
+
+  // canvas dimensions
+  const canvasW = Math.max(900, ...nodes.map(n => n.position_x + NODE_W + 60))
+  const canvasH = Math.max(400, ...nodes.map(n => n.position_y + NODE_H + 80))
+
+  // node results map
+  const nodeResultMap: Record<string, NodeRunResult> = {}
+  const activeRun = currentRun || selectedHistoryRun
+  if (activeRun) {
+    activeRun.node_results.forEach(nr => { nodeResultMap[nr.node_id] = nr })
+  }
+
+  // all mode keys in display order
+  const allModes: ExecutionMode[] = ['sequential', 'parallel', 'hierarchical', 'hybrid', 'collaborative', 'event_driven']
+  const modeIcons: Record<ExecutionMode, string> = {
+    sequential: '→',
+    parallel: '⇉',
+    hierarchical: '⟐',
+    hybrid: '⊕',
+    collaborative: '↻',
+    event_driven: '⚡',
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
 
   return (
-    <div style={{ padding: '40px 48px', width: '100%' }}>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, marginBottom: 28, flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+    <div style={{ display: 'flex', height: '100%', gap: 0 }}>
+      {/* ── Left panel ── */}
+      <div style={{
+        width: 220, flexShrink: 0,
+        borderRight: '1px solid var(--border)',
+        display: 'flex', flexDirection: 'column',
+        background: 'var(--bg-card)',
+      }}>
+        <div style={{
+          padding: '14px 14px 8px',
+          borderBottom: '1px solid var(--border)',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-heading)' }}>Workflows</span>
           <button
-            onClick={() => { setView({ mode: 'list' }); setShowRun(false) }}
-            style={{ background: 'transparent', border: '1px solid var(--border-light)', borderRadius: 7, padding: '5px 11px', cursor: 'pointer', color: 'var(--text-body)', fontSize: 12 }}
-          >
-            ← Back
-          </button>
-          <div>
-            <div style={{ ...MONO, fontSize: 10, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--blue)', marginBottom: 3 }}>Workflow</div>
-            <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-dark)' }}>{editName || wf.name}</div>
-          </div>
+            onClick={newWorkflow}
+            style={{
+              ...MONO, fontSize: 11, padding: '3px 8px',
+              background: '#1D5FFA22', border: '1px solid #1D5FFA44',
+              color: '#1D5FFA', borderRadius: 5, cursor: 'pointer',
+            }}
+          >+ New</button>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <Button variant="ghost" size="sm" onClick={() => setShowRun(v => !v)}>
-            {showRun ? 'Hide Run' : '▶ Run'}
-          </Button>
-          <Button variant="primary" size="sm" onClick={handleSave} loading={saving}>Save</Button>
-        </div>
-      </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: showRun ? '1fr 1fr' : '1fr', gap: 24 }}>
-        {/* Editor column */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-          {/* Metadata */}
-          <Card>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <div>
-                <SectionLabel>Name</SectionLabel>
-                <input
-                  type="text"
-                  value={editName}
-                  onChange={e => setEditName(e.target.value)}
-                  style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border-light)', ...MONO, fontSize: 13, color: 'var(--text-dark)', boxSizing: 'border-box' }}
-                />
+        <div style={{ flex: 1, overflow: 'auto' }}>
+          {loading && (
+            <div style={{ padding: 14, color: 'var(--text-muted)', fontSize: 12 }}>Loading…</div>
+          )}
+          {workflows.map(wf => (
+            <div
+              key={wf.workflow_id}
+              onClick={() => loadWorkflow(wf)}
+              style={{
+                padding: '10px 14px',
+                cursor: 'pointer',
+                background: selected?.workflow_id === wf.workflow_id ? 'var(--bg-page)' : 'transparent',
+                borderBottom: '1px solid var(--border)',
+                borderLeft: selected?.workflow_id === wf.workflow_id ? '3px solid #1D5FFA' : '3px solid transparent',
+              }}
+            >
+              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-heading)', marginBottom: 3 }}>
+                {wf.name}
               </div>
-              <div>
-                <SectionLabel>Description</SectionLabel>
-                <input
-                  type="text"
-                  value={editDesc}
-                  onChange={e => setEditDesc(e.target.value)}
-                  placeholder="What does this pipeline do?"
-                  style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border-light)', fontFamily: 'var(--font-sans)', fontSize: 13, color: 'var(--text-dark)', boxSizing: 'border-box' }}
-                />
+              <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                <Chip label={wf.execution_mode} />
+                <span style={{ ...MONO, fontSize: 10, color: 'var(--text-muted)' }}>
+                  {wf.nodes?.length || wf.steps?.length || 0} nodes
+                </span>
               </div>
             </div>
-          </Card>
-
-          {/* Steps */}
-          <Card>
-            <SectionLabel>Pipeline Steps</SectionLabel>
-
-            {draftSteps.length === 0 && (
-              <div style={{ padding: '20px', textAlign: 'center', border: '1px dashed var(--border-light)', borderRadius: 8, ...MONO, fontSize: 12, color: 'var(--text-body)' }}>
-                No steps yet — add an agent below.
-              </div>
-            )}
-
-            {draftSteps.map((s, i) => {
-              const ag = agentMap[s.agent_id]
-              const isAnthropic = ag?.provider === 'anthropic'
-              return (
-                <div key={s.step_id} style={{
-                  display: 'flex', alignItems: 'center', gap: 12,
-                  padding: '10px 12px', borderRadius: 8,
-                  border: '1px solid var(--border-light)',
-                  marginBottom: i < draftSteps.length - 1 ? 8 : 0,
-                  background: 'rgba(11,16,32,0.02)',
-                }}>
-                  <span style={{ ...MONO, fontSize: 11, fontWeight: 700, color: 'var(--blue)', minWidth: 20 }}>{i + 1}</span>
-                  <div style={{ flex: 1 }}>
-                    <span style={{ ...MONO, fontSize: 13, fontWeight: 600, color: 'var(--text-dark)' }}>
-                      {ag?.name ?? <span style={{ color: 'var(--invalid)' }}>Unknown agent</span>}
-                    </span>
-                    {ag && (
-                      <span style={{
-                        ...MONO, fontSize: 10, marginLeft: 8,
-                        padding: '1px 7px', borderRadius: 4,
-                        background: isAnthropic ? 'var(--blue-dim)' : 'rgba(11,16,32,0.06)',
-                        border: `1px solid ${isAnthropic ? 'var(--blue-border)' : 'var(--border-light)'}`,
-                        color: isAnthropic ? 'var(--blue)' : 'var(--text-body)',
-                      }}>
-                        {MODEL_SHORT[ag.model_id] ?? ag.model_id}
-                      </span>
-                    )}
-                  </div>
-                  <div style={{ display: 'flex', gap: 4 }}>
-                    <button onClick={() => moveStep(i, -1)} disabled={i === 0} style={{ background: 'transparent', border: '1px solid var(--border-light)', borderRadius: 5, padding: '3px 7px', cursor: i === 0 ? 'not-allowed' : 'pointer', opacity: i === 0 ? 0.3 : 1, fontSize: 11, color: 'var(--text-body)' }}>↑</button>
-                    <button onClick={() => moveStep(i, 1)} disabled={i === draftSteps.length - 1} style={{ background: 'transparent', border: '1px solid var(--border-light)', borderRadius: 5, padding: '3px 7px', cursor: i === draftSteps.length - 1 ? 'not-allowed' : 'pointer', opacity: i === draftSteps.length - 1 ? 0.3 : 1, fontSize: 11, color: 'var(--text-body)' }}>↓</button>
-                    <button onClick={() => removeStep(i)} style={{ background: 'transparent', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 5, padding: '3px 8px', cursor: 'pointer', fontSize: 11, color: 'var(--invalid)' }}>✕</button>
-                  </div>
-                </div>
-              )
-            })}
-
-            {/* Add step */}
-            {agents.length > 0 && (
-              <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <select
-                  defaultValue=""
-                  onChange={e => { if (e.target.value) { addStep(e.target.value); e.target.value = '' } }}
-                  style={{
-                    flex: 1, padding: '7px 10px', borderRadius: 8,
-                    border: '1px solid var(--border-light)',
-                    ...MONO, fontSize: 12.5,
-                    color: 'var(--text-body)', background: '#fff', cursor: 'pointer',
-                  }}
-                >
-                  <option value="" disabled>+ Add agent step…</option>
-                  {agents.map(a => (
-                    <option key={a.agent_id} value={a.agent_id}>
-                      {a.name} ({MODEL_SHORT[a.model_id] ?? a.model_id})
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            {agents.length === 0 && (
-              <p style={{ fontSize: 12.5, color: 'var(--text-body)', marginTop: 10 }}>
-                No agents found — create agents on the Agents page first.
-              </p>
-            )}
-
-            {saveError && (
-              <p style={{ ...MONO, fontSize: 11, color: 'var(--invalid)', marginTop: 8 }}>{saveError}</p>
-            )}
-          </Card>
+          ))}
         </div>
 
-        {/* Run column */}
-        {showRun && (
-          <Card>
-            <SectionLabel>Run Pipeline</SectionLabel>
-            <RunPanel workflow={wf} onClose={() => setShowRun(false)} />
-          </Card>
+        {/* Run history in left panel */}
+        {selected && (
+          <div style={{ borderTop: '1px solid var(--border)', maxHeight: 220, overflow: 'auto' }}>
+            <div style={{
+              padding: '8px 14px', fontSize: 11, fontWeight: 700,
+              color: 'var(--text-muted)', ...MONO, letterSpacing: '0.1em',
+              textTransform: 'uppercase',
+            }}>Run History</div>
+            <RunHistoryPanel
+              runs={runs}
+              onSelectRun={r => {
+                setSelectedHistoryRun(r)
+                setCurrentRun(null)
+              }}
+              selectedRunId={selectedHistoryRun?.run_id}
+            />
+          </div>
         )}
       </div>
+
+      {/* ── Main area ── */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
+
+        {/* Toolbar */}
+        <div style={{
+          padding: '10px 20px',
+          borderBottom: '1px solid var(--border)',
+          display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
+          background: 'var(--bg-card)',
+          flexShrink: 0,
+        }}>
+          <input
+            value={wfName}
+            onChange={e => setWfName(e.target.value)}
+            placeholder="Workflow name"
+            style={{
+              fontSize: 15, fontWeight: 700, color: 'var(--text-heading)',
+              background: 'transparent', border: 'none', outline: 'none',
+              minWidth: 160,
+            }}
+          />
+
+          <select
+            value={execMode}
+            onChange={e => setExecMode(e.target.value as ExecutionMode)}
+            style={{
+              ...MONO, fontSize: 11, padding: '4px 8px',
+              background: 'var(--bg-page)', color: 'var(--text-body)',
+              border: '1px solid var(--border)', borderRadius: 5,
+            }}
+          >
+            {(Object.entries(MODE_LABELS) as [ExecutionMode, string][]).map(([k, v]) => (
+              <option key={k} value={k}>{v}</option>
+            ))}
+          </select>
+
+          <button onClick={autoLayout} style={toolBtn}>Auto Layout</button>
+          <button onClick={() => addNode('agent')} style={{ ...toolBtn, color: '#1D5FFA' }}>
+            + Agent Node
+          </button>
+          {execMode === 'hierarchical' && (
+            <button onClick={() => addNode('orchestrator')} style={{ ...toolBtn, color: '#7C3AED' }}>
+              + Coordinator
+            </button>
+          )}
+          {(execMode === 'parallel' || execMode === 'hybrid') && (
+            <button onClick={() => addNode('fan_out')} style={{ ...toolBtn, color: '#F59E0B' }}>
+              + Fan-out
+            </button>
+          )}
+
+          {connectingFrom && (
+            <span style={{
+              ...MONO, fontSize: 11, color: '#F59E0B',
+              padding: '4px 10px', background: '#F59E0B20',
+              border: '1px solid #F59E0B40', borderRadius: 5,
+            }}>
+              Click target node — Esc to cancel
+            </span>
+          )}
+
+          <div style={{ flex: 1 }} />
+
+          {selected && (
+            <button
+              onClick={() => doDeleteWorkflow(selected.workflow_id)}
+              style={{ ...toolBtn, color: '#EF4444' }}
+            >Delete</button>
+          )}
+
+          <button
+            onClick={saveWorkflow}
+            disabled={saving}
+            style={{
+              ...MONO, fontSize: 11, padding: '4px 14px',
+              background: '#1D5FFA', color: '#fff',
+              border: 'none', borderRadius: 5, cursor: 'pointer',
+              opacity: saving ? 0.6 : 1,
+            }}
+          >
+            {saving ? 'Saving…' : 'Save'}
+          </button>
+
+          {/* Triggers button */}
+          <div ref={triggersRef} style={{ position: 'relative' }}>
+            <button
+              onClick={() => setShowTriggersPanel(!showTriggersPanel)}
+              disabled={!selected}
+              style={{
+                ...MONO, fontSize: 11, padding: '4px 12px',
+                background: showTriggersPanel ? '#7C3AED22' : 'var(--bg-page)',
+                color: showTriggersPanel ? '#7C3AED' : 'var(--text-body)',
+                border: `1px solid ${showTriggersPanel ? '#7C3AED44' : 'var(--border)'}`,
+                borderRadius: 5, cursor: selected ? 'pointer' : 'default',
+                opacity: selected ? 1 : 0.5,
+              }}
+            >
+              ⚡ Triggers
+            </button>
+
+            {showTriggersPanel && selected && (
+              <TriggersPanel
+                workflowId={selected.workflow_id}
+                onClose={() => setShowTriggersPanel(false)}
+              />
+            )}
+          </div>
+
+          {saveMsg && (
+            <span style={{ ...MONO, fontSize: 11, color: '#10B981' }}>{saveMsg}</span>
+          )}
+        </div>
+
+        {/* Canvas */}
+        <div style={{ flex: 1, overflow: 'auto', position: 'relative', minHeight: 0 }}>
+          <div
+            ref={canvasRef}
+            onMouseMove={handleCanvasMouseMove}
+            onMouseUp={handleCanvasMouseUp}
+            onKeyDown={e => { if (e.key === 'Escape') setConnectingFrom(null) }}
+            tabIndex={0}
+            style={{
+              position: 'relative',
+              width: canvasW, height: canvasH,
+              background: 'var(--bg-page)',
+              backgroundImage: 'radial-gradient(var(--border) 1px, transparent 1px)',
+              backgroundSize: '24px 24px',
+              cursor: connectingFrom ? 'crosshair' : 'default',
+            }}
+          >
+            {/* SVG edge layer */}
+            <svg
+              style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none' }}
+              width={canvasW} height={canvasH}
+            >
+              <defs>
+                <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                  <path d="M0,0 L0,6 L8,3 z" fill="#1D5FFA88" />
+                </marker>
+              </defs>
+              {edgePaths.map(({ edge, d, midX, midY }) => (
+                <g key={edge.edge_id}>
+                  <path
+                    d={d} fill="none" stroke="#1D5FFA66" strokeWidth={2}
+                    markerEnd="url(#arrow)"
+                  />
+                  {/* Delete edge hit area */}
+                  <circle
+                    cx={midX} cy={midY} r={7}
+                    fill="var(--bg-card)" stroke="var(--border)" strokeWidth={1}
+                    style={{ cursor: 'pointer', pointerEvents: 'all' }}
+                    onClick={() => deleteEdge(edge.edge_id)}
+                  />
+                  <text x={midX} y={midY + 4} textAnchor="middle"
+                    fontSize={10} fill="#EF4444" style={{ pointerEvents: 'all', cursor: 'pointer' }}
+                    onClick={() => deleteEdge(edge.edge_id)}>×</text>
+                </g>
+              ))}
+            </svg>
+
+            {/* Nodes */}
+            {nodes.map(node => (
+              <CanvasNodeCard
+                key={node.node_id}
+                node={node}
+                agents={agents}
+                isSelected={selectedNodeId === node.node_id}
+                isConnectingSource={connectingFrom === node.node_id}
+                nodeResult={nodeResultMap[node.node_id]}
+                connectingFrom={connectingFrom}
+                execMode={execMode}
+                onSelect={() => setSelectedNodeId(node.node_id)}
+                onDragStart={e => startDrag(node.node_id, e)}
+                onStartConnect={() => startConnect(node.node_id)}
+                onCompleteConnect={() => completeConnect(node.node_id)}
+                onAgentChange={(agentId, label, type) =>
+                  updateNodeField(node.node_id, agentId, label, type)
+                }
+                onConfigChange={config => updateNodeConfig(node.node_id, config)}
+                onDelete={() => deleteNode(node.node_id)}
+              />
+            ))}
+
+            {/* Empty state */}
+            {nodes.length === 0 && (
+              <div style={{
+                position: 'absolute', top: '50%', left: '50%',
+                transform: 'translate(-50%, -50%)',
+                textAlign: 'center', color: 'var(--text-muted)',
+              }}>
+                <div style={{ fontSize: 32, marginBottom: 12 }}>◈</div>
+                <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 6 }}>
+                  No nodes yet
+                </div>
+                <div style={{ fontSize: 12, marginBottom: 14 }}>
+                  Add agent nodes and connect them to build your workflow
+                </div>
+                <button onClick={() => addNode('agent')} style={{
+                  ...MONO, fontSize: 12, padding: '8px 18px',
+                  background: '#1D5FFA', color: '#fff',
+                  border: 'none', borderRadius: 6, cursor: 'pointer',
+                }}>+ Add First Node</button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Run panel */}
+        <div style={{
+          borderTop: '1px solid var(--border)',
+          background: 'var(--bg-card)',
+          flexShrink: 0,
+        }}>
+          <div style={{
+            padding: '12px 20px',
+            display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
+          }}>
+            <input
+              value={initialInput}
+              onChange={e => setInitialInput(e.target.value)}
+              placeholder="Initial prompt / input for the workflow…"
+              style={{
+                flex: 1, minWidth: 200, fontSize: 13,
+                padding: '7px 12px',
+                background: 'var(--bg-page)', color: 'var(--text-body)',
+                border: '1px solid var(--border)', borderRadius: 6,
+              }}
+            />
+
+            {/* Collaborative iterations pill selector */}
+            {execMode === 'collaborative' && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ ...MONO, fontSize: 10, color: 'var(--text-muted)' }}>Iterations:</span>
+                <div style={{ display: 'flex', gap: 2 }}>
+                  {[1, 2, 3, 4, 5].map(n => (
+                    <button
+                      key={n}
+                      onClick={() => setLoopIterations(n)}
+                      style={{
+                        ...MONO, fontSize: 11, width: 26, height: 26,
+                        background: loopIterations === n ? '#14b8a6' : 'var(--bg-page)',
+                        color: loopIterations === n ? '#fff' : 'var(--text-muted)',
+                        border: `1px solid ${loopIterations === n ? '#14b8a6' : 'var(--border)'}`,
+                        borderRadius: 4, cursor: 'pointer', fontWeight: loopIterations === n ? 700 : 400,
+                      }}
+                    >{n}</button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <button
+              onClick={doRun}
+              disabled={running || !selected}
+              style={{
+                ...MONO, fontSize: 12, padding: '7px 20px',
+                background: running ? '#10B98144' : '#1D5FFA',
+                color: '#fff', border: 'none', borderRadius: 6,
+                cursor: running ? 'wait' : 'pointer',
+                opacity: running || !selected ? 0.7 : 1,
+              }}
+            >
+              {running ? '⟳ Running…' : '▶ Run'}
+            </button>
+            {runError && (
+              <span style={{ ...MONO, fontSize: 11, color: '#EF4444' }}>{runError}</span>
+            )}
+          </div>
+
+          {/* Mode tabs + notes */}
+          <div style={{ padding: '0 20px 10px' }}>
+            <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+              {allModes.map(m => (
+                <div key={m} style={{
+                  ...MONO, fontSize: 10,
+                  color: execMode === m ? '#1D5FFA' : 'var(--text-muted)',
+                  cursor: 'pointer', padding: '3px 0',
+                  borderBottom: execMode === m ? '2px solid #1D5FFA' : '2px solid transparent',
+                }} onClick={() => setExecMode(m)}>
+                  {modeIcons[m]} {m.charAt(0).toUpperCase() + m.slice(1)}
+                </div>
+              ))}
+              <span style={{ ...MONO, fontSize: 10, color: 'var(--text-muted)', marginLeft: 'auto' }}>
+                {nodes.filter(n => n.agent_id).length}/{nodes.length} nodes assigned
+              </span>
+            </div>
+
+            {/* Collaborative mode note */}
+            {execMode === 'collaborative' && (
+              <div style={{
+                marginTop: 6, ...MONO, fontSize: 10,
+                color: TEAL,
+                padding: '3px 8px',
+                background: `${TEAL}12`,
+                border: `1px solid ${TEAL}30`,
+                borderRadius: 4, display: 'inline-block',
+              }}>
+                Review loop — {loopIterations} iteration{loopIterations !== 1 ? 's' : ''}
+              </div>
+            )}
+
+            {/* Hybrid mode note */}
+            {execMode === 'hybrid' && (
+              <div style={{
+                marginTop: 6, ...MONO, fontSize: 10,
+                color: '#F59E0B',
+                padding: '3px 8px',
+                background: '#F59E0B12',
+                border: '1px solid #F59E0B30',
+                borderRadius: 4, display: 'inline-block',
+              }}>
+                Nodes sharing the same parallel group name will fan-out together
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Results */}
+        {(currentRun || selectedHistoryRun) && (
+          <RunResultPanel
+            run={(currentRun || selectedHistoryRun)!}
+            onClose={() => { setCurrentRun(null); setSelectedHistoryRun(null) }}
+          />
+        )}
+      </div>
+
+      <style>{`
+        @keyframes pulse { 0%,100% { opacity:1 } 50% { opacity:0.5 } }
+      `}</style>
     </div>
   )
+}
+
+const toolBtn: React.CSSProperties = {
+  ...MONO, fontSize: 11, padding: '4px 10px',
+  background: 'var(--bg-page)', color: 'var(--text-body)',
+  border: '1px solid var(--border)', borderRadius: 5,
+  cursor: 'pointer',
 }

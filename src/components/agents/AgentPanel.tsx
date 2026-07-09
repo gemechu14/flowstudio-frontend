@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { AgentRecord, AgentBody, createAgent, updateAgent } from '../../api/agents'
+import { DataSourceRecord, listDataSources } from '../../api/dataSources'
 import { ApiError } from '../../api/client'
 import Button from '../ui/Button'
 
@@ -58,11 +59,14 @@ export default function AgentPanel({ mode, agent, availableTools, onSave, onClos
   const [modelId, setModelId] = useState(agent?.model_id ?? 'claude-sonnet-5')
   const [systemPrompt, setSystemPrompt] = useState(agent?.system_prompt ?? '')
   const [selectedTools, setSelectedTools] = useState<Set<string>>(new Set(agent?.tool_names ?? []))
+  const [selectedSources, setSelectedSources] = useState<Set<string>>(new Set(agent?.datasource_ids ?? []))
+  const [availableSources, setAvailableSources] = useState<DataSourceRecord[]>([])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
   useEffect(() => {
     setTimeout(() => setVisible(true), 10)
+    listDataSources().then(setAvailableSources).catch(() => {})
   }, [])
 
   const handleClose = () => {
@@ -79,7 +83,28 @@ export default function AgentPanel({ mode, agent, availableTools, onSave, onClos
     })
   }
 
+  const toggleSource = (sourceId: string) => {
+    setSelectedSources((prev) => {
+      const next = new Set(prev)
+      if (next.has(sourceId)) next.delete(sourceId)
+      else next.add(sourceId)
+      return next
+    })
+  }
+
   const provider: 'anthropic' | 'openai' = modelId.startsWith('claude') ? 'anthropic' : 'openai'
+
+  const autoInjectedTools: string[] = (() => {
+    const tools: string[] = []
+    const selected = availableSources.filter(s => selectedSources.has(s.source_id))
+    const hasDocOrWeb = selected.some(s => s.source_type === 'document' || s.source_type === 'website')
+    if (hasDocOrWeb) tools.push('search_docs')
+    selected.filter(s => s.source_type === 'database').forEach(s => {
+      tools.push(`get_schema_${s.source_id.slice(0, 8)}`)
+      tools.push(`run_sql_${s.source_id.slice(0, 8)}`)
+    })
+    return tools
+  })()
 
   const handleSave = async () => {
     if (!name.trim()) {
@@ -96,6 +121,7 @@ export default function AgentPanel({ mode, agent, availableTools, onSave, onClos
         model_id: modelId,
         provider,
         tool_names: [...selectedTools],
+        datasource_ids: [...selectedSources],
       }
       const result = mode === 'create'
         ? await createAgent(body)
@@ -279,6 +305,48 @@ export default function AgentPanel({ mode, agent, availableTools, onSave, onClos
             />
           </div>
 
+          {/* Data Sources */}
+          <div>
+            <label style={LABEL_STYLE}>Data Sources ({selectedSources.size} attached)</label>
+            {availableSources.length === 0 ? (
+              <div style={{
+                padding: '14px 16px', borderRadius: 8,
+                background: 'rgba(11,16,32,0.03)',
+                border: '1px solid var(--border-light)',
+                fontFamily: 'var(--font-mono)', fontSize: 12,
+                color: 'var(--text-body)',
+              }}>
+                No data sources yet — create one in the Data Sources page.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {availableSources.map((src) => {
+                  const active = selectedSources.has(src.source_id)
+                  return (
+                    <button
+                      key={src.source_id}
+                      onClick={() => toggleSource(src.source_id)}
+                      style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        padding: '8px 12px', borderRadius: 6, textAlign: 'left', cursor: 'pointer',
+                        border: `1px solid ${active ? 'var(--blue-border)' : 'var(--border-light)'}`,
+                        background: active ? 'var(--blue-dim)' : 'transparent',
+                        color: active ? 'var(--blue)' : 'var(--text-body)',
+                        transition: 'all 0.15s',
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontSize: 12.5, fontWeight: 500 }}>{src.name}</div>
+                        <div style={{ fontSize: 11, opacity: 0.7, fontFamily: 'var(--font-mono)' }}>{src.source_type}</div>
+                      </div>
+                      {active && <span style={{ fontSize: 11 }}>✓</span>}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+
           {/* Tools */}
           <div>
             <label style={LABEL_STYLE}>Tools ({selectedTools.size} selected)</label>
@@ -316,6 +384,38 @@ export default function AgentPanel({ mode, agent, availableTools, onSave, onClos
                     </button>
                   )
                 })}
+                {autoInjectedTools.map(toolName => (
+                  <span
+                    key={toolName}
+                    title="Added automatically from an attached data source"
+                    style={{
+                      fontFamily: 'var(--font-mono)',
+                      fontSize: 12,
+                      padding: '5px 12px',
+                      borderRadius: 6,
+                      border: '1px dashed rgba(29,95,250,0.35)',
+                      background: 'rgba(29,95,250,0.04)',
+                      color: 'rgba(29,95,250,0.6)',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 5,
+                    }}
+                  >
+                    <svg width="9" height="9" viewBox="0 0 10 10" fill="none" style={{ flexShrink: 0 }}>
+                      <path d="M5.5 1L2 5.5h3.5L4.5 9 8 4.5H4.5L5.5 1Z" fill="currentColor"/>
+                    </svg>
+                    {toolName}
+                  </span>
+                ))}
+              </div>
+            )}
+            {autoInjectedTools.length > 0 && (
+              <div style={{
+                marginTop: 8, fontSize: 11, color: 'var(--text-body)',
+                fontFamily: 'var(--font-mono)', display: 'flex', alignItems: 'center', gap: 5,
+              }}>
+                <svg width="9" height="9" viewBox="0 0 10 10" fill="none"><path d="M5.5 1L2 5.5h3.5L4.5 9 8 4.5H4.5L5.5 1Z" fill="currentColor"/></svg>
+                These tools are added automatically when the agent runs.
               </div>
             )}
           </div>
