@@ -2,10 +2,11 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { AgentRecord, listAgents } from '../api/agents'
 import {
   WorkflowRecord, WorkflowNode, WorkflowEdge, WorkflowRun, NodeRunResult, ExecutionMode,
-  NodeStatus, ScheduleTrigger, WebhookTrigger,
-  listWorkflows, createWorkflow, updateWorkflow, deleteWorkflow, runWorkflow, listRuns,
+  NodeStatus, ScheduleTrigger, WebhookTrigger, CheckpointInfo,
+  listWorkflows, createWorkflow, updateWorkflow, deleteWorkflow, runWorkflow, listRuns, getRun,
   listSchedules, createSchedule, deleteSchedule,
   listWebhooks, createWebhook, deleteWebhook,
+  getCheckpoint, resumeRun,
 } from '../api/workflows'
 
 // ─── constants ───────────────────────────────────────────────────────────────
@@ -30,6 +31,8 @@ const NODE_TYPE_COLORS: Record<string, string> = {
   fan_out: '#F59E0B',
   fan_in: '#10B981',
   condition: '#EF4444',
+  loop: '#06B6D4',
+  switch: '#F97316',
 }
 
 const STATUS_COLORS: Record<NodeStatus, string> = {
@@ -116,6 +119,23 @@ function CanvasNodeCard({
   node, agents, isSelected, isConnectingSource, nodeResult, connectingFrom, execMode,
   onSelect, onDragStart, onStartConnect, onCompleteConnect, onAgentChange, onConfigChange, onDelete,
 }: CanvasNodeProps) {
+  const [expandField, setExpandField] = useState<string | null>(null)
+  const [expandValue, setExpandValue] = useState('')
+  const [expandLabel, setExpandLabel] = useState('')
+
+  const openExpand = (e: React.MouseEvent, fieldKey: string, label: string, currentValue: string) => {
+    e.stopPropagation()
+    setExpandField(fieldKey)
+    setExpandLabel(label)
+    setExpandValue(currentValue)
+  }
+
+  const applyExpand = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (expandField) onConfigChange({ ...node.config, [expandField]: expandValue })
+    setExpandField(null)
+  }
+
   const accentColor = NODE_TYPE_COLORS[node.node_type] || '#1D5FFA'
   const agentRecord = agents.find(a => a.agent_id === node.agent_id)
   const status = nodeResult?.status as NodeStatus | undefined
@@ -139,6 +159,7 @@ function CanvasNodeCard({
     : '0 2px 8px rgba(0,0,0,0.3)'
 
   return (
+  <>
     <div
       onClick={() => {
         if (connectingFrom && connectingFrom !== node.node_id) onCompleteConnect()
@@ -277,6 +298,263 @@ function CanvasNodeCard({
           </div>
         )}
 
+        {/* Condition expression — condition nodes only */}
+        {node.node_type === 'condition' && (
+          <div style={{ marginTop: 6 }}>
+            <div style={{ ...MONO, fontSize: 9, color: '#EF4444', marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Condition expr
+            </div>
+            <input
+              value={(node.config.condition_expr as string | undefined) || ''}
+              onChange={e => onConfigChange({ ...node.config, condition_expr: e.target.value })}
+              onClick={e => e.stopPropagation()}
+              placeholder="contains:APPROVE  |  regex:^yes  |  nonempty"
+              style={{
+                width: '100%', fontSize: 10, padding: '3px 6px',
+                background: 'var(--bg-page)', color: 'var(--text-body)',
+                border: '1px solid #EF4444', borderRadius: 5, boxSizing: 'border-box', ...MONO,
+              }}
+            />
+            <div style={{ ...MONO, fontSize: 9, color: 'var(--text-muted)', marginTop: 2 }}>
+              Label outgoing edges "true" / "false"
+            </div>
+          </div>
+        )}
+
+        {/* Loop node config — loop nodes only */}
+        {node.node_type === 'loop' && (
+          <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 5 }}>
+            <div>
+              <div style={{ ...MONO, fontSize: 9, color: '#06B6D4', marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Convergence condition
+              </div>
+              <input
+                value={(node.config.condition_expr as string | undefined) || ''}
+                onChange={e => onConfigChange({ ...node.config, condition_expr: e.target.value })}
+                onClick={e => e.stopPropagation()}
+                placeholder="contains:LGTM  |  regex:score:\s*[89]\d  |  nonempty"
+                style={{
+                  width: '100%', fontSize: 10, padding: '3px 6px',
+                  background: 'var(--bg-page)', color: 'var(--text-body)',
+                  border: '1px solid #06B6D4', borderRadius: 5, boxSizing: 'border-box', ...MONO,
+                }}
+              />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div style={{ ...MONO, fontSize: 9, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
+                Max iterations
+              </div>
+              <input
+                type="number"
+                min={1} max={20}
+                value={(node.config.max_iterations as number | undefined) ?? 10}
+                onChange={e => onConfigChange({ ...node.config, max_iterations: parseInt(e.target.value) || 10 })}
+                onClick={e => e.stopPropagation()}
+                style={{
+                  width: 52, fontSize: 10, padding: '2px 5px',
+                  background: 'var(--bg-page)', color: 'var(--text-body)',
+                  border: '1px solid var(--border)', borderRadius: 4, ...MONO,
+                }}
+              />
+            </div>
+            <div style={{ ...MONO, fontSize: 9, color: 'var(--text-muted)' }}>
+              Edge to loop start → label "continue" · Edge forward → label "exit"
+            </div>
+          </div>
+        )}
+
+        {/* Switch node config — multi-way routing */}
+        {node.node_type === 'switch' && (
+          <div style={{ marginTop: 6 }}>
+            <div style={{ ...MONO, fontSize: 9, color: '#F97316', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Branches (evaluated in order)
+            </div>
+            {((node.config.branches as {condition: string; label: string}[] | undefined) || []).map((branch, idx) => (
+              <div key={idx} style={{ display: 'flex', gap: 4, marginBottom: 4, alignItems: 'center' }}>
+                <input
+                  value={branch.condition}
+                  onChange={e => {
+                    const branches = [...((node.config.branches as {condition: string; label: string}[]) || [])]
+                    branches[idx] = { ...branch, condition: e.target.value }
+                    onConfigChange({ ...node.config, branches })
+                  }}
+                  onClick={e => e.stopPropagation()}
+                  placeholder="contains:low"
+                  style={{
+                    flex: 2, fontSize: 10, padding: '2px 5px',
+                    background: 'var(--bg-page)', color: 'var(--text-body)',
+                    border: '1px solid #F97316', borderRadius: 4, ...MONO,
+                  }}
+                />
+                <span style={{ ...MONO, fontSize: 9, color: 'var(--text-muted)' }}>→</span>
+                <input
+                  value={branch.label}
+                  onChange={e => {
+                    const branches = [...((node.config.branches as {condition: string; label: string}[]) || [])]
+                    branches[idx] = { ...branch, label: e.target.value }
+                    onConfigChange({ ...node.config, branches })
+                  }}
+                  onClick={e => e.stopPropagation()}
+                  placeholder="low"
+                  style={{
+                    flex: 1, fontSize: 10, padding: '2px 5px',
+                    background: 'var(--bg-page)', color: 'var(--text-body)',
+                    border: '1px solid var(--border)', borderRadius: 4, ...MONO,
+                  }}
+                />
+                <button
+                  onClick={e => {
+                    e.stopPropagation()
+                    const branches = ((node.config.branches as {condition: string; label: string}[]) || []).filter((_, i) => i !== idx)
+                    onConfigChange({ ...node.config, branches })
+                  }}
+                  style={{ background: 'none', border: 'none', color: '#EF4444', cursor: 'pointer', fontSize: 13, padding: '0 2px', lineHeight: 1 }}
+                >×</button>
+              </div>
+            ))}
+            <button
+              onClick={e => {
+                e.stopPropagation()
+                const branches = [...((node.config.branches as {condition: string; label: string}[]) || []), { condition: '', label: '' }]
+                onConfigChange({ ...node.config, branches })
+              }}
+              style={{
+                ...MONO, fontSize: 9, padding: '2px 8px',
+                background: '#F9731622', border: '1px solid #F9731644',
+                color: '#F97316', borderRadius: 3, cursor: 'pointer', marginBottom: 4,
+              }}
+            >+ branch</button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+              <span style={{ ...MONO, fontSize: 9, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>Default edge label:</span>
+              <input
+                value={(node.config.default_label as string | undefined) || 'default'}
+                onChange={e => onConfigChange({ ...node.config, default_label: e.target.value })}
+                onClick={e => e.stopPropagation()}
+                style={{
+                  flex: 1, fontSize: 10, padding: '2px 5px',
+                  background: 'var(--bg-page)', color: 'var(--text-body)',
+                  border: '1px solid var(--border)', borderRadius: 4, ...MONO,
+                }}
+              />
+            </div>
+            <div style={{ ...MONO, fontSize: 9, color: 'var(--text-muted)', marginTop: 3 }}>
+              Draw outgoing edges with matching labels
+            </div>
+          </div>
+        )}
+
+        {/* Retry config — agent nodes */}
+        {node.node_type === 'agent' && (
+          <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div style={{ ...MONO, fontSize: 9, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', flex: 1 }}>
+                Retries
+              </div>
+              {[0, 1, 2, 3].map(n => (
+                <button
+                  key={n}
+                  onClick={e => { e.stopPropagation(); onConfigChange({ ...node.config, max_retries: n }) }}
+                  style={{
+                    ...MONO, fontSize: 10, width: 22, height: 22,
+                    background: (node.config.max_retries as number | undefined || 0) === n ? '#1D5FFA' : 'var(--bg-page)',
+                    color: (node.config.max_retries as number | undefined || 0) === n ? '#fff' : 'var(--text-muted)',
+                    border: '1px solid var(--border)', borderRadius: 3, cursor: 'pointer',
+                  }}
+                >{n}</button>
+              ))}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <div style={{ ...MONO, fontSize: 9, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
+                On fail
+              </div>
+              <select
+                value={(node.config.on_failure as string | undefined) || 'fail'}
+                onChange={e => { e.stopPropagation(); onConfigChange({ ...node.config, on_failure: e.target.value }) }}
+                onClick={e => e.stopPropagation()}
+                style={{
+                  flex: 1, fontSize: 10, padding: '2px 4px',
+                  background: 'var(--bg-page)', color: 'var(--text-body)',
+                  border: '1px solid var(--border)', borderRadius: 4, ...MONO,
+                }}
+              >
+                <option value="fail">Fail workflow</option>
+                <option value="skip">Skip node</option>
+                <option value="fallback">Use fallback text</option>
+              </select>
+            </div>
+            {(node.config.on_failure as string | undefined) === 'fallback' && (
+              <div style={{ display: 'flex', gap: 3, alignItems: 'center' }}>
+                <input
+                  value={(node.config.fallback_text as string | undefined) || ''}
+                  onChange={e => onConfigChange({ ...node.config, fallback_text: e.target.value })}
+                  onClick={e => e.stopPropagation()}
+                  placeholder="Fallback output text…"
+                  style={{
+                    flex: 1, fontSize: 10, padding: '3px 6px',
+                    background: 'var(--bg-page)', color: 'var(--text-body)',
+                    border: '1px solid var(--border)', borderRadius: 5, boxSizing: 'border-box', ...MONO,
+                  }}
+                />
+                <button
+                  onMouseDown={e => e.stopPropagation()}
+                  onClick={e => openExpand(e, 'fallback_text', 'Fallback Text', (node.config.fallback_text as string | undefined) || '')}
+                  title="Edit in full view"
+                  style={{
+                    ...MONO, fontSize: 10, padding: '2px 5px', flexShrink: 0,
+                    background: 'var(--bg-page)', border: '1px solid var(--border)',
+                    color: 'var(--text-muted)', borderRadius: 4, cursor: 'pointer', lineHeight: 1,
+                  }}
+                >↗</button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Human-in-the-loop checkbox — agent nodes */}
+        {node.node_type === 'agent' && (
+          <div style={{ marginTop: 5 }}>
+            <label
+              onClick={e => e.stopPropagation()}
+              style={{ display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer' }}
+            >
+              <input
+                type="checkbox"
+                checked={!!(node.config.human_checkpoint)}
+                onChange={e => onConfigChange({ ...node.config, human_checkpoint: e.target.checked })}
+                onClick={e => e.stopPropagation()}
+              />
+              <span style={{ ...MONO, fontSize: 9, color: '#7C3AED', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Human checkpoint
+              </span>
+            </label>
+            {!!(node.config.human_checkpoint) && (
+              <div style={{ marginTop: 3, display: 'flex', gap: 3, alignItems: 'center' }}>
+                <input
+                  value={(node.config.checkpoint_prompt as string | undefined) || ''}
+                  onChange={e => onConfigChange({ ...node.config, checkpoint_prompt: e.target.value })}
+                  onClick={e => e.stopPropagation()}
+                  placeholder="Instructions for reviewer…"
+                  style={{
+                    flex: 1, fontSize: 10, padding: '3px 6px',
+                    background: 'var(--bg-page)', color: 'var(--text-body)',
+                    border: '1px solid #7C3AED66', borderRadius: 5, boxSizing: 'border-box', ...MONO,
+                  }}
+                />
+                <button
+                  onMouseDown={e => e.stopPropagation()}
+                  onClick={e => openExpand(e, 'checkpoint_prompt', 'Checkpoint Prompt', (node.config.checkpoint_prompt as string | undefined) || '')}
+                  title="Edit in full view"
+                  style={{
+                    ...MONO, fontSize: 10, padding: '2px 5px', flexShrink: 0,
+                    background: '#7C3AED22', border: '1px solid #7C3AED44',
+                    color: '#7C3AED', borderRadius: 4, cursor: 'pointer', lineHeight: 1,
+                  }}
+                >↗</button>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Node output preview */}
         {nodeResult?.output_text && (
           <div style={{
@@ -307,21 +585,166 @@ function CanvasNodeCard({
         </div>
       </div>
     </div>
+
+    {/* Full-text editor modal — fixed so it escapes overflow:hidden on the node card */}
+    {expandField && (
+      <div
+        onMouseDown={e => e.stopPropagation()}
+        onClick={e => e.stopPropagation()}
+        style={{
+          position: 'fixed', inset: 0, zIndex: 9999,
+          background: 'rgba(0,0,0,0.55)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}
+      >
+        <div style={{
+          background: 'var(--bg-card)',
+          border: '1px solid var(--border)',
+          borderRadius: 12,
+          padding: 20,
+          width: 560, maxWidth: '90vw',
+          display: 'flex', flexDirection: 'column', gap: 12,
+          boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ ...MONO, fontSize: 11, fontWeight: 700, color: accentColor, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              {expandLabel}
+            </span>
+            <button
+              onClick={() => setExpandField(null)}
+              style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 20, lineHeight: 1, padding: '0 2px' }}
+            >×</button>
+          </div>
+          <textarea
+            autoFocus
+            value={expandValue}
+            onChange={e => setExpandValue(e.target.value)}
+            rows={8}
+            style={{
+              width: '100%', boxSizing: 'border-box',
+              fontSize: 13, lineHeight: 1.6,
+              padding: '10px 12px',
+              background: 'var(--bg-page)', color: 'var(--text-body)',
+              border: `1px solid ${accentColor}55`,
+              borderRadius: 7, resize: 'vertical',
+              fontFamily: 'inherit',
+            }}
+          />
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+            <button
+              onClick={() => setExpandField(null)}
+              style={{ ...MONO, fontSize: 11, padding: '6px 16px', background: 'var(--bg-page)', border: '1px solid var(--border)', borderRadius: 6, cursor: 'pointer', color: 'var(--text-muted)' }}
+            >Cancel</button>
+            <button
+              onClick={applyExpand}
+              style={{ ...MONO, fontSize: 11, padding: '6px 16px', background: accentColor, border: 'none', borderRadius: 6, cursor: 'pointer', color: '#fff', fontWeight: 700 }}
+            >Apply</button>
+          </div>
+        </div>
+      </div>
+    )}
+  </>
   )
 }
 
 // ─── run result panel ─────────────────────────────────────────────────────────
 
 function RunResultPanel({
-  run, onClose,
-}: { run: WorkflowRun; onClose: () => void }) {
+  run, workflowId, onClose, onResumed,
+}: {
+  run: WorkflowRun
+  workflowId: string
+  onClose: () => void
+  onResumed: (updated: WorkflowRun) => void
+}) {
   const [expanded, setExpanded] = useState<string | null>(null)
+  const [checkpoint, setCheckpoint] = useState<CheckpointInfo | null>(null)
+  const [humanInput, setHumanInput] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [runnerExpand, setRunnerExpand] = useState<{ label: string; value: string } | null>(null)
+
+  // Fetch checkpoint detail when status changes to awaiting
+  useEffect(() => {
+    if (run.status === 'awaiting_checkpoint') {
+      getCheckpoint(workflowId, run.run_id)
+        .then(cp => { if (cp.status === 'awaiting') setCheckpoint(cp) })
+        .catch(() => {})
+    } else {
+      setCheckpoint(null)
+    }
+  }, [run.status, run.run_id, workflowId])
+
+  const handleResume = async () => {
+    if (!humanInput.trim() && !confirm('Submit empty input?')) return
+    setSubmitting(true)
+    try {
+      const updated = await resumeRun(workflowId, run.run_id, humanInput || 'APPROVE')
+      setHumanInput('')
+      setCheckpoint(null)
+      onResumed(updated)
+    } catch (e: any) {
+      alert(e.message || String(e))
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const statusColor =
+    run.status === 'completed' ? '#10B981'
+    : run.status === 'awaiting_checkpoint' ? '#7C3AED'
+    : run.status === 'running' ? '#3B82F6'
+    : '#EF4444'
+
+  const statusIcon =
+    run.status === 'completed' ? '✓'
+    : run.status === 'awaiting_checkpoint' ? '⏸'
+    : run.status === 'running' ? '◌'
+    : '✗'
+
+  const expandModal = runnerExpand ? (
+    <div
+      onClick={() => setRunnerExpand(null)}
+      style={{
+        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        zIndex: 9999,
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          background: 'var(--bg-card)', border: '1px solid var(--border)',
+          borderRadius: 10, padding: 20, width: 700, maxWidth: '90vw',
+          maxHeight: '80vh', display: 'flex', flexDirection: 'column', gap: 10,
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ ...MONO, fontSize: 11, fontWeight: 700, color: 'var(--text-heading)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+            {runnerExpand.label}
+          </span>
+          <button onClick={() => setRunnerExpand(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 18, lineHeight: 1 }}>×</button>
+        </div>
+        <textarea
+          readOnly
+          value={runnerExpand.value}
+          style={{
+            ...MONO, fontSize: 12, color: 'var(--text-body)',
+            background: 'var(--bg-page)', border: '1px solid var(--border)',
+            borderRadius: 6, padding: '10px 12px',
+            resize: 'vertical', minHeight: 300, flex: 1,
+            outline: 'none',
+          }}
+        />
+      </div>
+    </div>
+  ) : null
 
   return (
+    <>
     <div style={{
       borderTop: '1px solid var(--border)',
       background: 'var(--bg-card)',
-      maxHeight: 380,
+      maxHeight: 420,
       overflow: 'auto',
     }}>
       <div style={{
@@ -334,11 +757,8 @@ function RunResultPanel({
           fontSize: 12, fontWeight: 700, color: 'var(--text-heading)', flex: 1,
         }}>
           Run result — {run.execution_mode}
-          <span style={{
-            ...MONO, fontSize: 10, marginLeft: 8,
-            color: run.status === 'completed' ? '#10B981' : '#EF4444',
-          }}>
-            {run.status === 'completed' ? '✓' : '✗'} {run.status}
+          <span style={{ ...MONO, fontSize: 10, marginLeft: 8, color: statusColor }}>
+            {statusIcon} {run.status}
           </span>
         </span>
         <span style={{ ...MONO, fontSize: 10, color: 'var(--text-muted)' }}>
@@ -352,6 +772,61 @@ function RunResultPanel({
           }}
         >×</button>
       </div>
+
+      {/* HITL checkpoint panel */}
+      {run.status === 'awaiting_checkpoint' && (
+        <div style={{
+          margin: '12px 20px',
+          padding: '12px 14px',
+          background: '#7C3AED12',
+          border: '1px solid #7C3AED44',
+          borderRadius: 8,
+        }}>
+          <div style={{ fontWeight: 700, color: '#7C3AED', fontSize: 12, marginBottom: 6 }}>
+            ⏸ Human checkpoint — {checkpoint?.node_label || 'waiting…'}
+          </div>
+          {checkpoint?.checkpoint_prompt && (
+            <div style={{ ...MONO, fontSize: 11, color: 'var(--text-body)', marginBottom: 8, lineHeight: 1.5 }}>
+              {checkpoint.checkpoint_prompt}
+            </div>
+          )}
+          {checkpoint?.prior_output && (
+            <div style={{
+              ...MONO, fontSize: 11, color: 'var(--text-muted)',
+              background: 'var(--bg-page)', padding: '8px 10px',
+              borderRadius: 6, border: '1px solid var(--border)',
+              whiteSpace: 'pre-wrap', maxHeight: 120, overflow: 'auto', marginBottom: 8,
+            }}>
+              {checkpoint.prior_output}
+            </div>
+          )}
+          <textarea
+            value={humanInput}
+            onChange={e => setHumanInput(e.target.value)}
+            placeholder="Type APPROVE to accept the output above, or enter your own text to override it…"
+            rows={3}
+            style={{
+              width: '100%', ...MONO, fontSize: 11,
+              padding: '8px 10px', borderRadius: 6,
+              background: 'var(--bg-page)', color: 'var(--text-body)',
+              border: '1px solid #7C3AED66',
+              resize: 'vertical', boxSizing: 'border-box',
+            }}
+          />
+          <button
+            onClick={handleResume}
+            disabled={submitting}
+            style={{
+              marginTop: 6, ...MONO, fontSize: 11, padding: '6px 16px',
+              background: submitting ? '#7C3AED44' : '#7C3AED',
+              color: '#fff', border: 'none', borderRadius: 6,
+              cursor: submitting ? 'wait' : 'pointer',
+            }}
+          >
+            {submitting ? 'Submitting…' : '▶ Resume workflow'}
+          </button>
+        </div>
+      )}
 
       {/* Node results */}
       {run.node_results.map(nr => (
@@ -394,9 +869,28 @@ function RunResultPanel({
                   {nr.error_message}
                 </div>
               )}
+              {nr.system_prompt_used && (
+                <div style={{ marginBottom: 8 }}>
+                  <div style={{ ...MONO, fontSize: 10, color: '#7C3AED', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    SYSTEM
+                    <button onClick={() => setRunnerExpand({ label: `${nr.node_label || nr.node_id} — System Prompt`, value: nr.system_prompt_used! })} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#7C3AED', fontSize: 11, padding: 0, lineHeight: 1 }}>↗</button>
+                  </div>
+                  <div style={{
+                    ...MONO, fontSize: 11, color: 'var(--text-body)',
+                    background: '#7C3AED08', padding: '8px 10px',
+                    borderRadius: 6, border: '1px solid #7C3AED30',
+                    whiteSpace: 'pre-wrap', maxHeight: 80, overflow: 'auto',
+                  }}>
+                    {nr.system_prompt_used}
+                  </div>
+                </div>
+              )}
               {nr.input_text && (
                 <div style={{ marginBottom: 8 }}>
-                  <div style={{ ...MONO, fontSize: 10, color: 'var(--text-muted)', marginBottom: 4 }}>INPUT</div>
+                  <div style={{ ...MONO, fontSize: 10, color: 'var(--text-muted)', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    INPUT
+                    <button onClick={() => setRunnerExpand({ label: `${nr.node_label || nr.node_id} — Input`, value: nr.input_text })} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 11, padding: 0, lineHeight: 1 }}>↗</button>
+                  </div>
                   <div style={{
                     ...MONO, fontSize: 11, color: 'var(--text-body)',
                     background: 'var(--bg-card)', padding: '8px 10px',
@@ -409,7 +903,10 @@ function RunResultPanel({
               )}
               {nr.output_text && (
                 <div>
-                  <div style={{ ...MONO, fontSize: 10, color: 'var(--text-muted)', marginBottom: 4 }}>OUTPUT</div>
+                  <div style={{ ...MONO, fontSize: 10, color: 'var(--text-muted)', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    OUTPUT
+                    <button onClick={() => setRunnerExpand({ label: `${nr.node_label || nr.node_id} — Output`, value: nr.output_text })} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 11, padding: 0, lineHeight: 1 }}>↗</button>
+                  </div>
                   <div style={{
                     ...MONO, fontSize: 11, color: 'var(--text-body)',
                     background: 'var(--bg-card)', padding: '8px 10px',
@@ -428,7 +925,10 @@ function RunResultPanel({
       {/* Final output */}
       {run.final_output && (
         <div style={{ padding: '12px 20px' }}>
-          <div style={{ ...MONO, fontSize: 10, color: 'var(--text-muted)', marginBottom: 6 }}>FINAL OUTPUT</div>
+          <div style={{ ...MONO, fontSize: 10, color: 'var(--text-muted)', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+            FINAL OUTPUT
+            <button onClick={() => setRunnerExpand({ label: 'Final Output', value: run.final_output })} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 11, padding: 0, lineHeight: 1 }}>↗</button>
+          </div>
           <div style={{
             ...MONO, fontSize: 11, color: 'var(--text-body)',
             background: 'var(--bg-page)', padding: '10px 12px',
@@ -472,6 +972,9 @@ function RunResultPanel({
         )}
       </div>
     </div>
+
+      {expandModal}
+    </>
   )
 }
 
@@ -808,7 +1311,11 @@ export default function WorkflowsPage() {
 
   // Run state
   const [initialInput, setInitialInput] = useState('')
+  const [expandPage, setExpandPage] = useState<{ field: 'wfDesc' | 'initialInput'; label: string } | null>(null)
+  const [expandPageValue, setExpandPageValue] = useState('')
   const [loopIterations, setLoopIterations] = useState(3)
+  const [enableMemory, setEnableMemory] = useState(false)
+  const [convergenceExpr, setConvergenceExpr] = useState('')
   const [running, setRunning] = useState(false)
   const [currentRun, setCurrentRun] = useState<WorkflowRun | null>(null)
   const [runError, setRunError] = useState('')
@@ -817,11 +1324,29 @@ export default function WorkflowsPage() {
   const [runs, setRuns] = useState<WorkflowRun[]>([])
   const [selectedHistoryRun, setSelectedHistoryRun] = useState<WorkflowRun | null>(null)
 
+  // Run panel resize
+  const [runPanelH, setRunPanelH] = useState(420)
+  const runPanelMinH = 36
+  const resizeDragRef = useRef<{ startY: number; startH: number } | null>(null)
+
   // Triggers panel
   const [showTriggersPanel, setShowTriggersPanel] = useState(false)
   const triggersRef = useRef<HTMLDivElement>(null)
 
   const canvasRef = useRef<HTMLDivElement>(null)
+
+  // Run panel drag-resize
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      if (!resizeDragRef.current) return
+      const dy = resizeDragRef.current.startY - e.clientY
+      setRunPanelH(Math.max(runPanelMinH, Math.min(700, resizeDragRef.current.startH + dy)))
+    }
+    const onUp = () => { resizeDragRef.current = null }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
+  }, [])
 
   // Close triggers panel on outside click
   useEffect(() => {
@@ -851,6 +1376,9 @@ export default function WorkflowsPage() {
     setWfName(wf.name)
     setWfDesc(wf.description || '')
     setExecMode(wf.execution_mode || 'sequential')
+    setLoopIterations(wf.loop_iterations || 3)
+    setEnableMemory(wf.enable_memory || false)
+    setConvergenceExpr(wf.convergence_expr || '')
     setShowTriggersPanel(false)
     // DAG nodes take precedence; convert legacy steps otherwise
     if (wf.nodes && wf.nodes.length > 0) {
@@ -1023,6 +1551,8 @@ export default function WorkflowsPage() {
         description: wfDesc,
         execution_mode: execMode,
         nodes, edges, steps: [],
+        enable_memory: enableMemory,
+        convergence_expr: convergenceExpr,
         ...(execMode === 'collaborative' ? { loop_iterations: loopIterations } : {}),
       }
       let wf: WorkflowRecord
@@ -1052,6 +1582,9 @@ export default function WorkflowsPage() {
     setWfName('New Workflow')
     setWfDesc('')
     setExecMode('sequential')
+    setLoopIterations(3)
+    setEnableMemory(false)
+    setConvergenceExpr('')
     setNodes([])
     setEdges([])
     setCurrentRun(null)
@@ -1074,17 +1607,41 @@ export default function WorkflowsPage() {
 
   // ── run ───────────────────────────────────────────────────────────────────
 
+  const pollRunRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const pollRun = useCallback((workflowId: string, run: WorkflowRun) => {
+    pollRunRef.current = setTimeout(async () => {
+      try {
+        const updated = await getRun(workflowId, run.run_id)
+        setCurrentRun(updated)
+        setRuns(prev => prev.map(r => r.run_id === updated.run_id ? updated : r))
+        if (updated.status === 'running' || updated.status === 'awaiting_checkpoint') {
+          if (updated.status === 'running') setRunning(true)
+          else setRunning(false)  // allow user to interact with HITL panel
+          pollRun(workflowId, updated)
+        } else {
+          setRunning(false)
+          listRuns(workflowId).then(setRuns).catch(() => {})
+        }
+      } catch {
+        setRunning(false)
+      }
+    }, 2000)
+  }, [])
+
   const doRun = async () => {
     if (!selected) { alert('Save the workflow first.'); return }
     if (!initialInput.trim()) { alert('Enter an initial prompt.'); return }
+    if (pollRunRef.current) clearTimeout(pollRunRef.current)
     setRunning(true); setRunError(''); setCurrentRun(null)
     try {
       const run = await runWorkflow(selected.workflow_id, initialInput, '')
       setCurrentRun(run)
       setRuns(prev => [run, ...prev])
+      // Server returns immediately (202); start polling for completion
+      pollRun(selected.workflow_id, run)
     } catch (e: any) {
       setRunError(e.message || String(e))
-    } finally {
       setRunning(false)
     }
   }
@@ -1197,6 +1754,8 @@ export default function WorkflowsPage() {
               onSelectRun={r => {
                 setSelectedHistoryRun(r)
                 setCurrentRun(null)
+                setInitialInput(r.initial_input)
+                setRunPanelH(420)
               }}
               selectedRunId={selectedHistoryRun?.run_id}
             />
@@ -1225,6 +1784,26 @@ export default function WorkflowsPage() {
               minWidth: 160,
             }}
           />
+          <span style={{ color: 'var(--border)', fontSize: 16 }}>|</span>
+          <input
+            value={wfDesc}
+            onChange={e => setWfDesc(e.target.value)}
+            placeholder="Description (optional)"
+            style={{
+              fontSize: 12, color: 'var(--text-muted)',
+              background: 'transparent', border: 'none', outline: 'none',
+              minWidth: 200, flex: 1,
+            }}
+          />
+          <button
+            onClick={() => { setExpandPageValue(wfDesc); setExpandPage({ field: 'wfDesc', label: 'Workflow Description' }) }}
+            title="Edit in full view"
+            style={{
+              ...MONO, fontSize: 10, padding: '2px 6px', flexShrink: 0,
+              background: 'var(--bg-page)', border: '1px solid var(--border)',
+              color: 'var(--text-muted)', borderRadius: 4, cursor: 'pointer',
+            }}
+          >↗</button>
 
           <select
             value={execMode}
@@ -1252,6 +1831,16 @@ export default function WorkflowsPage() {
           {(execMode === 'parallel' || execMode === 'hybrid') && (
             <button onClick={() => addNode('fan_out')} style={{ ...toolBtn, color: '#F59E0B' }}>
               + Fan-out
+            </button>
+          )}
+          {execMode === 'hybrid' && (
+            <button onClick={() => addNode('loop')} style={{ ...toolBtn, color: '#06B6D4' }}>
+              + Loop
+            </button>
+          )}
+          {execMode === 'hybrid' && (
+            <button onClick={() => addNode('switch')} style={{ ...toolBtn, color: '#F97316' }}>
+              + Switch
             </button>
           )}
 
@@ -1432,25 +2021,50 @@ export default function WorkflowsPage() {
                 border: '1px solid var(--border)', borderRadius: 6,
               }}
             />
+            <button
+              onClick={() => { setExpandPageValue(initialInput); setExpandPage({ field: 'initialInput', label: 'Initial Prompt' }) }}
+              title="Edit in full view"
+              style={{
+                ...MONO, fontSize: 11, padding: '6px 10px', flexShrink: 0,
+                background: 'var(--bg-page)', border: '1px solid var(--border)',
+                color: 'var(--text-muted)', borderRadius: 6, cursor: 'pointer',
+              }}
+            >↗</button>
 
             {/* Collaborative iterations pill selector */}
             {execMode === 'collaborative' && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ ...MONO, fontSize: 10, color: 'var(--text-muted)' }}>Iterations:</span>
-                <div style={{ display: 'flex', gap: 2 }}>
-                  {[1, 2, 3, 4, 5].map(n => (
-                    <button
-                      key={n}
-                      onClick={() => setLoopIterations(n)}
-                      style={{
-                        ...MONO, fontSize: 11, width: 26, height: 26,
-                        background: loopIterations === n ? '#14b8a6' : 'var(--bg-page)',
-                        color: loopIterations === n ? '#fff' : 'var(--text-muted)',
-                        border: `1px solid ${loopIterations === n ? '#14b8a6' : 'var(--border)'}`,
-                        borderRadius: 4, cursor: 'pointer', fontWeight: loopIterations === n ? 700 : 400,
-                      }}
-                    >{n}</button>
-                  ))}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ ...MONO, fontSize: 10, color: 'var(--text-muted)' }}>Max rounds:</span>
+                  <div style={{ display: 'flex', gap: 2 }}>
+                    {[1, 2, 3, 4, 5].map(n => (
+                      <button
+                        key={n}
+                        onClick={() => setLoopIterations(n)}
+                        style={{
+                          ...MONO, fontSize: 11, width: 26, height: 26,
+                          background: loopIterations === n ? '#14b8a6' : 'var(--bg-page)',
+                          color: loopIterations === n ? '#fff' : 'var(--text-muted)',
+                          border: `1px solid ${loopIterations === n ? '#14b8a6' : 'var(--border)'}`,
+                          borderRadius: 4, cursor: 'pointer', fontWeight: loopIterations === n ? 700 : 400,
+                        }}
+                      >{n}</button>
+                    ))}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <span style={{ ...MONO, fontSize: 10, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>Stop when:</span>
+                  <input
+                    value={convergenceExpr}
+                    onChange={e => setConvergenceExpr(e.target.value)}
+                    placeholder="contains:LGTM  |  nonempty  (blank = run all rounds)"
+                    style={{
+                      ...MONO, fontSize: 10, padding: '3px 7px', width: 240,
+                      background: 'var(--bg-page)', color: 'var(--text-body)',
+                      border: `1px solid ${convergenceExpr ? TEAL : 'var(--border)'}`,
+                      borderRadius: 4,
+                    }}
+                  />
                 </div>
               </div>
             )}
@@ -1501,7 +2115,8 @@ export default function WorkflowsPage() {
                 border: `1px solid ${TEAL}30`,
                 borderRadius: 4, display: 'inline-block',
               }}>
-                Review loop — {loopIterations} iteration{loopIterations !== 1 ? 's' : ''}
+                Review loop — up to {loopIterations} round{loopIterations !== 1 ? 's' : ''}
+                {convergenceExpr ? ` · stops when: ${convergenceExpr}` : ' · runs all rounds'}
               </div>
             )}
 
@@ -1518,21 +2133,152 @@ export default function WorkflowsPage() {
                 Nodes sharing the same parallel group name will fan-out together
               </div>
             )}
+
+            {/* Persistent memory toggle */}
+            <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <button
+                onClick={() => setEnableMemory(v => !v)}
+                style={{
+                  ...MONO, fontSize: 10,
+                  padding: '3px 10px',
+                  background: enableMemory ? '#7C3AED22' : 'var(--bg-page)',
+                  color: enableMemory ? '#7C3AED' : 'var(--text-muted)',
+                  border: `1px solid ${enableMemory ? '#7C3AED66' : 'var(--border)'}`,
+                  borderRadius: 4, cursor: 'pointer',
+                  fontWeight: enableMemory ? 700 : 400,
+                }}
+              >
+                {enableMemory ? '🧠 Memory: ON' : '○ Memory: OFF'}
+              </button>
+              {enableMemory && (
+                <span style={{ ...MONO, fontSize: 10, color: '#7C3AED99' }}>
+                  Agents summarize each run and remember it next time
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Results */}
+        {/* Results — drag-resizable panel */}
         {(currentRun || selectedHistoryRun) && (
-          <RunResultPanel
-            run={(currentRun || selectedHistoryRun)!}
-            onClose={() => { setCurrentRun(null); setSelectedHistoryRun(null) }}
-          />
+          <div style={{ flexShrink: 0, position: 'relative' }}>
+            {/* Drag handle */}
+            <div
+              onMouseDown={e => {
+                resizeDragRef.current = { startY: e.clientY, startH: runPanelH }
+                e.preventDefault()
+              }}
+              title="Drag to resize · drag down to minimise"
+              style={{
+                height: 6, cursor: 'ns-resize', background: 'var(--border)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}
+            >
+              <div style={{ width: 32, height: 3, borderRadius: 2, background: 'var(--text-muted)', opacity: 0.4 }} />
+            </div>
+            {/* Panel body — height controlled by drag */}
+            <div style={{ height: runPanelH, overflow: 'hidden' }}>
+              {runPanelH <= runPanelMinH ? (
+                /* Minimised bar */
+                <div style={{
+                  height: '100%', display: 'flex', alignItems: 'center',
+                  padding: '0 16px', gap: 10,
+                  background: 'var(--bg-card)', borderTop: '1px solid var(--border)',
+                  cursor: 'pointer',
+                }} onClick={() => setRunPanelH(420)}>
+                  <span style={{ ...MONO, fontSize: 11, color: 'var(--text-muted)' }}>
+                    Run result — {(currentRun || selectedHistoryRun)!.status}
+                  </span>
+                  <span style={{ ...MONO, fontSize: 10, color: 'var(--text-muted)', marginLeft: 'auto' }}>▲ expand</span>
+                </div>
+              ) : (
+                <RunResultPanel
+                  run={(currentRun || selectedHistoryRun)!}
+                  workflowId={selected?.workflow_id ?? ''}
+                  onClose={() => {
+                    setCurrentRun(null)
+                    setSelectedHistoryRun(null)
+                    setInitialInput('')
+                  }}
+                  onResumed={updated => {
+                    setCurrentRun(updated)
+                    setRuns(prev => prev.map(r => r.run_id === updated.run_id ? updated : r))
+                    if (selected) pollRun(selected.workflow_id, updated)
+                  }}
+                />
+              )}
+            </div>
+          </div>
         )}
       </div>
 
       <style>{`
         @keyframes pulse { 0%,100% { opacity:1 } 50% { opacity:0.5 } }
       `}</style>
+
+      {/* Page-level expand modal — for description and initial prompt */}
+      {expandPage && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, zIndex: 9999,
+            background: 'rgba(0,0,0,0.55)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}
+          onClick={() => setExpandPage(null)}
+        >
+          <div
+            style={{
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border)',
+              borderRadius: 12, padding: 24,
+              width: 640, maxWidth: '92vw',
+              display: 'flex', flexDirection: 'column', gap: 14,
+              boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ ...MONO, fontSize: 11, fontWeight: 700, color: '#1D5FFA', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                {expandPage.label}
+              </span>
+              <button
+                onClick={() => setExpandPage(null)}
+                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 20, lineHeight: 1 }}
+              >×</button>
+            </div>
+            <textarea
+              autoFocus
+              value={expandPageValue}
+              onChange={e => setExpandPageValue(e.target.value)}
+              rows={expandPage.field === 'initialInput' ? 12 : 5}
+              placeholder={expandPage.field === 'initialInput' ? 'Paste your full prompt here…' : 'Workflow description…'}
+              style={{
+                width: '100%', boxSizing: 'border-box',
+                fontSize: 13, lineHeight: 1.6,
+                padding: '10px 14px',
+                background: 'var(--bg-page)', color: 'var(--text-body)',
+                border: '1px solid #1D5FFA44',
+                borderRadius: 7, resize: 'vertical',
+                fontFamily: 'inherit',
+              }}
+            />
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setExpandPage(null)}
+                style={{ ...MONO, fontSize: 11, padding: '7px 18px', background: 'var(--bg-page)', border: '1px solid var(--border)', borderRadius: 6, cursor: 'pointer', color: 'var(--text-muted)' }}
+              >Cancel</button>
+              <button
+                onClick={() => {
+                  if (expandPage.field === 'wfDesc') setWfDesc(expandPageValue)
+                  else setInitialInput(expandPageValue)
+                  setExpandPage(null)
+                }}
+                style={{ ...MONO, fontSize: 11, padding: '7px 18px', background: '#1D5FFA', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#fff', fontWeight: 700 }}
+              >Apply</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -4,7 +4,7 @@ import { apiFetch } from './client'
 // Node & edge types
 // ---------------------------------------------------------------------------
 
-export type NodeType = 'agent' | 'orchestrator' | 'fan_out' | 'fan_in' | 'condition'
+export type NodeType = 'agent' | 'orchestrator' | 'fan_out' | 'fan_in' | 'condition' | 'loop' | 'switch'
 export type ExecutionMode = 'sequential' | 'parallel' | 'hierarchical' | 'hybrid' | 'collaborative' | 'event_driven'
 
 export interface WorkflowNode {
@@ -39,6 +39,9 @@ export interface WorkflowRecord {
   name: string
   description: string
   execution_mode: ExecutionMode
+  loop_iterations: number
+  enable_memory: boolean
+  convergence_expr: string
   nodes: WorkflowNode[]
   edges: WorkflowEdge[]
   steps: WorkflowStep[]
@@ -51,7 +54,7 @@ export interface WorkflowRecord {
 // ---------------------------------------------------------------------------
 
 export type NodeStatus = 'pending' | 'running' | 'completed' | 'failed' | 'skipped'
-export type RunStatus = 'running' | 'completed' | 'failed'
+export type RunStatus = 'running' | 'completed' | 'failed' | 'awaiting_checkpoint'
 
 export interface NodeRunResult {
   result_id: string
@@ -66,6 +69,7 @@ export interface NodeRunResult {
   completed_at: string | null
   input_tokens: number
   output_tokens: number
+  system_prompt_used?: string
 }
 
 export interface WorkflowRun {
@@ -98,6 +102,8 @@ export interface WorkflowBody {
   edges?: Partial<WorkflowEdge>[]
   steps?: Partial<WorkflowStep>[]
   loop_iterations?: number
+  enable_memory?: boolean
+  convergence_expr?: string
 }
 
 // ---------------------------------------------------------------------------
@@ -171,6 +177,36 @@ export async function listRuns(workflow_id: string): Promise<WorkflowRun[]> {
 export async function getRun(workflow_id: string, run_id: string): Promise<WorkflowRun> {
   return apiFetch<WorkflowRun>(
     `/workflows/${encodeURIComponent(workflow_id)}/runs/${encodeURIComponent(run_id)}`,
+  )
+}
+
+export interface CheckpointInfo {
+  checkpoint_id: string
+  node_id: string
+  node_label: string
+  checkpoint_prompt: string
+  prior_output: string
+  status: string
+}
+
+export async function getCheckpoint(workflow_id: string, run_id: string): Promise<CheckpointInfo> {
+  return apiFetch<CheckpointInfo>(
+    `/workflows/${encodeURIComponent(workflow_id)}/runs/${encodeURIComponent(run_id)}/checkpoint`,
+  )
+}
+
+export async function resumeRun(
+  workflow_id: string,
+  run_id: string,
+  human_input: string,
+): Promise<WorkflowRun> {
+  return apiFetch<WorkflowRun>(
+    `/workflows/${encodeURIComponent(workflow_id)}/runs/${encodeURIComponent(run_id)}/resume`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ human_input }),
+    },
   )
 }
 
