@@ -242,6 +242,175 @@ function RejectModal({ tool, onConfirm, onClose }: {
   )
 }
 
+// ─── editor panel ────────────────────────────────────────────────────────────
+
+const TOOL_TEMPLATE = `from agentcore.object_model.tool import Tool, Parameter
+
+
+class MyTool(Tool):
+    def __init__(self):
+        super().__init__(
+            name="my_tool",
+            description="Describe what this tool does for the LLM",
+            parameters=[
+                Parameter(name="input", type="string", description="The input text"),
+            ],
+            required={"input"},
+        )
+
+    def run(self, input: str) -> str:
+        # Your logic here
+        return f"Result: {input}"
+`
+
+function EditorPanel({ onUploaded }: { onUploaded: (t: ToolRecord) => void }) {
+  const [code, setCode] = useState(TOOL_TEMPLATE)
+  const [filename, setFilename] = useState('my_tool.py')
+  const [requirements, setRequirements] = useState('')
+  const [uploading, setUploading] = useState(false)
+  const [error, setError] = useState('')
+  const [warnings, setWarnings] = useState<string[]>([])
+  const lineCount = code.split('\n').length
+
+  const submit = async () => {
+    if (!code.trim()) return
+    setUploading(true); setError(''); setWarnings([])
+    try {
+      const blob = new Blob([code], { type: 'text/x-python' })
+      const fname = filename.endsWith('.py') ? filename : `${filename}.py`
+      const file = new File([blob], fname, { type: 'text/x-python' })
+      const res = await uploadTool(file, requirements)
+      setWarnings(res.warnings)
+      onUploaded(res.tool)
+      setCode(TOOL_TEMPLATE); setFilename('my_tool.py'); setRequirements('')
+    } catch (e: any) {
+      const detail = e.detail
+      if (detail?.errors) setError(detail.errors.join(' · '))
+      else setError(e.message || String(e))
+    } finally { setUploading(false) }
+  }
+
+  return (
+    <div style={{
+      background: 'var(--bg-card)', border: '1px solid var(--border)',
+      borderRadius: 10, padding: 20, marginBottom: 24,
+    }}>
+      <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-heading)', marginBottom: 14 }}>
+        Write Custom Tool
+      </div>
+
+      {/* Filename + requirements row */}
+      <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
+        <div style={{ flex: 1 }}>
+          <div style={{ ...MONO, fontSize: 10, color: 'var(--text-muted)', marginBottom: 4 }}>FILENAME</div>
+          <input
+            value={filename}
+            onChange={e => setFilename(e.target.value)}
+            placeholder="my_tool.py"
+            style={{
+              width: '100%', fontSize: 12, padding: '7px 10px',
+              background: 'var(--bg-page)', color: 'var(--text-body)',
+              border: '1px solid var(--border)', borderRadius: 6, ...MONO,
+              boxSizing: 'border-box',
+            }}
+          />
+        </div>
+        <div style={{ flex: 2 }}>
+          <div style={{ ...MONO, fontSize: 10, color: 'var(--text-muted)', marginBottom: 4 }}>
+            REQUIREMENTS <span style={{ color: '#6B7280' }}>(optional — pip packages)</span>
+          </div>
+          <input
+            value={requirements}
+            onChange={e => setRequirements(e.target.value)}
+            placeholder="e.g. requests, pandas>=2.0"
+            style={{
+              width: '100%', fontSize: 12, padding: '7px 10px',
+              background: 'var(--bg-page)', color: 'var(--text-body)',
+              border: '1px solid var(--border)', borderRadius: 6, ...MONO,
+              boxSizing: 'border-box',
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Code editor with line numbers */}
+      <div style={{
+        display: 'flex', border: '1px solid var(--border)', borderRadius: 8,
+        overflow: 'hidden', marginBottom: 12, background: 'var(--bg-page)',
+      }}>
+        {/* Line numbers */}
+        <div style={{
+          ...MONO, fontSize: 12, lineHeight: '1.6', padding: '12px 10px',
+          color: 'var(--text-muted)', background: 'var(--bg-card)',
+          borderRight: '1px solid var(--border)', userSelect: 'none',
+          minWidth: 40, textAlign: 'right', flexShrink: 0,
+        }}>
+          {Array.from({ length: lineCount }, (_, i) => (
+            <div key={i}>{i + 1}</div>
+          ))}
+        </div>
+        {/* Textarea */}
+        <textarea
+          value={code}
+          onChange={e => setCode(e.target.value)}
+          spellCheck={false}
+          rows={Math.max(16, lineCount + 2)}
+          style={{
+            flex: 1, ...MONO, fontSize: 12, lineHeight: '1.6',
+            padding: '12px 14px', resize: 'vertical',
+            background: 'transparent', color: 'var(--text-body)',
+            border: 'none', outline: 'none', whiteSpace: 'pre', overflowWrap: 'normal',
+            overflowX: 'auto', tabSize: 4,
+          }}
+          onKeyDown={e => {
+            if (e.key === 'Tab') {
+              e.preventDefault()
+              const el = e.currentTarget
+              const start = el.selectionStart
+              const end = el.selectionEnd
+              const next = code.slice(0, start) + '    ' + code.slice(end)
+              setCode(next)
+              requestAnimationFrame(() => { el.selectionStart = el.selectionEnd = start + 4 })
+            }
+          }}
+        />
+      </div>
+
+      {error && (
+        <div style={{
+          ...MONO, fontSize: 11, color: '#EF4444', marginBottom: 10,
+          padding: '8px 10px', background: '#EF444420',
+          border: '1px solid #EF444440', borderRadius: 6,
+        }}>{error}</div>
+      )}
+      {warnings.length > 0 && (
+        <div style={{
+          ...MONO, fontSize: 11, color: '#F59E0B', marginBottom: 10,
+          padding: '8px 10px', background: '#F59E0B20',
+          border: '1px solid #F59E0B40', borderRadius: 6,
+        }}>⚠ {warnings.join(' · ')}</div>
+      )}
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <button
+          onClick={submit} disabled={!code.trim() || uploading}
+          style={{
+            ...MONO, fontSize: 12, padding: '8px 20px',
+            background: !code.trim() || uploading ? 'var(--border)' : '#1D5FFA',
+            color: !code.trim() || uploading ? 'var(--text-muted)' : '#fff',
+            border: 'none', borderRadius: 6,
+            cursor: !code.trim() || uploading ? 'not-allowed' : 'pointer',
+            fontWeight: 700,
+          }}
+        >{uploading ? 'Uploading…' : 'Submit for Review'}</button>
+        <span style={{ ...MONO, fontSize: 10, color: 'var(--text-muted)' }}>
+          {lineCount} lines · Tab key inserts 4 spaces
+        </span>
+      </div>
+    </div>
+  )
+}
+
 // ─── upload panel ─────────────────────────────────────────────────────────────
 
 function UploadPanel({ onUploaded }: { onUploaded: (t: ToolRecord) => void }) {
@@ -376,9 +545,9 @@ function ToolRow({ tool, onApprove, onRejectClick, onDelete, onTest, onViewSourc
   const [expanded, setExpanded] = useState(false)
   const color = STATUS_COLOR[tool.status]
 
-  const handleApprove = async () => {
+  const handleApprove = () => {
     setApproving(true)
-    try { await onApprove() } finally { setApproving(false) }
+    try { onApprove() } finally { setApproving(false) }
   }
 
   return (
@@ -556,7 +725,7 @@ export default function Tools() {
   const [tools, setTools] = useState<ToolRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<ToolStatus | 'all'>('all')
-  const [showUpload, setShowUpload] = useState(false)
+  const [showAdd, setShowAdd] = useState<'upload' | 'editor' | false>(false)
   const [viewSourceId, setViewSourceId] = useState<string | null>(null)
   const [testTool_, setTestTool] = useState<ToolRecord | null>(null)
   const [rejectTarget, setRejectTarget] = useState<ToolRecord | null>(null)
@@ -609,24 +778,40 @@ export default function Tools() {
             Upload custom tools, review risk flags, approve for agent use.
           </p>
         </div>
-        <button
-          onClick={() => setShowUpload(v => !v)}
-          style={{
-            ...MONO, fontSize: 12, padding: '8px 16px',
-            background: showUpload ? '#1D5FFA33' : '#1D5FFA',
-            color: '#fff', border: 'none', borderRadius: 7,
-            cursor: 'pointer', fontWeight: 700,
-          }}
-        >
-          {showUpload ? '✕ Cancel' : '+ Upload Tool'}
-        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            onClick={() => setShowAdd(showAdd === 'editor' ? false : 'editor')}
+            style={{
+              ...MONO, fontSize: 12, padding: '8px 16px',
+              background: showAdd === 'editor' ? '#7C3AED33' : '#7C3AED',
+              color: '#fff', border: 'none', borderRadius: 7,
+              cursor: 'pointer', fontWeight: 700,
+            }}
+          >{showAdd === 'editor' ? '✕ Cancel' : '✎ Write Code'}</button>
+          <button
+            onClick={() => setShowAdd(showAdd === 'upload' ? false : 'upload')}
+            style={{
+              ...MONO, fontSize: 12, padding: '8px 16px',
+              background: showAdd === 'upload' ? '#1D5FFA33' : '#1D5FFA',
+              color: '#fff', border: 'none', borderRadius: 7,
+              cursor: 'pointer', fontWeight: 700,
+            }}
+          >{showAdd === 'upload' ? '✕ Cancel' : '↑ Upload File'}</button>
+        </div>
       </div>
 
-      {/* Upload panel */}
-      {showUpload && (
+      {/* Editor / upload panels */}
+      {showAdd === 'editor' && (
+        <EditorPanel onUploaded={_t => {
+          reload()
+          setShowAdd(false)
+          setActiveTab('pending')
+        }} />
+      )}
+      {showAdd === 'upload' && (
         <UploadPanel onUploaded={_t => {
           reload()
-          setShowUpload(false)
+          setShowAdd(false)
           setActiveTab('pending')
         }} />
       )}

@@ -567,8 +567,9 @@ function CanvasNodeCard({
           </div>
         )}
 
-        {/* Connect button */}
+        {/* Connect button — hidden in parallel mode */}
         <div style={{ marginTop: 6, display: 'flex', gap: 4 }}>
+          {execMode !== 'parallel' && (
           <button
             onMouseDown={e => e.stopPropagation()}
             onClick={e => { e.stopPropagation(); onStartConnect() }}
@@ -582,6 +583,7 @@ function CanvasNodeCard({
           >
             {isConnectingSource ? '● connecting…' : '→ connect'}
           </button>
+          )}
         </div>
       </div>
     </div>
@@ -1006,11 +1008,11 @@ function RunHistoryPanel({
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
             <span style={{
               ...MONO, fontSize: 11, fontWeight: 700,
-              color: run.status === 'completed' ? '#10B981' : '#EF4444',
+              color: run.status === 'completed' ? '#10B981' : run.status === 'running' ? '#3B82F6' : run.status === 'awaiting_checkpoint' ? '#7C3AED' : '#EF4444',
             }}>
-              {run.status === 'completed' ? '✓' : '✗'}
+              {run.status === 'completed' ? '✓' : run.status === 'running' ? '◌' : run.status === 'awaiting_checkpoint' ? '⏸' : '✗'}
             </span>
-            <Chip label={run.execution_mode} color={run.status === 'completed' ? '#10B981' : '#EF4444'} />
+            <Chip label={run.execution_mode} color={run.status === 'completed' ? '#10B981' : run.status === 'running' ? '#3B82F6' : run.status === 'awaiting_checkpoint' ? '#7C3AED' : '#EF4444'} />
           </div>
           <div style={{ ...MONO, fontSize: 10, color: 'var(--text-muted)' }}>
             {fmt(run.started_at)} · {run.total_input_tokens + run.total_output_tokens} tok
@@ -1828,7 +1830,7 @@ export default function WorkflowsPage() {
               + Coordinator
             </button>
           )}
-          {(execMode === 'parallel' || execMode === 'hybrid') && (
+          {execMode === 'hybrid' && (
             <button onClick={() => addNode('fan_out')} style={{ ...toolBtn, color: '#F59E0B' }}>
               + Fan-out
             </button>
