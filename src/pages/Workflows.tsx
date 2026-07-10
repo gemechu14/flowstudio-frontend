@@ -4,6 +4,7 @@ import {
   WorkflowRecord, WorkflowNode, WorkflowEdge, WorkflowRun, NodeRunResult, ExecutionMode,
   NodeStatus, ScheduleTrigger, WebhookTrigger, CheckpointInfo,
   listWorkflows, createWorkflow, updateWorkflow, deleteWorkflow, runWorkflow, listRuns, getRun,
+  deleteRun, clearAllRuns,
   listSchedules, createSchedule, deleteSchedule,
   listWebhooks, createWebhook, deleteWebhook,
   getCheckpoint, resumeRun,
@@ -444,7 +445,7 @@ function CanvasNodeCard({
         )}
 
         {/* Retry config — agent nodes */}
-        {node.node_type === 'agent' && (
+        {(node.node_type === 'agent' || node.node_type === 'orchestrator') && (
           <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 4 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <div style={{ ...MONO, fontSize: 9, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', flex: 1 }}>
@@ -510,8 +511,8 @@ function CanvasNodeCard({
           </div>
         )}
 
-        {/* Human-in-the-loop checkbox — agent nodes */}
-        {node.node_type === 'agent' && (
+        {/* Human-in-the-loop checkbox — agent and orchestrator nodes */}
+        {(node.node_type === 'agent' || node.node_type === 'orchestrator') && (
           <div style={{ marginTop: 5 }}>
             <label
               onClick={e => e.stopPropagation()}
@@ -555,8 +556,8 @@ function CanvasNodeCard({
           </div>
         )}
 
-        {/* Node output preview */}
-        {nodeResult?.output_text && (
+        {/* Node output preview — hidden for orchestrator nodes to keep card height stable */}
+        {nodeResult?.output_text && node.node_type !== 'orchestrator' && (
           <div style={{
             marginTop: 6, fontSize: 10, color: 'var(--text-muted)',
             maxHeight: 40, overflow: 'hidden',
@@ -569,7 +570,7 @@ function CanvasNodeCard({
 
         {/* Connect button — hidden in parallel mode */}
         <div style={{ marginTop: 6, display: 'flex', gap: 4 }}>
-          {execMode !== 'parallel' && (
+          {execMode !== 'parallel' && execMode !== 'hierarchical' && (
           <button
             onMouseDown={e => e.stopPropagation()}
             onClick={e => { e.stopPropagation(); onStartConnect() }}
@@ -983,17 +984,52 @@ function RunResultPanel({
 // ─── run history panel ────────────────────────────────────────────────────────
 
 function RunHistoryPanel({
-  runs, onSelectRun, selectedRunId,
-}: { runs: WorkflowRun[]; onSelectRun: (r: WorkflowRun) => void; selectedRunId?: string }) {
-  if (runs.length === 0) {
-    return (
-      <div style={{ padding: 16, color: 'var(--text-muted)', fontSize: 12, textAlign: 'center' }}>
-        No runs yet
-      </div>
-    )
+  runs, onSelectRun, selectedRunId, workflowId, onRunsChanged,
+}: {
+  runs: WorkflowRun[]
+  onSelectRun: (r: WorkflowRun) => void
+  selectedRunId?: string
+  workflowId: string
+  onRunsChanged: () => void
+}) {
+  const statusColor = (s: string) =>
+    s === 'completed' ? '#10B981' : s === 'running' ? '#3B82F6' : s === 'awaiting_checkpoint' ? '#7C3AED' : '#EF4444'
+  const statusIcon = (s: string) =>
+    s === 'completed' ? '✓' : s === 'running' ? '◌' : s === 'awaiting_checkpoint' ? '⏸' : '✗'
+
+  const handleDeleteRun = async (e: React.MouseEvent, runId: string) => {
+    e.stopPropagation()
+    await deleteRun(workflowId, runId)
+    onRunsChanged()
   }
+
+  const handleClearAll = async () => {
+    if (!confirm('Delete all run history and clear agent memory for this workflow?')) return
+    await clearAllRuns(workflowId)
+    onRunsChanged()
+  }
+
   return (
     <div>
+      {runs.length > 0 && (
+        <div style={{ padding: '6px 14px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end' }}>
+          <button
+            onClick={handleClearAll}
+            style={{
+              ...MONO, fontSize: 10, padding: '2px 8px',
+              background: 'none', border: '1px solid #EF4444',
+              color: '#EF4444', borderRadius: 4, cursor: 'pointer',
+            }}
+          >
+            Clear all + memory
+          </button>
+        </div>
+      )}
+      {runs.length === 0 && (
+        <div style={{ padding: 16, color: 'var(--text-muted)', fontSize: 12, textAlign: 'center' }}>
+          No runs yet
+        </div>
+      )}
       {runs.map(run => (
         <div
           key={run.run_id}
@@ -1003,16 +1039,23 @@ function RunHistoryPanel({
             borderBottom: '1px solid var(--border)',
             cursor: 'pointer',
             background: selectedRunId === run.run_id ? 'var(--bg-page)' : 'transparent',
+            position: 'relative',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
-            <span style={{
-              ...MONO, fontSize: 11, fontWeight: 700,
-              color: run.status === 'completed' ? '#10B981' : run.status === 'running' ? '#3B82F6' : run.status === 'awaiting_checkpoint' ? '#7C3AED' : '#EF4444',
-            }}>
-              {run.status === 'completed' ? '✓' : run.status === 'running' ? '◌' : run.status === 'awaiting_checkpoint' ? '⏸' : '✗'}
+            <span style={{ ...MONO, fontSize: 11, fontWeight: 700, color: statusColor(run.status) }}>
+              {statusIcon(run.status)}
             </span>
-            <Chip label={run.execution_mode} color={run.status === 'completed' ? '#10B981' : run.status === 'running' ? '#3B82F6' : run.status === 'awaiting_checkpoint' ? '#7C3AED' : '#EF4444'} />
+            <Chip label={run.execution_mode} color={statusColor(run.status)} />
+            <button
+              onClick={e => handleDeleteRun(e, run.run_id)}
+              title="Delete this run"
+              style={{
+                marginLeft: 'auto', background: 'none', border: 'none',
+                color: 'var(--text-muted)', cursor: 'pointer', fontSize: 14,
+                lineHeight: 1, padding: '0 2px',
+              }}
+            >×</button>
           </div>
           <div style={{ ...MONO, fontSize: 10, color: 'var(--text-muted)' }}>
             {fmt(run.started_at)} · {run.total_input_tokens + run.total_output_tokens} tok
@@ -1512,7 +1555,7 @@ export default function WorkflowsPage() {
   // ── auto-layout ──────────────────────────────────────────────────────────
 
   const autoLayout = () => {
-    if (execMode === 'sequential' || execMode === 'collaborative') {
+    if (execMode === 'sequential') {
       setNodes(prev => prev.map((n, i) => ({ ...n, position_x: 40 + i * 240, position_y: 120 })))
       setEdges(() => {
         const sorted = [...nodes]
@@ -1524,18 +1567,31 @@ export default function WorkflowsPage() {
         }))
         return newEdges
       })
+    } else if (execMode === 'collaborative') {
+      // Sequential left-to-right per round — wire nodes in order
+      setNodes(prev => prev.map((n, i) => ({ ...n, position_x: 40 + i * 240, position_y: 120 })))
+      setEdges(() => {
+        const sorted = [...nodes]
+        return sorted.slice(0, -1).map((n, i) => ({
+          edge_id: newId('e'),
+          from_node_id: n.node_id,
+          to_node_id: sorted[i + 1].node_id,
+          label: '', condition_expr: '',
+        }))
+      })
     } else if (execMode === 'parallel' || execMode === 'hybrid') {
       setNodes(prev => prev.map((n, i) => ({
         ...n, position_x: 40 + i * 240, position_y: 120,
       })))
       setEdges([])
     } else if (execMode === 'hierarchical') {
-      // First node = orchestrator, rest = specialists fanned below
+      // Orchestrator centered above specialists
       setNodes(prev => {
         const [orch, ...specs] = prev
+        const orchX = specs.length > 0 ? 40 + ((specs.length - 1) * 240) / 2 : 40
         const layouted = [
-          { ...orch, node_type: 'orchestrator' as any, position_x: 40 + specs.length * 120, position_y: 30 },
-          ...specs.map((s, i) => ({ ...s, position_x: 40 + i * 240, position_y: 200 })),
+          { ...orch, node_type: 'orchestrator' as any, position_x: orchX, position_y: 30 },
+          ...specs.map((s, i) => ({ ...s, position_x: 40 + i * 240, position_y: 260 })),
         ]
         return layouted
       })
@@ -1673,7 +1729,13 @@ export default function WorkflowsPage() {
   const nodeResultMap: Record<string, NodeRunResult> = {}
   const activeRun = currentRun || selectedHistoryRun
   if (activeRun) {
-    activeRun.node_results.forEach(nr => { nodeResultMap[nr.node_id] = nr })
+    // For each node, keep the result with the latest started_at (handles multi-round collaborative)
+    activeRun.node_results.forEach(nr => {
+      const existing = nodeResultMap[nr.node_id]
+      if (!existing || (nr.started_at ?? '') > (existing.started_at ?? '')) {
+        nodeResultMap[nr.node_id] = nr
+      }
+    })
   }
 
   // all mode keys in display order
@@ -1760,6 +1822,14 @@ export default function WorkflowsPage() {
                 setRunPanelH(420)
               }}
               selectedRunId={selectedHistoryRun?.run_id}
+              workflowId={selected?.workflow_id ?? ''}
+              onRunsChanged={() => {
+                setRuns([])
+                setSelectedHistoryRun(null)
+                setCurrentRun(null)
+                setInitialInput('')
+                if (selected) listRuns(selected.workflow_id).then(setRuns)
+              }}
             />
           </div>
         )}
@@ -2056,12 +2126,30 @@ export default function WorkflowsPage() {
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                   <span style={{ ...MONO, fontSize: 10, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>Stop when:</span>
+                  <select
+                    value={['', 'nonempty'].includes(convergenceExpr) || convergenceExpr.startsWith('contains:') || convergenceExpr.startsWith('startswith:') || convergenceExpr.startsWith('endswith:') || convergenceExpr.startsWith('equals:') || convergenceExpr.startsWith('regex:') ? '' : ''}
+                    onChange={e => { if (e.target.value) setConvergenceExpr(e.target.value) }}
+                    style={{
+                      ...MONO, fontSize: 10, padding: '3px 4px',
+                      background: 'var(--bg-page)', color: 'var(--text-muted)',
+                      border: '1px solid var(--border)', borderRadius: 4,
+                    }}
+                  >
+                    <option value="">— pick preset —</option>
+                    <option value="nonempty">nonempty — any output stops the loop</option>
+                    <option value="contains:APPROVED">contains:APPROVED</option>
+                    <option value="contains:LGTM">contains:LGTM</option>
+                    <option value="contains:DONE">contains:DONE</option>
+                    <option value="contains:PASS">contains:PASS</option>
+                    <option value="contains:score:9">contains:score:9 — score 9+</option>
+                    <option value="regex:verdict:\s*yes">regex:verdict:\s*yes</option>
+                  </select>
                   <input
                     value={convergenceExpr}
                     onChange={e => setConvergenceExpr(e.target.value)}
-                    placeholder="contains:LGTM  |  nonempty  (blank = run all rounds)"
+                    placeholder="or type: contains:X  startswith:X  equals:X  regex:X  nonempty"
                     style={{
-                      ...MONO, fontSize: 10, padding: '3px 7px', width: 240,
+                      ...MONO, fontSize: 10, padding: '3px 7px', width: 260,
                       background: 'var(--bg-page)', color: 'var(--text-body)',
                       border: `1px solid ${convergenceExpr ? TEAL : 'var(--border)'}`,
                       borderRadius: 4,

@@ -180,6 +180,20 @@ export async function getRun(workflow_id: string, run_id: string): Promise<Workf
   )
 }
 
+export async function deleteRun(workflow_id: string, run_id: string): Promise<void> {
+  await apiFetch<void>(
+    `/workflows/${encodeURIComponent(workflow_id)}/runs/${encodeURIComponent(run_id)}`,
+    { method: 'DELETE' },
+  )
+}
+
+export async function clearAllRuns(workflow_id: string): Promise<void> {
+  await apiFetch<void>(
+    `/workflows/${encodeURIComponent(workflow_id)}/runs`,
+    { method: 'DELETE' },
+  )
+}
+
 export interface CheckpointInfo {
   checkpoint_id: string
   node_id: string
