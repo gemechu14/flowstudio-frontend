@@ -7,6 +7,7 @@ import Agents from './pages/Agents'
 import Workflows from './pages/Workflows'
 import DataSources from './pages/DataSources'
 import Settings from './pages/Settings'
+import ErrorBoundary from './components/ErrorBoundary'
 
 export default function App() {
   return (
@@ -28,7 +29,7 @@ export default function App() {
             <Route path="/tools" element={<Tools />} />
             <Route path="/agents" element={<Agents />} />
             <Route path="/data-sources" element={<DataSources />} />
-            <Route path="/workflows" element={<Workflows />} />
+            <Route path="/workflows" element={<ErrorBoundary><Workflows /></ErrorBoundary>} />
             <Route path="/settings" element={<Settings />} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { AgentRecord, listAgents } from '../api/agents'
 import {
   WorkflowRecord, WorkflowNode, WorkflowEdge, WorkflowRun, NodeRunResult, ExecutionMode,
@@ -34,6 +34,8 @@ const NODE_TYPE_COLORS: Record<string, string> = {
   condition: '#EF4444',
   loop: '#06B6D4',
   switch: '#F97316',
+  subworkflow: '#7C3AED',
+  collaborative_node: '#EC4899',
 }
 
 const STATUS_COLORS: Record<NodeStatus, string> = {
@@ -107,10 +109,14 @@ interface CanvasNodeProps {
   nodeResult?: NodeRunResult
   connectingFrom: string | null
   execMode: ExecutionMode
+  workflows?: WorkflowRecord[]
+  selected?: WorkflowRecord | null
   onSelect: () => void
   onDragStart: (e: React.MouseEvent) => void
-  onStartConnect: () => void
   onCompleteConnect: () => void
+  onMouseEnter: () => void
+  onMouseLeave: () => void
+  onHeightChange: (h: number) => void
   onAgentChange: (agentId: string, label: string, type: string) => void
   onConfigChange: (config: Record<string, unknown>) => void
   onDelete: () => void
@@ -118,9 +124,22 @@ interface CanvasNodeProps {
 
 function CanvasNodeCard({
   node, agents, isSelected, isConnectingSource, nodeResult, connectingFrom, execMode,
-  onSelect, onDragStart, onStartConnect, onCompleteConnect, onAgentChange, onConfigChange, onDelete,
+  workflows = [], selected,
+  onSelect, onDragStart, onCompleteConnect, onMouseEnter, onMouseLeave, onHeightChange,
+  onAgentChange, onConfigChange, onDelete,
 }: CanvasNodeProps) {
   const [expandField, setExpandField] = useState<string | null>(null)
+  const cardRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const el = cardRef.current
+    if (!el) return
+    const ro = new ResizeObserver(entries => {
+      const h = entries[0]?.contentRect.height
+      if (h) onHeightChange(h)
+    })
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, []) // eslint-disable-line
   const [expandValue, setExpandValue] = useState('')
   const [expandLabel, setExpandLabel] = useState('')
 
@@ -162,10 +181,13 @@ function CanvasNodeCard({
   return (
   <>
     <div
+      ref={cardRef}
       onClick={() => {
         if (connectingFrom && connectingFrom !== node.node_id) onCompleteConnect()
         else onSelect()
       }}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
       style={{
         position: 'absolute',
         left: node.position_x, top: node.position_y,
@@ -207,11 +229,29 @@ function CanvasNodeCard({
 
       {/* Body */}
       <div style={{ padding: '8px 10px' }}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-heading)', marginBottom: 4 }}>
-          {node.label || agentRecord?.name || 'Untitled Node'}
-        </div>
+        {/* Editable label for control nodes (no agent selector) */}
+        {(node.node_type === 'switch' || node.node_type === 'condition' || node.node_type === 'loop' || node.node_type === 'fan_out' || node.node_type === 'fan_in') ? (
+          <input
+            value={node.label || ''}
+            onChange={e => onAgentChange('', e.target.value, node.node_type)}
+            onClick={e => e.stopPropagation()}
+            placeholder={node.node_type === 'switch' ? 'Switch name…' : node.node_type === 'condition' ? 'Condition name…' : node.node_type === 'loop' ? 'Loop name…' : 'Node name…'}
+            style={{
+              width: '100%', fontSize: 13, fontWeight: 600, padding: '2px 4px',
+              background: 'transparent', color: 'var(--text-heading)',
+              border: 'none', borderBottom: '1px solid var(--border)',
+              borderRadius: 0, marginBottom: 6, boxSizing: 'border-box',
+              outline: 'none',
+            }}
+          />
+        ) : (
+          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-heading)', marginBottom: 4 }}>
+            {node.label || agentRecord?.name || 'Untitled Node'}
+          </div>
+        )}
 
-        {/* Agent selector */}
+        {/* Agent selector — agent / orchestrator / subworkflow / collab / fan_in only */}
+        {node.node_type !== 'switch' && node.node_type !== 'condition' && node.node_type !== 'fan_out' && node.node_type !== 'loop' && (
         <select
           value={node.agent_id || ''}
           onChange={e => {
@@ -231,33 +271,50 @@ function CanvasNodeCard({
             <option key={a.agent_id} value={a.agent_id}>{a.name}</option>
           ))}
         </select>
+        )}
 
-        {/* Parallel group input — hybrid mode only */}
-        {execMode === 'hybrid' && (
-          <div style={{ marginTop: 6 }}>
-            <div style={{ ...MONO, fontSize: 9, color: 'var(--text-muted)', marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Parallel group
+        {/* Timeout + retry delay — agent / orchestrator nodes only */}
+        {(node.node_type === 'agent' || node.node_type === 'orchestrator') && (
+        <div style={{ marginTop: 4 }}>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 9, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2, fontFamily: 'monospace' }}>Timeout (s)</div>
+              <input type="number" min="0" placeholder="∞"
+                value={(node.config.timeout_seconds as number | undefined) || ''}
+                onChange={e => onConfigChange({ ...node.config, timeout_seconds: e.target.value ? Number(e.target.value) : undefined })}
+                onClick={e => e.stopPropagation()}
+                style={{ width: '100%', fontSize: 10, padding: '2px 5px', background: 'var(--bg-page)', color: 'var(--text-body)', border: '1px solid var(--border)', borderRadius: 4, fontFamily: 'monospace' }}
+              />
             </div>
-            <input
-              value={parallelGroup}
-              onChange={e => {
-                onConfigChange({ ...node.config, parallel_group: e.target.value })
-              }}
-              onClick={e => e.stopPropagation()}
-              placeholder="group-name (leave blank for sequential)"
-              style={{
-                width: '100%', fontSize: 10, padding: '3px 6px',
-                background: 'var(--bg-page)', color: 'var(--text-body)',
-                border: `1px solid ${parallelGroup.trim() ? TEAL : 'var(--border)'}`,
-                borderRadius: 5, boxSizing: 'border-box',
-                ...MONO,
-              }}
-            />
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 9, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2, fontFamily: 'monospace' }}>Retry delay (s)</div>
+              <input type="number" min="0" step="0.5" placeholder="1.0"
+                value={(node.config.retry_delay as number | undefined) || ''}
+                onChange={e => onConfigChange({ ...node.config, retry_delay: e.target.value ? Number(e.target.value) : undefined })}
+                onClick={e => e.stopPropagation()}
+                style={{ width: '100%', fontSize: 10, padding: '2px 5px', background: 'var(--bg-page)', color: 'var(--text-body)', border: '1px solid var(--border)', borderRadius: 4, fontFamily: 'monospace' }}
+              />
+            </div>
+          </div>
+        </div>
+        )}
+
+        {/* Splitter/Aggregator toggles — parallel and hybrid modes */}
+        {(execMode === 'parallel' || execMode === 'hybrid') && node.node_type === 'agent' && (
+          <div style={{ marginTop: 4, display: 'flex', gap: 6 }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, cursor: 'pointer', fontFamily: 'monospace', color: '#F59E0B' }}>
+              <input type="checkbox" checked={!!(node.config.is_splitter)} onChange={e => onConfigChange({ ...node.config, is_splitter: e.target.checked, is_aggregator: false })} onClick={ev => ev.stopPropagation()} />
+              Splitter
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, cursor: 'pointer', fontFamily: 'monospace', color: '#10B981' }}>
+              <input type="checkbox" checked={!!(node.config.is_aggregator)} onChange={e => onConfigChange({ ...node.config, is_aggregator: e.target.checked, is_splitter: false })} onClick={ev => ev.stopPropagation()} />
+              Aggregator
+            </label>
           </div>
         )}
 
-        {/* Event-driven config — event_driven mode only */}
-        {execMode === 'event_driven' && (
+        {/* Event-driven / hybrid config — agent and orchestrator nodes only */}
+        {(execMode === 'event_driven' || execMode === 'hybrid') && (node.node_type === 'agent' || node.node_type === 'orchestrator') && (
           <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 5 }}>
             <div>
               <div style={{ ...MONO, fontSize: 9, color: '#F59E0B', marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
@@ -294,6 +351,66 @@ function CanvasNodeCard({
                   border: `1px solid ${'#10B981'}`,
                   borderRadius: 5, boxSizing: 'border-box', ...MONO,
                 }}
+              />
+            </div>
+            {execMode === 'event_driven' && ((node.config.subscribes_to as string[] | undefined) || []).length > 0 && (
+              <div style={{ marginTop: 4 }}>
+                <div style={{ fontSize: 9, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2, fontFamily: 'monospace' }}>Event timeout (s)</div>
+                <input type="number" min="10" placeholder="300"
+                  value={(node.config.event_timeout_seconds as number | undefined) || ''}
+                  onChange={e => onConfigChange({ ...node.config, event_timeout_seconds: e.target.value ? Number(e.target.value) : undefined })}
+                  onClick={e => e.stopPropagation()}
+                  style={{ width: '100%', fontSize: 10, padding: '2px 5px', background: 'var(--bg-page)', color: 'var(--text-body)', border: '1px solid var(--border)', borderRadius: 4, fontFamily: 'monospace' }}
+                />
+                <div style={{ fontSize: 9, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2, marginTop: 4, fontFamily: 'monospace' }}>Fallback if event times out</div>
+                <input placeholder="fallback text or leave empty"
+                  value={(node.config.event_fallback as string | undefined) || ''}
+                  onChange={e => onConfigChange({ ...node.config, event_fallback: e.target.value })}
+                  onClick={e => e.stopPropagation()}
+                  style={{ width: '100%', fontSize: 10, padding: '2px 5px', background: 'var(--bg-page)', color: 'var(--text-body)', border: '1px solid var(--border)', borderRadius: 4, fontFamily: 'monospace' }}
+                />
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Sub-workflow config */}
+        {node.node_type === 'subworkflow' && (
+          <div style={{ marginTop: 6 }}>
+            <div style={{ fontSize: 9, color: '#7C3AED', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2, fontFamily: 'monospace' }}>Target Workflow</div>
+            <select
+              value={(node.config.target_workflow_id as string | undefined) || ''}
+              onChange={e => onConfigChange({ ...node.config, target_workflow_id: e.target.value })}
+              onClick={e => e.stopPropagation()}
+              style={{ width: '100%', fontSize: 10, padding: '3px 6px', background: 'var(--bg-page)', color: 'var(--text-body)', border: '1px solid #7C3AED', borderRadius: 5, fontFamily: 'monospace' }}
+            >
+              <option value="">— select workflow —</option>
+              {workflows.filter(w => w.workflow_id !== selected?.workflow_id).map(w => (
+                <option key={w.workflow_id} value={w.workflow_id}>{w.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {/* Collaborative node config */}
+        {node.node_type === 'collaborative_node' && (
+          <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div>
+              <div style={{ fontSize: 9, color: '#EC4899', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2, fontFamily: 'monospace' }}>Rounds</div>
+              <input type="number" min="1" max="10"
+                value={(node.config.loop_iterations as number | undefined) || 3}
+                onChange={e => onConfigChange({ ...node.config, loop_iterations: Number(e.target.value) })}
+                onClick={e => e.stopPropagation()}
+                style={{ width: '100%', fontSize: 10, padding: '2px 5px', background: 'var(--bg-page)', color: 'var(--text-body)', border: '1px solid #EC4899', borderRadius: 4, fontFamily: 'monospace' }}
+              />
+            </div>
+            <div>
+              <div style={{ fontSize: 9, color: '#EC4899', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2, fontFamily: 'monospace' }}>Stop when</div>
+              <input placeholder="contains:APPROVED"
+                value={(node.config.convergence_expr as string | undefined) || ''}
+                onChange={e => onConfigChange({ ...node.config, convergence_expr: e.target.value })}
+                onClick={e => e.stopPropagation()}
+                style={{ width: '100%', fontSize: 10, padding: '2px 5px', background: 'var(--bg-page)', color: 'var(--text-body)', border: '1px solid #EC4899', borderRadius: 4, fontFamily: 'monospace' }}
               />
             </div>
           </div>
@@ -371,7 +488,22 @@ function CanvasNodeCard({
               Branches (evaluated in order)
             </div>
             {((node.config.branches as {condition: string; label: string}[] | undefined) || []).map((branch, idx) => (
-              <div key={idx} style={{ display: 'flex', gap: 4, marginBottom: 4, alignItems: 'center' }}>
+              <div key={idx} style={{
+                display: 'flex', flexDirection: 'column', gap: 3,
+                marginBottom: 6, padding: '5px 6px',
+                background: '#F9731608', border: '1px solid #F9731630', borderRadius: 5,
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <span style={{ ...MONO, fontSize: 9, color: '#F97316', fontWeight: 700, flex: 1 }}>IF</span>
+                  <button
+                    onClick={e => {
+                      e.stopPropagation()
+                      const branches = ((node.config.branches as {condition: string; label: string}[]) || []).filter((_, i) => i !== idx)
+                      onConfigChange({ ...node.config, branches })
+                    }}
+                    style={{ background: 'none', border: 'none', color: '#EF4444', cursor: 'pointer', fontSize: 13, padding: '0 2px', lineHeight: 1 }}
+                  >×</button>
+                </div>
                 <input
                   value={branch.condition}
                   onChange={e => {
@@ -380,14 +512,14 @@ function CanvasNodeCard({
                     onConfigChange({ ...node.config, branches })
                   }}
                   onClick={e => e.stopPropagation()}
-                  placeholder="contains:low"
+                  placeholder="contains:value"
                   style={{
-                    flex: 2, fontSize: 10, padding: '2px 5px',
+                    width: '100%', fontSize: 10, padding: '2px 5px',
                     background: 'var(--bg-page)', color: 'var(--text-body)',
-                    border: '1px solid #F97316', borderRadius: 4, ...MONO,
+                    border: '1px solid #F97316', borderRadius: 4, ...MONO, boxSizing: 'border-box',
                   }}
                 />
-                <span style={{ ...MONO, fontSize: 9, color: 'var(--text-muted)' }}>→</span>
+                <div style={{ ...MONO, fontSize: 9, color: 'var(--text-muted)' }}>→ EDGE LABEL</div>
                 <input
                   value={branch.label}
                   onChange={e => {
@@ -396,21 +528,13 @@ function CanvasNodeCard({
                     onConfigChange({ ...node.config, branches })
                   }}
                   onClick={e => e.stopPropagation()}
-                  placeholder="low"
+                  placeholder="branch-name"
                   style={{
-                    flex: 1, fontSize: 10, padding: '2px 5px',
+                    width: '100%', fontSize: 10, padding: '2px 5px',
                     background: 'var(--bg-page)', color: 'var(--text-body)',
-                    border: '1px solid var(--border)', borderRadius: 4, ...MONO,
+                    border: '1px solid var(--border)', borderRadius: 4, ...MONO, boxSizing: 'border-box',
                   }}
                 />
-                <button
-                  onClick={e => {
-                    e.stopPropagation()
-                    const branches = ((node.config.branches as {condition: string; label: string}[]) || []).filter((_, i) => i !== idx)
-                    onConfigChange({ ...node.config, branches })
-                  }}
-                  style={{ background: 'none', border: 'none', color: '#EF4444', cursor: 'pointer', fontSize: 13, padding: '0 2px', lineHeight: 1 }}
-                >×</button>
               </div>
             ))}
             <button
@@ -568,24 +692,7 @@ function CanvasNodeCard({
           </div>
         )}
 
-        {/* Connect button — hidden in parallel mode */}
-        <div style={{ marginTop: 6, display: 'flex', gap: 4 }}>
-          {execMode !== 'parallel' && execMode !== 'hierarchical' && (
-          <button
-            onMouseDown={e => e.stopPropagation()}
-            onClick={e => { e.stopPropagation(); onStartConnect() }}
-            style={{
-              ...MONO, fontSize: 10, padding: '2px 7px',
-              background: isConnectingSource ? '#F59E0B22' : 'var(--bg-page)',
-              border: `1px solid ${isConnectingSource ? '#F59E0B' : 'var(--border)'}`,
-              color: isConnectingSource ? '#F59E0B' : 'var(--text-muted)',
-              borderRadius: 4, cursor: 'pointer',
-            }}
-          >
-            {isConnectingSource ? '● connecting…' : '→ connect'}
-          </button>
-          )}
-        </div>
+        {/* Port handles are in the SVG layer above — hover the node border to connect */}
       </div>
     </div>
 
@@ -1348,6 +1455,14 @@ export default function WorkflowsPage() {
   const [saving, setSaving] = useState(false)
   const [saveMsg, setSaveMsg] = useState('')
 
+  // Port-drag state
+  const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null)
+  const hoverCancelRef = useRef<number | null>(null)
+  const [portDrag, setPortDrag] = useState<{
+    fromNodeId: string; fromSide: string; fromOffset: number; canvasX: number; canvasY: number
+  } | null>(null)
+  const [nodeHeights, setNodeHeights] = useState<Record<string, number>>({})
+
   // Drag state
   const dragging = useRef<{
     nodeId: string; startMX: number; startMY: number
@@ -1368,6 +1483,17 @@ export default function WorkflowsPage() {
   // History
   const [runs, setRuns] = useState<WorkflowRun[]>([])
   const [selectedHistoryRun, setSelectedHistoryRun] = useState<WorkflowRun | null>(null)
+
+  // Canvas zoom
+  const [zoom, setZoom] = useState(1)
+  const [editingEdgeId, setEditingEdgeId] = useState<string | null>(null)
+  const [editingEdgeLabel, setEditingEdgeLabel] = useState('')
+  const ZOOM_MIN = 0.3
+  const ZOOM_MAX = 2
+  const ZOOM_STEP = 0.1
+  const zoomIn  = () => setZoom(z => Math.min(ZOOM_MAX, +(z + ZOOM_STEP).toFixed(2)))
+  const zoomOut = () => setZoom(z => Math.max(ZOOM_MIN, +(z - ZOOM_STEP).toFixed(2)))
+  const zoomReset = () => setZoom(1)
 
   // Run panel resize
   const [runPanelH, setRunPanelH] = useState(420)
@@ -1455,30 +1581,12 @@ export default function WorkflowsPage() {
   }
 
   // ── canvas mouse events ──────────────────────────────────────────────────
-
-  const handleCanvasMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    if (!dragging.current) return
-    const rect = canvasRef.current?.getBoundingClientRect()
-    if (!rect) return
-    const dx = e.clientX - dragging.current.startMX
-    const dy = e.clientY - dragging.current.startMY
-    const newX = Math.max(0, dragging.current.startNX + dx)
-    const newY = Math.max(0, dragging.current.startNY + dy)
-    setNodes(prev =>
-      prev.map(n =>
-        n.node_id === dragging.current!.nodeId
-          ? { ...n, position_x: newX, position_y: newY }
-          : n
-      )
-    )
-  }, [])
-
-  const handleCanvasMouseUp = useCallback(() => {
-    dragging.current = null
-  }, [])
+  // Listeners are attached to window during drag so fast mouse movement
+  // outside the canvas div doesn't lose mouseup and corrupt drag state.
 
   const startDrag = useCallback((nodeId: string, e: React.MouseEvent) => {
     e.preventDefault()
+    e.stopPropagation()
     const node = nodes.find(n => n.node_id === nodeId)
     if (!node) return
     dragging.current = {
@@ -1486,6 +1594,30 @@ export default function WorkflowsPage() {
       startMX: e.clientX, startMY: e.clientY,
       startNX: node.position_x, startNY: node.position_y,
     }
+
+    const onMove = (ev: MouseEvent) => {
+      const d = dragging.current
+      if (!d) return
+      const dx = ev.clientX - d.startMX
+      const dy = ev.clientY - d.startMY
+      const newX = Math.max(0, d.startNX + dx)
+      const newY = Math.max(0, d.startNY + dy)
+      const targetId = d.nodeId
+      setNodes(prev =>
+        prev.map(n =>
+          n.node_id === targetId
+            ? { ...n, position_x: newX, position_y: newY }
+            : n
+        )
+      )
+    }
+    const onUp = () => {
+      dragging.current = null
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+    }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
   }, [nodes])
 
   // ── add / delete nodes ───────────────────────────────────────────────────
@@ -1496,7 +1628,10 @@ export default function WorkflowsPage() {
     const newNode: WorkflowNode = {
       node_id: newId('nd'),
       node_type: type as any,
-      label: type === 'orchestrator' ? 'Coordinator' : 'Agent Node',
+      label: type === 'orchestrator' ? 'Coordinator'
+      : type === 'subworkflow' ? 'Sub-workflow'
+      : type === 'collaborative_node' ? 'Collab Loop'
+      : 'Agent Node',
       agent_id: null,
       position_x: 40 + col * 240,
       position_y: 40 + row * 140,
@@ -1525,10 +1660,6 @@ export default function WorkflowsPage() {
 
   // ── connect ──────────────────────────────────────────────────────────────
 
-  const startConnect = (nodeId: string) => {
-    if (connectingFrom === nodeId) { setConnectingFrom(null); return }
-    setConnectingFrom(nodeId)
-  }
 
   const completeConnect = (toNodeId: string) => {
     if (!connectingFrom || connectingFrom === toNodeId) {
@@ -1547,6 +1678,78 @@ export default function WorkflowsPage() {
     }
     setConnectingFrom(null)
   }
+
+  // ── port-handle drag ─────────────────────────────────────────────────────
+
+  const startPortDrag = (fromNodeId: string, fromSide: string, fromOffset: number, e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const rect = canvasRef.current?.getBoundingClientRect()
+    if (!rect) return
+    const canvasX = (e.clientX - rect.left) / zoom
+    const canvasY = (e.clientY - rect.top) / zoom
+    setPortDrag({ fromNodeId, fromSide, fromOffset, canvasX, canvasY })
+
+    const onMove = (ev: MouseEvent) => {
+      const r = canvasRef.current?.getBoundingClientRect()
+      if (!r) return
+      setPortDrag(prev => prev ? {
+        ...prev,
+        canvasX: (ev.clientX - r.left) / zoom,
+        canvasY: (ev.clientY - r.top) / zoom,
+      } : null)
+    }
+
+    const onUp = (ev: MouseEvent) => {
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+      const r = canvasRef.current?.getBoundingClientRect()
+      if (!r) { setPortDrag(null); return }
+      const cx = (ev.clientX - r.left) / zoom
+      const cy = (ev.clientY - r.top) / zoom
+      // Snap to nearest port dot on target node
+      const target = nodes.find(n =>
+        cx >= n.position_x - 16 && cx <= n.position_x + NODE_W + 16 &&
+        cy >= n.position_y - 16 && cy <= n.position_y + 500 + 16 &&
+        n.node_id !== fromNodeId
+      )
+      if (target) {
+        // Find closest port dot on target
+        const PORT_OFFSETS = [0.25, 0.5, 0.75]
+        const PORT_SIDES = ['top', 'right', 'bottom', 'left']
+        let bestDist = Infinity, toSide = 'left', toOffset = 0.5
+        PORT_SIDES.forEach(side => {
+          PORT_OFFSETS.forEach(off => {
+            const p = getPortPos(target, side, off)
+            const d = Math.sqrt((cx - p.x) ** 2 + (cy - p.y) ** 2)
+            if (d < bestDist) { bestDist = d; toSide = side; toOffset = off }
+          })
+        })
+        const already = edges.some(
+          ed => ed.from_node_id === fromNodeId && ed.to_node_id === target.node_id &&
+                ed.from_side === fromSide && ed.from_offset === fromOffset
+        )
+        if (!already) {
+          setEdges(prev => [...prev, {
+            edge_id: newId('e'),
+            from_node_id: fromNodeId,
+            to_node_id: target.node_id,
+            label: '', condition_expr: '',
+            from_side: fromSide, from_offset: fromOffset,
+            to_side: toSide, to_offset: toOffset,
+          }])
+        }
+      }
+      setPortDrag(null)
+    }
+
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+  }
+
+  // While dragging: show dots on all nodes (so user can see drop targets).
+  // While hovering: show dots only on hovered node.
+  const showPortsFor: string | 'all' | null = portDrag ? 'all' : hoveredNodeId
 
   const deleteEdge = (edgeId: string) => {
     setEdges(prev => prev.filter(e => e.edge_id !== edgeId))
@@ -1596,6 +1799,67 @@ export default function WorkflowsPage() {
         return layouted
       })
       setEdges([])
+    } else if (execMode === 'event_driven') {
+      // Topological layout based on event connections
+      // Build event → emitter map and subscriber map
+      const emitterOf: Record<string, string> = {} // event name → node_id that emits it
+      nodes.forEach(n => {
+        const evt = (n.config.emits_event as string | undefined) || ''
+        if (evt) emitterOf[evt] = n.node_id
+      })
+      // Assign column depth per node via BFS from trigger nodes
+      const depth: Record<string, number> = {}
+      nodes.forEach(n => {
+        const subs = (n.config.subscribes_to as string[] | undefined) || []
+        if (subs.length === 0) depth[n.node_id] = 0
+      })
+      let changed = true
+      while (changed) {
+        changed = false
+        nodes.forEach(n => {
+          const subs = (n.config.subscribes_to as string[] | undefined) || []
+          if (subs.length === 0) return
+          const parentDepths = subs.map(e => depth[emitterOf[e] ?? ''] ?? -1)
+          if (parentDepths.some(d => d === -1)) return
+          const newDepth = Math.max(...parentDepths) + 1
+          if (depth[n.node_id] !== newDepth) { depth[n.node_id] = newDepth; changed = true }
+        })
+      }
+      // Group nodes by column
+      const cols: Record<number, string[]> = {}
+      nodes.forEach(n => {
+        const col = depth[n.node_id] ?? 0
+        if (!cols[col]) cols[col] = []
+        cols[col].push(n.node_id)
+      })
+      const colKeys = Object.keys(cols).map(Number).sort((a, b) => a - b)
+      const nodeMap: Record<string, WorkflowNode> = {}
+      nodes.forEach(n => { nodeMap[n.node_id] = n })
+      const positioned: WorkflowNode[] = []
+      colKeys.forEach((col, ci) => {
+        const colNodes = cols[col]
+        colNodes.forEach((nid, ri) => {
+          const n = nodeMap[nid]
+          positioned.push({
+            ...n,
+            position_x: 40 + ci * 260,
+            position_y: 40 + ri * 180,
+          })
+        })
+      })
+      setNodes(positioned)
+      // Draw edges following event wiring
+      const newEdges: WorkflowEdge[] = []
+      nodes.forEach(n => {
+        const subs = (n.config.subscribes_to as string[] | undefined) || []
+        subs.forEach(evt => {
+          const srcId = emitterOf[evt]
+          if (srcId) {
+            newEdges.push({ edge_id: newId('e'), from_node_id: srcId, to_node_id: n.node_id, label: evt, condition_expr: '' })
+          }
+        })
+      })
+      setEdges(newEdges)
     }
   }
 
@@ -1691,7 +1955,7 @@ export default function WorkflowsPage() {
     if (!selected) { alert('Save the workflow first.'); return }
     if (!initialInput.trim()) { alert('Enter an initial prompt.'); return }
     if (pollRunRef.current) clearTimeout(pollRunRef.current)
-    setRunning(true); setRunError(''); setCurrentRun(null)
+    setRunning(true); setRunError(''); setCurrentRun(null); setSelectedHistoryRun(null)
     try {
       const run = await runWorkflow(selected.workflow_id, initialInput, '')
       setCurrentRun(run)
@@ -1704,26 +1968,119 @@ export default function WorkflowsPage() {
     }
   }
 
+  // ── fired events — derived from completed node results during a run ────────
+  // A node's emits_event is considered fired once that node is completed.
+  const firedEvents = useMemo<Set<string>>(() => {
+    const active = currentRun || selectedHistoryRun
+    if (!active || execMode !== 'event_driven') return new Set()
+    const fired = new Set<string>()
+    active.node_results.forEach(nr => {
+      if (nr.status === 'completed') {
+        const node = nodes.find(n => n.node_id === nr.node_id)
+        const evt = (node?.config?.emits_event as string | undefined) || ''
+        if (evt) fired.add(evt)
+      }
+    })
+    return fired
+  }, [currentRun, selectedHistoryRun, execMode, nodes])
+
   // ── edge SVG paths ────────────────────────────────────────────────────────
 
   const nodeMap = Object.fromEntries(nodes.map(n => [n.node_id, n]))
+
+  const getNodeH = (node: WorkflowNode) => nodeHeights[node.node_id] || NODE_H
+
+  const getPortPos = (node: WorkflowNode, side: string, offset = 0.5): { x: number; y: number } => {
+    const h = getNodeH(node)
+    switch (side) {
+      case 'top':    return { x: node.position_x + NODE_W * offset, y: node.position_y }
+      case 'bottom': return { x: node.position_x + NODE_W * offset, y: node.position_y + h }
+      case 'left':   return { x: node.position_x,        y: node.position_y + h * offset }
+      case 'right': default: return { x: node.position_x + NODE_W, y: node.position_y + h * offset }
+    }
+  }
+
+  // Generate evenly-spaced offsets for a given side length
+  const portOffsets = (len: number) => {
+    const n = Math.max(2, Math.min(8, Math.floor(len / 60)))
+    return Array.from({ length: n }, (_, i) => (i + 1) / (n + 1))
+  }
+
+  const sideTangent = (side: string): [number, number] => {
+    switch (side) {
+      case 'top': return [0, -1]
+      case 'bottom': return [0, 1]
+      case 'left': return [-1, 0]
+      case 'right': default: return [1, 0]
+    }
+  }
 
   const edgePaths = edges.map(edge => {
     const from = nodeMap[edge.from_node_id]
     const to = nodeMap[edge.to_node_id]
     if (!from || !to) return null
-    const x1 = from.position_x + NODE_W
-    const y1 = from.position_y + NODE_H / 2
-    const x2 = to.position_x
-    const y2 = to.position_y + NODE_H / 2
-    const cx = (x1 + x2) / 2
-    const d = `M ${x1} ${y1} C ${cx} ${y1} ${cx} ${y2} ${x2} ${y2}`
-    return { edge, d, midX: cx, midY: (y1 + y2) / 2 }
-  }).filter(Boolean) as { edge: WorkflowEdge; d: string; midX: number; midY: number }[]
 
-  // canvas dimensions
-  const canvasW = Math.max(900, ...nodes.map(n => n.position_x + NODE_W + 60))
-  const canvasH = Math.max(400, ...nodes.map(n => n.position_y + NODE_H + 80))
+    let x1: number, y1: number, x2: number, y2: number
+    let fromSide: string, toSide: string
+
+    if (edge.from_side && edge.to_side) {
+      // Use stored port sides + offsets
+      fromSide = edge.from_side
+      toSide = edge.to_side
+      const p1 = getPortPos(from, fromSide, edge.from_offset ?? 0.5)
+      const p2 = getPortPos(to, toSide, edge.to_offset ?? 0.5)
+      x1 = p1.x; y1 = p1.y; x2 = p2.x; y2 = p2.y
+    } else {
+      // Auto-detect: right→left for forward, bottom→top for backward (use actual heights)
+      const fromH = getNodeH(from); const toH = getNodeH(to)
+      const fromRight = from.position_x + NODE_W
+      const toLeft = to.position_x
+      if (toLeft >= fromRight - 20) {
+        fromSide = 'right'; toSide = 'left'
+        x1 = fromRight; y1 = from.position_y + fromH / 2
+        x2 = toLeft; y2 = to.position_y + toH / 2
+      } else {
+        fromSide = 'bottom'; toSide = 'top'
+        x1 = from.position_x + NODE_W / 2; y1 = from.position_y + fromH
+        x2 = to.position_x + NODE_W / 2; y2 = to.position_y
+      }
+    }
+
+    const [dx1, dy1] = sideTangent(fromSide)
+    const [dx2, dy2] = sideTangent(toSide)
+    // Pull endpoint back so arrowhead tip sits on the node border
+    const ARROW = 10
+    const ex2 = x2 - dx2 * ARROW
+    const ey2 = y2 - dy2 * ARROW
+    const dist = Math.sqrt((ex2 - x1) ** 2 + (ey2 - y1) ** 2)
+    // Backward edges (source port faces away from dest, e.g. right→left when x1>x2)
+    // need larger cp to avoid tight S-curve loops
+    const isBackward =
+      (fromSide === 'right' && toSide === 'left' && ex2 < x1) ||
+      (fromSide === 'left' && toSide === 'right' && ex2 > x1) ||
+      (fromSide === 'bottom' && toSide === 'top' && ey2 < y1) ||
+      (fromSide === 'top' && toSide === 'bottom' && ey2 > y1)
+    const cp = isBackward
+      ? Math.max(120, Math.max(Math.abs(ex2 - x1), Math.abs(ey2 - y1)) * 0.7 + 60)
+      : Math.max(60, dist * 0.4)
+    const cx1 = x1 + dx1 * cp
+    const cy1 = y1 + dy1 * cp
+    // Proper CP2: approach destination from its port's outward direction
+    const cx2 = ex2 + dx2 * cp
+    const cy2 = ey2 + dy2 * cp
+    const d = `M ${x1} ${y1} C ${cx1} ${cy1} ${cx2} ${cy2} ${ex2} ${ey2}`
+    const midX = (x1 + cx1 + cx2 + ex2) / 4
+    const midY = (y1 + cy1 + cy2 + ey2) / 4
+
+    // Border position (actual port, before pullback) for rendering arrowhead in top SVG
+    const maxCtrlY = Math.max(y1, cy1, cy2, ey2)
+    return { edge, d, midX, midY, x2: ex2, y2: ey2, borderX: x2, borderY: y2, toSide, maxCtrlY }
+  }).filter(Boolean) as { edge: WorkflowEdge; d: string; midX: number; midY: number; x2: number; y2: number; borderX: number; borderY: number; toSide: string; maxCtrlY: number }[]
+
+  // canvas dimensions — include bezier control points so arcs beyond nodes trigger scroll
+  const canvasW = Math.max(900, ...nodes.map(n => n.position_x + NODE_W + 80))
+  const edgeMaxY = edgePaths.length > 0 ? Math.max(...edgePaths.map(ep => ep.maxCtrlY)) : 0
+  const canvasH = Math.max(600, ...nodes.map(n => n.position_y + getNodeH(n) + 100), edgeMaxY + 80)
 
   // node results map
   const nodeResultMap: Record<string, NodeRunResult> = {}
@@ -1892,12 +2249,21 @@ export default function WorkflowsPage() {
           </select>
 
           <button onClick={autoLayout} style={toolBtn}>Auto Layout</button>
+
+          {/* Zoom controls */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 2, marginLeft: 4 }}>
+            <button onClick={zoomOut} style={{ ...toolBtn, padding: '3px 9px', fontSize: 15, lineHeight: 1 }} title="Zoom out (Ctrl+scroll)">−</button>
+            <button onClick={zoomReset} style={{ ...toolBtn, minWidth: 46, textAlign: 'center', fontSize: 10 }} title="Reset zoom">
+              {Math.round(zoom * 100)}%
+            </button>
+            <button onClick={zoomIn} style={{ ...toolBtn, padding: '3px 9px', fontSize: 15, lineHeight: 1 }} title="Zoom in (Ctrl+scroll)">+</button>
+          </div>
           <button onClick={() => addNode('agent')} style={{ ...toolBtn, color: '#1D5FFA' }}>
             + Agent Node
           </button>
-          {execMode === 'hierarchical' && (
+          {(execMode === 'hierarchical' || execMode === 'hybrid') && (
             <button onClick={() => addNode('orchestrator')} style={{ ...toolBtn, color: '#7C3AED' }}>
-              + Coordinator
+              + Orchestrator
             </button>
           )}
           {execMode === 'hybrid' && (
@@ -1911,9 +2277,24 @@ export default function WorkflowsPage() {
             </button>
           )}
           {execMode === 'hybrid' && (
+            <button onClick={() => addNode('condition')} style={{ ...toolBtn, color: '#EF4444' }}>
+              + Condition
+            </button>
+          )}
+          {execMode === 'hybrid' && (
             <button onClick={() => addNode('switch')} style={{ ...toolBtn, color: '#F97316' }}>
               + Switch
             </button>
+          )}
+          {execMode === 'hybrid' && (
+            <>
+              <button onClick={() => addNode('subworkflow')} style={{ ...toolBtn, color: '#7C3AED' }}>
+                + Sub-workflow
+              </button>
+              <button onClick={() => addNode('collaborative_node')} style={{ ...toolBtn, color: '#EC4899' }}>
+                + Collab Node
+              </button>
+            </>
           )}
 
           {connectingFrom && (
@@ -1979,11 +2360,19 @@ export default function WorkflowsPage() {
         </div>
 
         {/* Canvas */}
-        <div style={{ flex: 1, overflow: 'auto', position: 'relative', minHeight: 0 }}>
+        <div
+          style={{ flex: 1, overflow: 'auto', position: 'relative', minHeight: 0 }}
+          onWheel={e => {
+            if (!e.ctrlKey && !e.metaKey) return
+            e.preventDefault()
+            setZoom(z => {
+              const next = e.deltaY < 0 ? z + ZOOM_STEP : z - ZOOM_STEP
+              return Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, +next.toFixed(2)))
+            })
+          }}
+        >
           <div
             ref={canvasRef}
-            onMouseMove={handleCanvasMouseMove}
-            onMouseUp={handleCanvasMouseUp}
             onKeyDown={e => { if (e.key === 'Escape') setConnectingFrom(null) }}
             tabIndex={0}
             style={{
@@ -1991,38 +2380,37 @@ export default function WorkflowsPage() {
               width: canvasW, height: canvasH,
               background: 'var(--bg-page)',
               backgroundImage: 'radial-gradient(var(--border) 1px, transparent 1px)',
-              backgroundSize: '24px 24px',
+              backgroundSize: `${24 * zoom}px ${24 * zoom}px`,
               cursor: connectingFrom ? 'crosshair' : 'default',
+              transform: `scale(${zoom})`,
+              transformOrigin: 'top left',
             }}
           >
-            {/* SVG edge layer */}
+            {/* Edge paths — behind node cards. Cards act as natural clipping: any portion that enters a card area is hidden by the card */}
             <svg
-              style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none' }}
+              style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none', zIndex: 0, overflow: 'visible' }}
               width={canvasW} height={canvasH}
             >
               <defs>
-                <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
-                  <path d="M0,0 L0,6 L8,3 z" fill="#1D5FFA88" />
-                </marker>
+                <filter id="glow-bottom">
+                  <feGaussianBlur stdDeviation="2.5" result="coloredBlur"/>
+                  <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                </filter>
               </defs>
-              {edgePaths.map(({ edge, d, midX, midY }) => (
-                <g key={edge.edge_id}>
-                  <path
-                    d={d} fill="none" stroke="#1D5FFA66" strokeWidth={2}
-                    markerEnd="url(#arrow)"
+              {edgePaths.map(({ edge, d }) => {
+                const isEventDriven = execMode === 'event_driven'
+                const hasRun = !!(currentRun || selectedHistoryRun)
+                const fired = isEventDriven && hasRun && edge.label ? firedEvents.has(edge.label) : null
+                const stroke = fired === null ? '#1D5FFA99' : fired ? '#F59E0B' : '#1D5FFA33'
+                const strokeW = fired ? 2.5 : 1.5
+                return (
+                  <path key={edge.edge_id}
+                    d={d} fill="none" stroke={stroke} strokeWidth={strokeW}
+                    filter={fired ? 'url(#glow-bottom)' : undefined}
+                    style={{ transition: 'stroke 0.4s ease' }}
                   />
-                  {/* Delete edge hit area */}
-                  <circle
-                    cx={midX} cy={midY} r={7}
-                    fill="var(--bg-card)" stroke="var(--border)" strokeWidth={1}
-                    style={{ cursor: 'pointer', pointerEvents: 'all' }}
-                    onClick={() => deleteEdge(edge.edge_id)}
-                  />
-                  <text x={midX} y={midY + 4} textAnchor="middle"
-                    fontSize={10} fill="#EF4444" style={{ pointerEvents: 'all', cursor: 'pointer' }}
-                    onClick={() => deleteEdge(edge.edge_id)}>×</text>
-                </g>
-              ))}
+                )
+              })}
             </svg>
 
             {/* Nodes */}
@@ -2036,10 +2424,20 @@ export default function WorkflowsPage() {
                 nodeResult={nodeResultMap[node.node_id]}
                 connectingFrom={connectingFrom}
                 execMode={execMode}
+                workflows={workflows}
+                selected={selected}
                 onSelect={() => setSelectedNodeId(node.node_id)}
                 onDragStart={e => startDrag(node.node_id, e)}
-                onStartConnect={() => startConnect(node.node_id)}
+
                 onCompleteConnect={() => completeConnect(node.node_id)}
+                onMouseEnter={() => {
+                  if (hoverCancelRef.current) { clearTimeout(hoverCancelRef.current); hoverCancelRef.current = null }
+                  setHoveredNodeId(node.node_id)
+                }}
+                onMouseLeave={() => {
+                  hoverCancelRef.current = window.setTimeout(() => setHoveredNodeId(null), 120)
+                }}
+                onHeightChange={h => setNodeHeights(prev => prev[node.node_id] === h ? prev : { ...prev, [node.node_id]: h })}
                 onAgentChange={(agentId, label, type) =>
                   updateNodeField(node.node_id, agentId, label, type)
                 }
@@ -2047,6 +2445,179 @@ export default function WorkflowsPage() {
                 onDelete={() => deleteNode(node.node_id)}
               />
             ))}
+
+            {/* SVG — on top of nodes: edges + arrowheads + labels + port handles */}
+            <svg
+              style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none', zIndex: 20, overflow: 'visible' }}
+              width={canvasW} height={canvasH}
+            >
+              <defs>
+                <marker id="arrow-ghost" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                  <path d="M0,0 L0,6 L8,3 z" fill="#F59E0B" />
+                </marker>
+                {/* Auto-orient arrowhead markers — tip at refX so it lands exactly on the port */}
+                <marker id="arrow-blue" markerWidth="11" markerHeight="8" refX="10" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+                  <polygon points="0 0, 11 4, 0 8" fill="#1D5FFA99" />
+                </marker>
+                <marker id="arrow-fired" markerWidth="11" markerHeight="8" refX="10" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+                  <polygon points="0 0, 11 4, 0 8" fill="#F59E0B" />
+                </marker>
+                <marker id="arrow-dim" markerWidth="11" markerHeight="8" refX="10" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+                  <polygon points="0 0, 11 4, 0 8" fill="#1D5FFA33" />
+                </marker>
+              </defs>
+
+              {/* Arrowheads — invisible approach lines with auto-orient markerEnd, always above node cards */}
+              {edgePaths.map(({ edge, borderX, borderY, toSide }) => {
+                const isEventDriven = execMode === 'event_driven'
+                const hasRun = !!(currentRun || selectedHistoryRun)
+                const fired = isEventDriven && hasRun && edge.label ? firedEvents.has(edge.label) : null
+                const markerId = fired === null ? 'arrow-blue' : fired ? 'arrow-fired' : 'arrow-dim'
+                const [dx2, dy2] = sideTangent(toSide)
+                const REACH = 16
+                return (
+                  <line
+                    key={`ah-${edge.edge_id}`}
+                    x1={borderX + dx2 * REACH} y1={borderY + dy2 * REACH}
+                    x2={borderX} y2={borderY}
+                    stroke="none" strokeWidth={1}
+                    markerEnd={`url(#${markerId})`}
+                    style={{ pointerEvents: 'none' }}
+                  />
+                )
+              })}
+              {/* Ghost edge while port-dragging */}
+              {portDrag && (() => {
+                const fromNode = nodeMap[portDrag.fromNodeId]
+                if (!fromNode) return null
+                const p = getPortPos(fromNode, portDrag.fromSide, portDrag.fromOffset)
+                const [dx, dy] = sideTangent(portDrag.fromSide)
+                const dist = Math.sqrt((portDrag.canvasX - p.x) ** 2 + (portDrag.canvasY - p.y) ** 2)
+                const cp = Math.max(60, dist * 0.4)
+                return (
+                  <path
+                    d={`M ${p.x} ${p.y} C ${p.x + dx * cp} ${p.y + dy * cp} ${portDrag.canvasX} ${portDrag.canvasY} ${portDrag.canvasX} ${portDrag.canvasY}`}
+                    fill="none" stroke="#F59E0B" strokeWidth={2} strokeDasharray="6 3"
+                    markerEnd="url(#arrow-ghost)"
+                    style={{ pointerEvents: 'none' }}
+                  />
+                )
+              })()}
+
+              {/* Port handles — dots on all 4 edges using actual node height */}
+              {showPortsFor && (() => {
+                const targetNodes = showPortsFor === 'all'
+                  ? nodes.filter(n => n.node_id !== portDrag?.fromNodeId)
+                  : nodes.filter(n => n.node_id === showPortsFor)
+                return targetNodes.flatMap(n => {
+                  const accent = NODE_TYPE_COLORS[n.node_type] || '#1D5FFA'
+                  const h = getNodeH(n)
+                  const hOffsets = portOffsets(NODE_W)  // horizontal sides (top/bottom)
+                  const vOffsets = portOffsets(h)        // vertical sides (left/right)
+                  return (['top', 'bottom', 'left', 'right'] as const).flatMap(side => {
+                    const offs = (side === 'left' || side === 'right') ? vOffsets : hOffsets
+                    return offs.map(off => {
+                      const p = getPortPos(n, side, off)
+                      const isDest = showPortsFor === 'all'
+                      return (
+                        <circle
+                          key={`${n.node_id}-${side}-${off}`}
+                          cx={p.x} cy={p.y} r={isDest ? 4 : 5}
+                          fill={isDest ? '#10B98144' : 'white'}
+                          stroke={isDest ? '#10B981' : accent}
+                          strokeWidth={2}
+                          style={{ pointerEvents: portDrag ? 'none' : 'all', cursor: 'crosshair' }}
+                          onMouseEnter={() => {
+                            if (hoverCancelRef.current) { clearTimeout(hoverCancelRef.current); hoverCancelRef.current = null }
+                          }}
+                          onMouseDown={e => startPortDrag(n.node_id, side, off, e)}
+                        />
+                      )
+                    })
+                  })
+                })
+              })()}
+
+              {edgePaths.map(({ edge, midX, midY }) => {
+                const hasLabel = !!edge.label
+                const labelW = hasLabel ? Math.max(edge.label.length * 7 + 16, 52) : 0
+                const labelH = 18
+                const isEventDriven = execMode === 'event_driven'
+                const hasRun = !!(currentRun || selectedHistoryRun)
+                const fired = isEventDriven && hasRun && edge.label ? firedEvents.has(edge.label) : null
+                const showLabel = hasLabel && (fired === null || fired === true)
+                const labelFill = fired ? '#F59E0B' : '#F59E0B'
+                const labelOpacity = fired === false ? 0 : 1
+                const isEditing = editingEdgeId === edge.edge_id
+                const btnY = midY + (hasLabel ? labelH : 0)
+                return (
+                  <g key={edge.edge_id}>
+                    {/* Clickable hit area on the midpoint to open label editor */}
+                    <circle
+                      cx={midX} cy={midY} r={hasLabel ? 0 : 10}
+                      fill="transparent"
+                      style={{ pointerEvents: 'all', cursor: 'text' }}
+                      onClick={() => { setEditingEdgeId(edge.edge_id); setEditingEdgeLabel(edge.label || '') }}
+                    />
+                    {showLabel && !isEditing && (
+                      <g style={{ opacity: labelOpacity, transition: 'opacity 0.4s ease', cursor: 'text', pointerEvents: 'all' }}
+                        onClick={() => { setEditingEdgeId(edge.edge_id); setEditingEdgeLabel(edge.label || '') }}>
+                        <rect
+                          x={midX - labelW / 2} y={midY - labelH / 2}
+                          width={labelW} height={labelH} rx={9}
+                          fill={labelFill} stroke="#92400E" strokeWidth={0.5}
+                        />
+                        <text
+                          x={midX} y={midY + 5}
+                          textAnchor="middle" fontSize={9.5}
+                          fontFamily="monospace" fill="#1a1a00" fontWeight="700"
+                          letterSpacing="0.02em"
+                        >{edge.label}</text>
+                      </g>
+                    )}
+                    {/* Inline label editor via foreignObject */}
+                    {isEditing && (
+                      <foreignObject x={midX - 52} y={midY - 12} width={104} height={24} style={{ pointerEvents: 'all' }}>
+                        <input
+                          autoFocus
+                          value={editingEdgeLabel}
+                          onChange={e => setEditingEdgeLabel(e.target.value)}
+                          onBlur={() => {
+                            setEdges(prev => prev.map(ed => ed.edge_id === edge.edge_id ? { ...ed, label: editingEdgeLabel.trim() } : ed))
+                            setEditingEdgeId(null)
+                          }}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter' || e.key === 'Escape') {
+                              if (e.key === 'Enter') setEdges(prev => prev.map(ed => ed.edge_id === edge.edge_id ? { ...ed, label: editingEdgeLabel.trim() } : ed))
+                              setEditingEdgeId(null)
+                            }
+                          }}
+                          placeholder="label…"
+                          style={{
+                            width: '100%', height: '100%', fontSize: 10, textAlign: 'center',
+                            background: '#1a1200', color: '#F59E0B', border: '1px solid #F59E0B',
+                            borderRadius: 6, outline: 'none', fontFamily: 'monospace', fontWeight: 700,
+                            padding: '0 4px', boxSizing: 'border-box',
+                          }}
+                        />
+                      </foreignObject>
+                    )}
+                    <circle
+                      cx={midX} cy={btnY + 10} r={7}
+                      fill="var(--bg-card)" stroke="var(--border)" strokeWidth={1}
+                      style={{ cursor: 'pointer', pointerEvents: 'all' }}
+                      onClick={() => deleteEdge(edge.edge_id)}
+                    />
+                    <text
+                      x={midX} y={btnY + 14}
+                      textAnchor="middle" fontSize={10} fill="#EF4444"
+                      style={{ pointerEvents: 'all', cursor: 'pointer' }}
+                      onClick={() => deleteEdge(edge.edge_id)}
+                    >×</text>
+                  </g>
+                )
+              })}
+            </svg>
 
             {/* Empty state */}
             {nodes.length === 0 && (

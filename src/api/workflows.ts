@@ -4,7 +4,7 @@ import { apiFetch } from './client'
 // Node & edge types
 // ---------------------------------------------------------------------------
 
-export type NodeType = 'agent' | 'orchestrator' | 'fan_out' | 'fan_in' | 'condition' | 'loop' | 'switch'
+export type NodeType = 'agent' | 'orchestrator' | 'fan_out' | 'fan_in' | 'condition' | 'loop' | 'switch' | 'subworkflow' | 'collaborative_node'
 export type ExecutionMode = 'sequential' | 'parallel' | 'hierarchical' | 'hybrid' | 'collaborative' | 'event_driven'
 
 export interface WorkflowNode {
@@ -24,6 +24,10 @@ export interface WorkflowEdge {
   to_node_id: string
   label: string
   condition_expr: string
+  from_side?: string
+  to_side?: string
+  from_offset?: number
+  to_offset?: number
 }
 
 // Legacy step (still supported for backward compat)
