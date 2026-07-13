@@ -250,8 +250,8 @@ function CanvasNodeCard({
           </div>
         )}
 
-        {/* Agent selector — agent / orchestrator / subworkflow / collab / fan_in only */}
-        {node.node_type !== 'switch' && node.node_type !== 'condition' && node.node_type !== 'fan_out' && node.node_type !== 'loop' && (
+        {/* Agent selector — agent / orchestrator / collab / fan_in only (not subworkflow) */}
+        {node.node_type !== 'switch' && node.node_type !== 'condition' && node.node_type !== 'fan_out' && node.node_type !== 'loop' && node.node_type !== 'subworkflow' && (
         <select
           value={node.agent_id || ''}
           onChange={e => {
@@ -1050,15 +1050,13 @@ function RunResultPanel({
         </div>
       )}
 
-      {/* Shared Blackboard */}
-      <div style={{ padding: '12px 20px', borderTop: '1px solid var(--border)' }}>
-        <div style={{ ...MONO, fontSize: 10, color: 'var(--text-muted)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-          Shared Blackboard
-        </div>
-        {run.blackboard && Object.keys(run.blackboard).length > 0 ? (
-          <div style={{
-            display: 'flex', flexDirection: 'column', gap: 4,
-          }}>
+      {/* Shared Blackboard — only rendered when agents have written to it */}
+      {run.blackboard && Object.keys(run.blackboard).length > 0 && (
+        <div style={{ padding: '12px 20px', borderTop: '1px solid var(--border)' }}>
+          <div style={{ ...MONO, fontSize: 10, color: 'var(--text-muted)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+            Shared Blackboard
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             {Object.entries(run.blackboard).map(([k, v]) => (
               <div key={k} style={{
                 display: 'flex', gap: 8, alignItems: 'flex-start',
@@ -1070,17 +1068,8 @@ function RunResultPanel({
               </div>
             ))}
           </div>
-        ) : (
-          <div style={{
-            ...MONO, fontSize: 11, color: 'var(--text-muted)',
-            background: 'var(--bg-page)', padding: '10px 12px',
-            borderRadius: 6, border: '1px solid var(--border)',
-            fontStyle: 'italic',
-          }}>
-            Blackboard values will appear here during collaborative and hybrid runs.
-          </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
 
       {expandModal}
