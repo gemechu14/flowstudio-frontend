@@ -1576,6 +1576,8 @@ export default function WorkflowsPage() {
       setEdges(synthEdges)
     }
     setCurrentRun(null)
+    setSelectedHistoryRun(null)
+    setInitialInput('')
     setRunError('')
     listRuns(wf.workflow_id).then(setRuns).catch(() => setRuns([]))
   }
@@ -1707,21 +1709,25 @@ export default function WorkflowsPage() {
       if (!r) { setPortDrag(null); return }
       const cx = (ev.clientX - r.left) / zoom
       const cy = (ev.clientY - r.top) / zoom
-      // Snap to nearest port dot on target node
-      const target = nodes.find(n =>
-        cx >= n.position_x - 16 && cx <= n.position_x + NODE_W + 16 &&
-        cy >= n.position_y - 16 && cy <= n.position_y + 500 + 16 &&
-        n.node_id !== fromNodeId
-      )
+      // Find target node under cursor (use actual height, not hardcoded 500)
+      const target = nodes.find(n => {
+        const h = nodeHeights[n.node_id] || NODE_H
+        return cx >= n.position_x - 16 && cx <= n.position_x + NODE_W + 16 &&
+               cy >= n.position_y - 16 && cy <= n.position_y + h + 16 &&
+               n.node_id !== fromNodeId
+      })
       if (target) {
-        // Find closest port dot on target
-        const PORT_OFFSETS = [0.25, 0.5, 0.75]
-        const PORT_SIDES = ['top', 'right', 'bottom', 'left']
-        let bestDist = Infinity, toSide = 'left', toOffset = 0.5
-        PORT_SIDES.forEach(side => {
-          PORT_OFFSETS.forEach(off => {
+        // Snap to the nearest displayed port dot — use the same portOffsets() the dots
+        // are rendered with so every visible dot is a valid snap target.
+        const th = nodeHeights[target.node_id] || NODE_H
+        const hOffs = portOffsets(NODE_W)
+        const vOffs = portOffsets(th)
+        let bestDist = Infinity, toSide = 'left', toOffset = 0.5;
+        (['top', 'bottom', 'left', 'right'] as const).forEach(side => {
+          const offs = (side === 'left' || side === 'right') ? vOffs : hOffs
+          offs.forEach(off => {
             const p = getPortPos(target, side, off)
-            const d = Math.sqrt((cx - p.x) ** 2 + (cy - p.y) ** 2)
+            const d = Math.hypot(cx - p.x, cy - p.y)
             if (d < bestDist) { bestDist = d; toSide = side; toOffset = off }
           })
         })
@@ -1789,72 +1795,92 @@ export default function WorkflowsPage() {
       setEdges([])
     } else if (execMode === 'hierarchical') {
       // Orchestrator centered above specialists
-      setNodes(prev => {
-        const [orch, ...specs] = prev
-        const orchX = specs.length > 0 ? 40 + ((specs.length - 1) * 240) / 2 : 40
-        const layouted = [
-          { ...orch, node_type: 'orchestrator' as any, position_x: orchX, position_y: 30 },
-          ...specs.map((s, i) => ({ ...s, position_x: 40 + i * 240, position_y: 260 })),
-        ]
-        return layouted
-      })
+      const [orch, ...specs] = nodes
+      if (!orch) return
+      const COL_W = NODE_W + 80                           // 280px between agent left-edges
+      const orchH = nodeHeights[orch.node_id] || 340     // actual card height, or safe default
+      const totalAgentsW = specs.length > 0 ? (specs.length - 1) * COL_W + NODE_W : NODE_W
+      const orchX = 40 + Math.max(0, (totalAgentsW - NODE_W) / 2)  // centre over agent row
+      const agentY = 40 + orchH + 80                     // below orch with 80px gap
+      const layouted = [
+        { ...orch, node_type: 'orchestrator' as any, position_x: orchX, position_y: 40 },
+        ...specs.map((s, i) => ({ ...s, position_x: 40 + i * COL_W, position_y: agentY })),
+      ]
+      setNodes(layouted)
       setEdges([])
     } else if (execMode === 'event_driven') {
-      // Topological layout based on event connections
-      // Build event → emitter map and subscriber map
-      const emitterOf: Record<string, string> = {} // event name → node_id that emits it
+      // ── Hierarchical pub/sub layout ──────────────────────────────────────
+      // subscribes_to is stored as a comma-separated STRING, not an array.
+      const getSubs = (n: WorkflowNode) => {
+        const raw = (n.config.subscribes_to as string) || ''
+        return raw ? raw.split(',').map(s => s.trim()).filter(Boolean) : []
+      }
+
+      // event name → id of node that emits it
+      const emitterOf: Record<string, string> = {}
       nodes.forEach(n => {
-        const evt = (n.config.emits_event as string | undefined) || ''
+        const evt = ((n.config.emits_event as string) || '').trim()
         if (evt) emitterOf[evt] = n.node_id
       })
-      // Assign column depth per node via BFS from trigger nodes
+
+      // BFS topological depth: root nodes (no subscriptions) = depth 0
       const depth: Record<string, number> = {}
-      nodes.forEach(n => {
-        const subs = (n.config.subscribes_to as string[] | undefined) || []
-        if (subs.length === 0) depth[n.node_id] = 0
-      })
+      nodes.forEach(n => { if (getSubs(n).length === 0) depth[n.node_id] = 0 })
       let changed = true
       while (changed) {
         changed = false
         nodes.forEach(n => {
-          const subs = (n.config.subscribes_to as string[] | undefined) || []
-          if (subs.length === 0) return
-          const parentDepths = subs.map(e => depth[emitterOf[e] ?? ''] ?? -1)
-          if (parentDepths.some(d => d === -1)) return
-          const newDepth = Math.max(...parentDepths) + 1
-          if (depth[n.node_id] !== newDepth) { depth[n.node_id] = newDepth; changed = true }
+          const subs = getSubs(n)
+          if (!subs.length) return
+          const parentDepths = subs.map(e => {
+            const pid = emitterOf[e]
+            return pid ? (depth[pid] ?? -1) : 0  // unknown event src → treat as root
+          })
+          if (parentDepths.some(d => d === -1)) return  // parent not resolved yet
+          const d = Math.max(...parentDepths) + 1
+          if (depth[n.node_id] !== d) { depth[n.node_id] = d; changed = true }
         })
       }
-      // Group nodes by column
+      // Any node that couldn't be resolved falls back to depth 0
+      nodes.forEach(n => { if (depth[n.node_id] === undefined) depth[n.node_id] = 0 })
+
+      // Group by column (depth)
       const cols: Record<number, string[]> = {}
       nodes.forEach(n => {
-        const col = depth[n.node_id] ?? 0
-        if (!cols[col]) cols[col] = []
-        cols[col].push(n.node_id)
+        const col = depth[n.node_id]
+        ;(cols[col] = cols[col] || []).push(n.node_id)
       })
+
+      const COL_W = 320   // horizontal distance between column left-edges
+      const ROW_H = 240   // vertical distance between node top-edges in same column
+      const START_X = 40, START_Y = 60
+
+      const nMap: Record<string, WorkflowNode> = {}
+      nodes.forEach(n => { nMap[n.node_id] = n })
+
       const colKeys = Object.keys(cols).map(Number).sort((a, b) => a - b)
-      const nodeMap: Record<string, WorkflowNode> = {}
-      nodes.forEach(n => { nodeMap[n.node_id] = n })
+      const maxRows = Math.max(...colKeys.map(c => cols[c].length))
+
       const positioned: WorkflowNode[] = []
       colKeys.forEach((col, ci) => {
-        const colNodes = cols[col]
-        colNodes.forEach((nid, ri) => {
-          const n = nodeMap[nid]
-          positioned.push({
-            ...n,
-            position_x: 40 + ci * 260,
-            position_y: 40 + ri * 180,
+        const ids = cols[col]
+        // Centre shorter columns vertically relative to the tallest
+        const topPad = ((maxRows - ids.length) * ROW_H) / 2
+        ids.forEach((nid, ri) => {
+          positioned.push({ ...nMap[nid],
+            position_x: START_X + ci * COL_W,
+            position_y: START_Y + topPad + ri * ROW_H,
           })
         })
       })
       setNodes(positioned)
-      // Draw edges following event wiring
+
+      // Rebuild edges from subscriptions (no stored port sides → auto-routed)
       const newEdges: WorkflowEdge[] = []
       nodes.forEach(n => {
-        const subs = (n.config.subscribes_to as string[] | undefined) || []
-        subs.forEach(evt => {
+        getSubs(n).forEach(evt => {
           const srcId = emitterOf[evt]
-          if (srcId) {
+          if (srcId && srcId !== n.node_id) {
             newEdges.push({ edge_id: newId('e'), from_node_id: srcId, to_node_id: n.node_id, label: evt, condition_expr: '' })
           }
         })
@@ -2006,78 +2032,117 @@ export default function WorkflowsPage() {
     return Array.from({ length: n }, (_, i) => (i + 1) / (n + 1))
   }
 
+  // Outward unit tangent for each port side
   const sideTangent = (side: string): [number, number] => {
     switch (side) {
-      case 'top': return [0, -1]
-      case 'bottom': return [0, 1]
-      case 'left': return [-1, 0]
-      case 'right': default: return [1, 0]
+      case 'top':    return [0, -1]
+      case 'bottom': return [0,  1]
+      case 'left':   return [-1, 0]
+      case 'right':  default: return [1, 0]
     }
   }
 
+  // Choose best exit/entry sides by measuring the angle between node centers
+  const autoSides = (from: WorkflowNode, to: WorkflowNode) => {
+    const angle = Math.atan2(
+      (to.position_y + getNodeH(to) / 2) - (from.position_y + getNodeH(from) / 2),
+      (to.position_x + NODE_W / 2)       - (from.position_x + NODE_W / 2)
+    ) * 180 / Math.PI
+    if (angle > -45 && angle <= 45)   return { fromSide: 'right',  toSide: 'left'   }
+    if (angle > 45  && angle <= 135)  return { fromSide: 'bottom', toSide: 'top'    }
+    if (angle < -45 && angle >= -135) return { fromSide: 'top',    toSide: 'bottom' }
+    return                                   { fromSide: 'left',   toSide: 'right'  }
+  }
+
+  // For edges without stored port info, pre-compute angle-based sides and
+  // evenly spread offsets so multiple edges on the same side fan out cleanly.
+  const _sideCache: Record<string, { fromSide: string; toSide: string }> = {}
+  const _srcGroup: Record<string, string[]> = {}
+  const _dstGroup: Record<string, string[]> = {}
+  edges.forEach(edge => {
+    if (edge.from_side) return
+    const from = nodeMap[edge.from_node_id], to = nodeMap[edge.to_node_id]
+    if (!from || !to) return
+    const sides = autoSides(from, to)
+    _sideCache[edge.edge_id] = sides
+    const sk = `${edge.from_node_id}|${sides.fromSide}`
+    const dk = `${edge.to_node_id}|${sides.toSide}`;
+    (_srcGroup[sk] = _srcGroup[sk] || []).push(edge.edge_id);
+    (_dstGroup[dk] = _dstGroup[dk] || []).push(edge.edge_id)
+  })
+  const _autoFromOff: Record<string, number> = {}
+  const _autoToOff:   Record<string, number> = {}
+  Object.values(_srcGroup).forEach(ids => ids.forEach((id, i) => { _autoFromOff[id] = (i + 1) / (ids.length + 1) }))
+  Object.values(_dstGroup).forEach(ids => ids.forEach((id, i) => { _autoToOff[id]   = (i + 1) / (ids.length + 1) }))
+
+  // ---------------------------------------------------------------------------
+  // Bezier edge computation
+  // Each edge exits its source port and arrives at its destination port using
+  // a cubic bezier. Both control points pull outward from their respective
+  // ports, guaranteeing smooth tangents. The path endpoint is pulled back by
+  // PULL px so the drawn line ends just before the border; the arrowhead tip
+  // is rendered separately at the exact border position in the top SVG.
+  // ---------------------------------------------------------------------------
+  const EDGE_PULL = 10   // path stops this many px before dest border
+  const ARROW_REACH = 18 // invisible arrowhead line extends this far outside border
+
   const edgePaths = edges.map(edge => {
-    const from = nodeMap[edge.from_node_id]
-    const to = nodeMap[edge.to_node_id]
+    const from = nodeMap[edge.from_node_id], to = nodeMap[edge.to_node_id]
     if (!from || !to) return null
 
-    let x1: number, y1: number, x2: number, y2: number
-    let fromSide: string, toSide: string
+    let fromSide: string, toSide: string, x1: number, y1: number, x2: number, y2: number
 
     if (edge.from_side && edge.to_side) {
-      // Use stored port sides + offsets
-      fromSide = edge.from_side
-      toSide = edge.to_side
+      // User explicitly drew this edge to specific ports — honour stored sides
+      fromSide = edge.from_side; toSide = edge.to_side
       const p1 = getPortPos(from, fromSide, edge.from_offset ?? 0.5)
-      const p2 = getPortPos(to, toSide, edge.to_offset ?? 0.5)
+      const p2 = getPortPos(to,   toSide,   edge.to_offset   ?? 0.5)
       x1 = p1.x; y1 = p1.y; x2 = p2.x; y2 = p2.y
     } else {
-      // Auto-detect: right→left for forward, bottom→top for backward (use actual heights)
-      const fromH = getNodeH(from); const toH = getNodeH(to)
-      const fromRight = from.position_x + NODE_W
-      const toLeft = to.position_x
-      if (toLeft >= fromRight - 20) {
-        fromSide = 'right'; toSide = 'left'
-        x1 = fromRight; y1 = from.position_y + fromH / 2
-        x2 = toLeft; y2 = to.position_y + toH / 2
-      } else {
-        fromSide = 'bottom'; toSide = 'top'
-        x1 = from.position_x + NODE_W / 2; y1 = from.position_y + fromH
-        x2 = to.position_x + NODE_W / 2; y2 = to.position_y
-      }
+      // Auto-route: angle-based side + spread offset
+      const s = _sideCache[edge.edge_id] || autoSides(from, to)
+      fromSide = s.fromSide; toSide = s.toSide
+      const p1 = getPortPos(from, fromSide, _autoFromOff[edge.edge_id] ?? 0.5)
+      const p2 = getPortPos(to,   toSide,   _autoToOff[edge.edge_id]   ?? 0.5)
+      x1 = p1.x; y1 = p1.y; x2 = p2.x; y2 = p2.y
     }
 
-    const [dx1, dy1] = sideTangent(fromSide)
-    const [dx2, dy2] = sideTangent(toSide)
-    // Pull endpoint back so arrowhead tip sits on the node border
-    const ARROW = 10
-    const ex2 = x2 - dx2 * ARROW
-    const ey2 = y2 - dy2 * ARROW
-    const dist = Math.sqrt((ex2 - x1) ** 2 + (ey2 - y1) ** 2)
-    // Backward edges (source port faces away from dest, e.g. right→left when x1>x2)
-    // need larger cp to avoid tight S-curve loops
-    const isBackward =
-      (fromSide === 'right' && toSide === 'left' && ex2 < x1) ||
-      (fromSide === 'left' && toSide === 'right' && ex2 > x1) ||
-      (fromSide === 'bottom' && toSide === 'top' && ey2 < y1) ||
-      (fromSide === 'top' && toSide === 'bottom' && ey2 > y1)
-    const cp = isBackward
-      ? Math.max(120, Math.max(Math.abs(ex2 - x1), Math.abs(ey2 - y1)) * 0.7 + 60)
-      : Math.max(60, dist * 0.4)
-    const cx1 = x1 + dx1 * cp
-    const cy1 = y1 + dy1 * cp
-    // Proper CP2: approach destination from its port's outward direction
-    const cx2 = ex2 + dx2 * cp
-    const cy2 = ey2 + dy2 * cp
-    const d = `M ${x1} ${y1} C ${cx1} ${cy1} ${cx2} ${cy2} ${ex2} ${ey2}`
-    const midX = (x1 + cx1 + cx2 + ex2) / 4
-    const midY = (y1 + cy1 + cy2 + ey2) / 4
+    const [tx1, ty1] = sideTangent(fromSide)
+    const [tx2, ty2] = sideTangent(toSide)
+    const dist = Math.hypot(x2 - x1, y2 - y1)
 
-    // Border position (actual port, before pullback) for rendering arrowhead in top SVG
-    const maxCtrlY = Math.max(y1, cy1, cy2, ey2)
-    return { edge, d, midX, midY, x2: ex2, y2: ey2, borderX: x2, borderY: y2, toSide, maxCtrlY }
-  }).filter(Boolean) as { edge: WorkflowEdge; d: string; midX: number; midY: number; x2: number; y2: number; borderX: number; borderY: number; toSide: string; maxCtrlY: number }[]
+    // If the source tangent points AWAY from the destination, the edge is
+    // "backward" and needs a larger pull-out to avoid tight S-loops.
+    const dot = tx1 * (x2 - x1) + ty1 * (y2 - y1)
+    const cp = dot < 0
+      ? Math.max(80, dist * 0.6 + 50)
+      : Math.max(60, dist * 0.45)
 
-  // canvas dimensions — include bezier control points so arcs beyond nodes trigger scroll
+    // Control points: pull outward from each port.
+    // Clamp y so control points never go above the canvas top (y < 0 can't scroll to).
+    const MIN_Y = 20
+    const cx1 = x1 + tx1 * cp
+    const cy1 = Math.max(MIN_Y, y1 + ty1 * cp)
+    const cx2 = x2 + tx2 * cp
+    const cy2 = Math.max(MIN_Y, y2 + ty2 * cp)
+
+    // Path endpoint pulled back PULL px outside the dest border
+    const px2 = x2 + tx2 * EDGE_PULL, py2 = y2 + ty2 * EDGE_PULL
+
+    const path = `M ${x1} ${y1} C ${cx1} ${cy1} ${cx2} ${cy2} ${px2} ${py2}`
+
+    // True bezier midpoint at t=0.5
+    const midX = (x1 + 3*cx1 + 3*cx2 + px2) / 8
+    const midY = (y1 + 3*cy1 + 3*cy2 + py2) / 8
+
+    const maxCtrlY = Math.max(y1, cy1, cy2, py2)
+    return { edge, path, midX, midY, arrowX: x2, arrowY: y2, tx2, ty2, maxCtrlY }
+  }).filter(Boolean) as {
+    edge: WorkflowEdge; path: string; midX: number; midY: number
+    arrowX: number; arrowY: number; tx2: number; ty2: number; maxCtrlY: number
+  }[]
+
+  // Canvas size includes bezier control-point extremes so large arcs trigger scroll
   const canvasW = Math.max(900, ...nodes.map(n => n.position_x + NODE_W + 80))
   const edgeMaxY = edgePaths.length > 0 ? Math.max(...edgePaths.map(ep => ep.maxCtrlY)) : 0
   const canvasH = Math.max(600, ...nodes.map(n => n.position_y + getNodeH(n) + 100), edgeMaxY + 80)
@@ -2248,7 +2313,12 @@ export default function WorkflowsPage() {
             ))}
           </select>
 
-          <button onClick={autoLayout} style={toolBtn}>Auto Layout</button>
+          <button
+            onClick={execMode === 'hybrid' ? undefined : autoLayout}
+            disabled={execMode === 'hybrid'}
+            title={execMode === 'hybrid' ? 'Auto Layout is disabled in hybrid mode to preserve manual edges' : undefined}
+            style={{ ...toolBtn, opacity: execMode === 'hybrid' ? 0.4 : 1, cursor: execMode === 'hybrid' ? 'not-allowed' : 'pointer' }}
+          >Auto Layout</button>
 
           {/* Zoom controls */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 2, marginLeft: 4 }}>
@@ -2386,29 +2456,24 @@ export default function WorkflowsPage() {
               transformOrigin: 'top left',
             }}
           >
-            {/* Edge paths — behind node cards. Cards act as natural clipping: any portion that enters a card area is hidden by the card */}
-            <svg
-              style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none', zIndex: 0, overflow: 'visible' }}
-              width={canvasW} height={canvasH}
-            >
+            {/* ── Bottom SVG: edge paths behind node cards ── */}
+            <svg style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none', zIndex: 0, overflow: 'visible' }}
+              width={canvasW} height={canvasH}>
               <defs>
-                <filter id="glow-bottom">
-                  <feGaussianBlur stdDeviation="2.5" result="coloredBlur"/>
-                  <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                <filter id="glow-edge">
+                  <feGaussianBlur stdDeviation="2.5" result="blur"/>
+                  <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
                 </filter>
               </defs>
-              {edgePaths.map(({ edge, d }) => {
-                const isEventDriven = execMode === 'event_driven'
-                const hasRun = !!(currentRun || selectedHistoryRun)
-                const fired = isEventDriven && hasRun && edge.label ? firedEvents.has(edge.label) : null
+              {edgePaths.map(({ edge, path }) => {
+                const fired = execMode === 'event_driven' && !!(currentRun || selectedHistoryRun) && edge.label
+                  ? firedEvents.has(edge.label) : null
                 const stroke = fired === null ? '#1D5FFA99' : fired ? '#F59E0B' : '#1D5FFA33'
-                const strokeW = fired ? 2.5 : 1.5
                 return (
-                  <path key={edge.edge_id}
-                    d={d} fill="none" stroke={stroke} strokeWidth={strokeW}
-                    filter={fired ? 'url(#glow-bottom)' : undefined}
-                    style={{ transition: 'stroke 0.4s ease' }}
-                  />
+                  <path key={edge.edge_id} d={path} fill="none"
+                    stroke={stroke} strokeWidth={fired ? 2.5 : 1.5}
+                    filter={fired ? 'url(#glow-edge)' : undefined}
+                    style={{ transition: 'stroke 0.4s ease' }} />
                 )
               })}
             </svg>
@@ -2446,65 +2511,56 @@ export default function WorkflowsPage() {
               />
             ))}
 
-            {/* SVG — on top of nodes: edges + arrowheads + labels + port handles */}
-            <svg
-              style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none', zIndex: 20, overflow: 'visible' }}
-              width={canvasW} height={canvasH}
-            >
+            {/* ── Top SVG: arrowheads, port dots, ghost edge, labels ── */}
+            <svg style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none', zIndex: 20, overflow: 'visible' }}
+              width={canvasW} height={canvasH}>
               <defs>
-                <marker id="arrow-ghost" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
-                  <path d="M0,0 L0,6 L8,3 z" fill="#F59E0B" />
+                <marker id="ah-blue"  markerWidth="11" markerHeight="8" refX="10" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+                  <polygon points="0 0,11 4,0 8" fill="#1D5FFA99" />
                 </marker>
-                {/* Auto-orient arrowhead markers — tip at refX so it lands exactly on the port */}
-                <marker id="arrow-blue" markerWidth="11" markerHeight="8" refX="10" refY="4" orient="auto" markerUnits="userSpaceOnUse">
-                  <polygon points="0 0, 11 4, 0 8" fill="#1D5FFA99" />
+                <marker id="ah-fired" markerWidth="11" markerHeight="8" refX="10" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+                  <polygon points="0 0,11 4,0 8" fill="#F59E0B" />
                 </marker>
-                <marker id="arrow-fired" markerWidth="11" markerHeight="8" refX="10" refY="4" orient="auto" markerUnits="userSpaceOnUse">
-                  <polygon points="0 0, 11 4, 0 8" fill="#F59E0B" />
+                <marker id="ah-dim"   markerWidth="11" markerHeight="8" refX="10" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+                  <polygon points="0 0,11 4,0 8" fill="#1D5FFA33" />
                 </marker>
-                <marker id="arrow-dim" markerWidth="11" markerHeight="8" refX="10" refY="4" orient="auto" markerUnits="userSpaceOnUse">
-                  <polygon points="0 0, 11 4, 0 8" fill="#1D5FFA33" />
+                <marker id="ah-ghost" markerWidth="11" markerHeight="8" refX="10" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+                  <polygon points="0 0,11 4,0 8" fill="#F59E0B" />
                 </marker>
               </defs>
 
-              {/* Arrowheads — invisible approach lines with auto-orient markerEnd, always above node cards */}
-              {edgePaths.map(({ edge, borderX, borderY, toSide }) => {
-                const isEventDriven = execMode === 'event_driven'
-                const hasRun = !!(currentRun || selectedHistoryRun)
-                const fired = isEventDriven && hasRun && edge.label ? firedEvents.has(edge.label) : null
-                const markerId = fired === null ? 'arrow-blue' : fired ? 'arrow-fired' : 'arrow-dim'
-                const [dx2, dy2] = sideTangent(toSide)
-                const REACH = 16
+              {/* Arrowheads: invisible approach line with auto-orient markerEnd */}
+              {edgePaths.map(({ edge, arrowX, arrowY, tx2, ty2 }) => {
+                const fired = execMode === 'event_driven' && !!(currentRun || selectedHistoryRun) && edge.label
+                  ? firedEvents.has(edge.label) : null
+                const mid = fired === null ? 'ah-blue' : fired ? 'ah-fired' : 'ah-dim'
                 return (
-                  <line
-                    key={`ah-${edge.edge_id}`}
-                    x1={borderX + dx2 * REACH} y1={borderY + dy2 * REACH}
-                    x2={borderX} y2={borderY}
+                  <line key={`ah-${edge.edge_id}`}
+                    x1={arrowX + tx2 * ARROW_REACH} y1={arrowY + ty2 * ARROW_REACH}
+                    x2={arrowX} y2={arrowY}
                     stroke="none" strokeWidth={1}
-                    markerEnd={`url(#${markerId})`}
-                    style={{ pointerEvents: 'none' }}
-                  />
+                    markerEnd={`url(#${mid})`}
+                    style={{ pointerEvents: 'none' }} />
                 )
               })}
-              {/* Ghost edge while port-dragging */}
+
+              {/* Ghost edge while dragging a new connection */}
               {portDrag && (() => {
                 const fromNode = nodeMap[portDrag.fromNodeId]
                 if (!fromNode) return null
                 const p = getPortPos(fromNode, portDrag.fromSide, portDrag.fromOffset)
-                const [dx, dy] = sideTangent(portDrag.fromSide)
-                const dist = Math.sqrt((portDrag.canvasX - p.x) ** 2 + (portDrag.canvasY - p.y) ** 2)
-                const cp = Math.max(60, dist * 0.4)
+                const [tx, ty] = sideTangent(portDrag.fromSide)
+                const dist = Math.hypot(portDrag.canvasX - p.x, portDrag.canvasY - p.y)
+                const cp = Math.max(60, dist * 0.45)
                 return (
                   <path
-                    d={`M ${p.x} ${p.y} C ${p.x + dx * cp} ${p.y + dy * cp} ${portDrag.canvasX} ${portDrag.canvasY} ${portDrag.canvasX} ${portDrag.canvasY}`}
+                    d={`M ${p.x} ${p.y} C ${p.x + tx*cp} ${p.y + ty*cp} ${portDrag.canvasX} ${portDrag.canvasY} ${portDrag.canvasX} ${portDrag.canvasY}`}
                     fill="none" stroke="#F59E0B" strokeWidth={2} strokeDasharray="6 3"
-                    markerEnd="url(#arrow-ghost)"
-                    style={{ pointerEvents: 'none' }}
-                  />
+                    markerEnd="url(#ah-ghost)" style={{ pointerEvents: 'none' }} />
                 )
               })()}
 
-              {/* Port handles — dots on all 4 edges using actual node height */}
+              {/* Port dots: hover → source node only; drag → all target nodes */}
               {showPortsFor && (() => {
                 const targetNodes = showPortsFor === 'all'
                   ? nodes.filter(n => n.node_id !== portDrag?.fromNodeId)
@@ -2512,75 +2568,57 @@ export default function WorkflowsPage() {
                 return targetNodes.flatMap(n => {
                   const accent = NODE_TYPE_COLORS[n.node_type] || '#1D5FFA'
                   const h = getNodeH(n)
-                  const hOffsets = portOffsets(NODE_W)  // horizontal sides (top/bottom)
-                  const vOffsets = portOffsets(h)        // vertical sides (left/right)
+                  const isDest = showPortsFor === 'all'
                   return (['top', 'bottom', 'left', 'right'] as const).flatMap(side => {
-                    const offs = (side === 'left' || side === 'right') ? vOffsets : hOffsets
+                    const offs = (side === 'left' || side === 'right') ? portOffsets(h) : portOffsets(NODE_W)
                     return offs.map(off => {
                       const p = getPortPos(n, side, off)
-                      const isDest = showPortsFor === 'all'
                       return (
-                        <circle
-                          key={`${n.node_id}-${side}-${off}`}
+                        <circle key={`${n.node_id}-${side}-${off}`}
                           cx={p.x} cy={p.y} r={isDest ? 4 : 5}
                           fill={isDest ? '#10B98144' : 'white'}
                           stroke={isDest ? '#10B981' : accent}
                           strokeWidth={2}
                           style={{ pointerEvents: portDrag ? 'none' : 'all', cursor: 'crosshair' }}
-                          onMouseEnter={() => {
-                            if (hoverCancelRef.current) { clearTimeout(hoverCancelRef.current); hoverCancelRef.current = null }
-                          }}
-                          onMouseDown={e => startPortDrag(n.node_id, side, off, e)}
-                        />
+                          onMouseEnter={() => { if (hoverCancelRef.current) { clearTimeout(hoverCancelRef.current); hoverCancelRef.current = null } }}
+                          onMouseDown={e => startPortDrag(n.node_id, side, off, e)} />
                       )
                     })
                   })
                 })
               })()}
 
+              {/* Edge labels + delete buttons */}
               {edgePaths.map(({ edge, midX, midY }) => {
                 const hasLabel = !!edge.label
                 const labelW = hasLabel ? Math.max(edge.label.length * 7 + 16, 52) : 0
                 const labelH = 18
-                const isEventDriven = execMode === 'event_driven'
-                const hasRun = !!(currentRun || selectedHistoryRun)
-                const fired = isEventDriven && hasRun && edge.label ? firedEvents.has(edge.label) : null
-                const showLabel = hasLabel && (fired === null || fired === true)
-                const labelFill = fired ? '#F59E0B' : '#F59E0B'
-                const labelOpacity = fired === false ? 0 : 1
+                const fired = execMode === 'event_driven' && !!(currentRun || selectedHistoryRun) && edge.label
+                  ? firedEvents.has(edge.label) : null
+                const showLabel = hasLabel && fired !== false
                 const isEditing = editingEdgeId === edge.edge_id
-                const btnY = midY + (hasLabel ? labelH : 0)
+                const delY = midY + (hasLabel ? labelH / 2 + 10 : 10)
                 return (
-                  <g key={edge.edge_id}>
-                    {/* Clickable hit area on the midpoint to open label editor */}
-                    <circle
-                      cx={midX} cy={midY} r={hasLabel ? 0 : 10}
-                      fill="transparent"
-                      style={{ pointerEvents: 'all', cursor: 'text' }}
-                      onClick={() => { setEditingEdgeId(edge.edge_id); setEditingEdgeLabel(edge.label || '') }}
-                    />
+                  <g key={`lbl-${edge.edge_id}`}>
+                    {!hasLabel && (
+                      <circle cx={midX} cy={midY} r={10} fill="transparent"
+                        style={{ pointerEvents: 'all', cursor: 'text' }}
+                        onClick={() => { setEditingEdgeId(edge.edge_id); setEditingEdgeLabel('') }} />
+                    )}
                     {showLabel && !isEditing && (
-                      <g style={{ opacity: labelOpacity, transition: 'opacity 0.4s ease', cursor: 'text', pointerEvents: 'all' }}
+                      <g style={{ cursor: 'text', pointerEvents: 'all' }}
                         onClick={() => { setEditingEdgeId(edge.edge_id); setEditingEdgeLabel(edge.label || '') }}>
-                        <rect
-                          x={midX - labelW / 2} y={midY - labelH / 2}
-                          width={labelW} height={labelH} rx={9}
-                          fill={labelFill} stroke="#92400E" strokeWidth={0.5}
-                        />
-                        <text
-                          x={midX} y={midY + 5}
-                          textAnchor="middle" fontSize={9.5}
-                          fontFamily="monospace" fill="#1a1a00" fontWeight="700"
-                          letterSpacing="0.02em"
-                        >{edge.label}</text>
+                        <rect x={midX - labelW/2} y={midY - labelH/2} width={labelW} height={labelH} rx={9}
+                          fill="#F59E0B" stroke="#92400E" strokeWidth={0.5} />
+                        <text x={midX} y={midY + 5} textAnchor="middle" fontSize={9.5}
+                          fontFamily="monospace" fill="#1a1a00" fontWeight="700" letterSpacing="0.02em">
+                          {edge.label}
+                        </text>
                       </g>
                     )}
-                    {/* Inline label editor via foreignObject */}
                     {isEditing && (
                       <foreignObject x={midX - 52} y={midY - 12} width={104} height={24} style={{ pointerEvents: 'all' }}>
-                        <input
-                          autoFocus
-                          value={editingEdgeLabel}
+                        <input autoFocus value={editingEdgeLabel}
                           onChange={e => setEditingEdgeLabel(e.target.value)}
                           onBlur={() => {
                             setEdges(prev => prev.map(ed => ed.edge_id === edge.edge_id ? { ...ed, label: editingEdgeLabel.trim() } : ed))
@@ -2593,27 +2631,19 @@ export default function WorkflowsPage() {
                             }
                           }}
                           placeholder="label…"
-                          style={{
-                            width: '100%', height: '100%', fontSize: 10, textAlign: 'center',
+                          style={{ width: '100%', height: '100%', fontSize: 10, textAlign: 'center',
                             background: '#1a1200', color: '#F59E0B', border: '1px solid #F59E0B',
                             borderRadius: 6, outline: 'none', fontFamily: 'monospace', fontWeight: 700,
-                            padding: '0 4px', boxSizing: 'border-box',
-                          }}
-                        />
+                            padding: '0 4px', boxSizing: 'border-box' }} />
                       </foreignObject>
                     )}
-                    <circle
-                      cx={midX} cy={btnY + 10} r={7}
+                    <circle cx={midX} cy={delY} r={7}
                       fill="var(--bg-card)" stroke="var(--border)" strokeWidth={1}
                       style={{ cursor: 'pointer', pointerEvents: 'all' }}
-                      onClick={() => deleteEdge(edge.edge_id)}
-                    />
-                    <text
-                      x={midX} y={btnY + 14}
-                      textAnchor="middle" fontSize={10} fill="#EF4444"
+                      onClick={() => deleteEdge(edge.edge_id)} />
+                    <text x={midX} y={delY + 4} textAnchor="middle" fontSize={10} fill="#EF4444"
                       style={{ pointerEvents: 'all', cursor: 'pointer' }}
-                      onClick={() => deleteEdge(edge.edge_id)}
-                    >×</text>
+                      onClick={() => deleteEdge(edge.edge_id)}>×</text>
                   </g>
                 )
               })}
