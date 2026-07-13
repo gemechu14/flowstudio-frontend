@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import ConfirmModal from '../components/ui/ConfirmModal'
 import {
   DataSourceRecord, SourceType, CreateDataSourcePayload,
   listDataSources, createDataSource, deleteDataSource,
@@ -593,6 +594,7 @@ function SourceDetail({ source, onDeleted }: { source: DataSourceRecord; onDelet
   const [deleting, setDeleting] = useState(false)
   const [notice, setNotice] = useState<{ ok: boolean; msg: string } | null>(null)
   const [usingAgents, setUsingAgents] = useState<AgentRecord[]>([])
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const t = TYPE_META[source.source_type]
 
   useEffect(() => {
@@ -639,8 +641,10 @@ function SourceDetail({ source, onDeleted }: { source: DataSourceRecord; onDelet
     finally { setLoadingSchema(false) }
   }
 
-  const handleDelete = async () => {
-    if (!confirm(`Delete "${source.name}"? All indexed content will be removed.`)) return
+  const handleDelete = () => setShowDeleteConfirm(true)
+
+  const confirmDelete = async () => {
+    setShowDeleteConfirm(false)
     setDeleting(true)
     try { await deleteDataSource(source.source_id); onDeleted() }
     finally { setDeleting(false) }
@@ -819,6 +823,15 @@ function SourceDetail({ source, onDeleted }: { source: DataSourceRecord; onDelet
           </div>
         )}
       </SectionCard>
+
+      {showDeleteConfirm && (
+        <ConfirmModal
+          message={`Delete "${source.name}"? All indexed content will be permanently removed.`}
+          confirmLabel="Delete Source"
+          onConfirm={confirmDelete}
+          onClose={() => setShowDeleteConfirm(false)}
+        />
+      )}
     </div>
   )
 }
@@ -895,6 +908,8 @@ export default function DataSources() {
   const [selected, setSelected] = useState<DataSourceRecord | null>(null)
   const [showCreate, setShowCreate] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState('')
+  const [filterType, setFilterType] = useState<SourceType | 'all'>('all')
 
   useEffect(() => {
     listDataSources()
@@ -917,34 +932,92 @@ export default function DataSources() {
     })
   }
 
+  const filtered = sources.filter(s => {
+    if (filterType !== 'all' && s.source_type !== filterType) return false
+    if (search.trim()) {
+      const q = search.toLowerCase()
+      return s.name.toLowerCase().includes(q) || (s.description || '').toLowerCase().includes(q)
+    }
+    return true
+  })
+
   return (
     <div style={{ display: 'flex', height: '100%', overflow: 'hidden', background: 'var(--bg-light)' }}>
 
-      {/* Left panel */}
+      {/* Left panel — header fixed, list scrolls */}
       <div style={{
-        width: 260, minWidth: 260, borderRight: '1px solid var(--border-light)',
-        display: 'flex', flexDirection: 'column', overflowY: 'auto',
+        width: 268, minWidth: 268, borderRight: '1px solid var(--border-light)',
+        display: 'flex', flexDirection: 'column', overflow: 'hidden',
         background: '#fff',
       }}>
-        {/* Left header */}
-        <div style={{ padding: '24px 16px 16px', borderBottom: '1px solid var(--border-light)' }}>
-          <div style={{ fontSize: 9, ...MONO, fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--blue)', marginBottom: 6 }}>
-            Data Sources
+        {/* Header: title + button + search + filter — never scrolls */}
+        <div style={{ flexShrink: 0, borderBottom: '1px solid var(--border-light)' }}>
+          {/* Title row */}
+          <div style={{ padding: '20px 16px 12px' }}>
+            <div style={{ fontSize: 9, ...MONO, fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--blue)', marginBottom: 5 }}>
+              Data Sources
+            </div>
+            <h2 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-dark)', margin: '0 0 10px' }}>Sources</h2>
+            <button onClick={() => setShowCreate(true)} style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+              width: '100%', padding: '7px', borderRadius: 7,
+              background: 'var(--blue)', border: 'none', color: '#fff',
+              cursor: 'pointer', fontSize: 12.5, fontWeight: 600,
+            }}>
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v10M1 6h10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
+              New source
+            </button>
           </div>
-          <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-dark)', margin: '0 0 12px' }}>Sources</h2>
-          <button onClick={() => setShowCreate(true)} style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-            width: '100%', padding: '8px', borderRadius: 7,
-            background: 'var(--blue)', border: 'none', color: '#fff',
-            cursor: 'pointer', fontSize: 13, fontWeight: 600,
-          }}>
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v10M1 6h10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
-            New source
-          </button>
+
+          {/* Search */}
+          <div style={{ padding: '0 12px 10px', position: 'relative' }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+              strokeLinecap="round" strokeLinejoin="round"
+              style={{ position: 'absolute', left: 22, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-body)', pointerEvents: 'none' }}>
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search sources…"
+              style={{
+                width: '100%', fontSize: 12, padding: '6px 28px 6px 30px',
+                background: 'var(--bg-page)', color: 'var(--text-body)',
+                border: '1px solid var(--border-light)', borderRadius: 6,
+                boxSizing: 'border-box', outline: 'none', ...MONO,
+              }}
+            />
+            {search && (
+              <button onClick={() => setSearch('')} style={{
+                position: 'absolute', right: 20, top: '50%', transform: 'translateY(-50%)',
+                background: 'none', border: 'none', color: 'var(--text-body)',
+                cursor: 'pointer', fontSize: 14, lineHeight: 1, padding: 0,
+              }}>×</button>
+            )}
+          </div>
+
+          {/* Type filter dropdown */}
+          <div style={{ padding: '0 12px 12px' }}>
+            <select
+              value={filterType}
+              onChange={e => setFilterType(e.target.value as SourceType | 'all')}
+              style={{
+                width: '100%', fontSize: 12, padding: '6px 8px', ...MONO,
+                background: 'var(--bg-page)', color: 'var(--text-body)',
+                border: '1px solid var(--border-light)', borderRadius: 6,
+                boxSizing: 'border-box', outline: 'none', cursor: 'pointer',
+              }}
+            >
+              <option value="all">All types</option>
+              <option value="document">Document</option>
+              <option value="database">Database</option>
+              <option value="website">Website</option>
+            </select>
+          </div>
         </div>
 
-        {/* Source list */}
-        <div style={{ flex: 1 }}>
+        {/* Source list — only this part scrolls */}
+        <div style={{ flex: 1, overflowY: 'auto' }}>
           {loading ? (
             <div style={{ padding: '16px', fontSize: 12.5, color: 'var(--text-body)' }}>Loading…</div>
           ) : sources.length === 0 ? (
@@ -957,7 +1030,11 @@ export default function DataSources() {
                 </div>
               ))}
             </div>
-          ) : sources.map(src => (
+          ) : filtered.length === 0 ? (
+            <div style={{ padding: '20px 16px', fontSize: 12, color: 'var(--text-body)', textAlign: 'center' }}>
+              No sources match.
+            </div>
+          ) : filtered.map(src => (
             <SourceItem key={src.source_id} source={src} active={selected?.source_id === src.source_id} onClick={() => setSelected(src)} />
           ))}
         </div>

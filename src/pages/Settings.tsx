@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback } from 'react'
+import ConfirmModal from '../components/ui/ConfirmModal'
 import {
   McpServer, McpTool,
   listMcpServers, createMcpServer, deleteMcpServer,
   syncMcpServer, getMcpServerTools,
 } from '../api/mcpServers'
+import { type KeyStatus, listApiKeys, saveApiKey, deleteApiKey } from '../api/apiKeys'
 
 // ─── design tokens ────────────────────────────────────────────────────────────
 
@@ -244,6 +246,7 @@ function ServerRow({ server, onDeleted, onSynced }: {
   const [syncError, setSyncError] = useState('')
   const [showTools, setShowTools] = useState(false)
   const [toolsKey, setToolsKey] = useState(0)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   const handleSync = async (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -261,9 +264,13 @@ function ServerRow({ server, onDeleted, onSynced }: {
     }
   }
 
-  const handleDelete = async (e: React.MouseEvent) => {
+  const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation()
-    if (!confirm(`Delete MCP server "${server.name}"?`)) return
+    setShowDeleteConfirm(true)
+  }
+
+  const confirmDelete = async () => {
+    setShowDeleteConfirm(false)
     try {
       await deleteMcpServer(server.server_id)
       onDeleted()
@@ -386,24 +393,232 @@ function ServerRow({ server, onDeleted, onSynced }: {
 
       {/* Tools panel */}
       {showTools && <ToolsList key={toolsKey} serverId={server.server_id} />}
+
+      {showDeleteConfirm && (
+        <ConfirmModal
+          message={`Delete MCP server "${server.name}"? This cannot be undone.`}
+          confirmLabel="Delete Server"
+          onConfirm={confirmDelete}
+          onClose={() => setShowDeleteConfirm(false)}
+        />
+      )}
     </div>
   )
 }
 
 // ─── Section 2: API Keys ──────────────────────────────────────────────────────
 
+const PROVIDER_META: Record<string, { label: string; color: string; envVar: string }> = {
+  openai:    { label: 'OpenAI API Key',    color: '#10A37F', envVar: 'OPENAI_API_KEY' },
+  anthropic: { label: 'Anthropic API Key', color: '#D97706', envVar: 'ANTHROPIC_API_KEY' },
+}
+
+function ApiKeyRow({
+  status,
+  onSaved,
+  onDeleted,
+}: {
+  status: KeyStatus
+  onSaved: () => void
+  onDeleted: () => void
+}) {
+  const meta = PROVIDER_META[status.provider] ?? { label: status.provider, color: '#6B7280', envVar: '' }
+  const [editing, setEditing] = useState(false)
+  const [value, setValue] = useState('')
+  const [showValue, setShowValue] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [error, setError] = useState('')
+
+  const handleSave = async () => {
+    if (!value.trim()) { setError('Key cannot be empty'); return }
+    setSaving(true); setError('')
+    try {
+      await saveApiKey(status.provider, value.trim())
+      setValue(''); setEditing(false); onSaved()
+    } catch (e: any) {
+      setError(e.message ?? 'Failed to save')
+    } finally { setSaving(false) }
+  }
+
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+
+  const handleDelete = () => setShowDeleteConfirm(true)
+
+  const confirmDelete = async () => {
+    setShowDeleteConfirm(false)
+    setDeleting(true); setError('')
+    try {
+      await deleteApiKey(status.provider)
+      onDeleted()
+    } catch (e: any) {
+      setError(e.message ?? 'Failed to delete')
+    } finally { setDeleting(false) }
+  }
+
+  return (
+    <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-light)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+        <div>
+          <div style={{ ...MONO, fontSize: 13, fontWeight: 600, color: 'var(--text-dark)', marginBottom: 3 }}>
+            {meta.label}
+          </div>
+          {meta.envVar && (
+            <div style={{ ...MONO, fontSize: 10, color: '#9CA3AF', letterSpacing: '0.06em' }}>
+              {meta.envVar}
+            </div>
+          )}
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {status.configured ? (
+            <>
+              <span style={{
+                ...MONO, fontSize: 11, fontWeight: 600,
+                padding: '3px 10px', borderRadius: 12,
+                background: `${meta.color}18`, color: meta.color,
+                border: `1px solid ${meta.color}40`,
+              }}>CONFIGURED</span>
+              <button
+                onClick={() => setEditing(true)}
+                style={{
+                  ...SANS, fontSize: 12, padding: '4px 12px', borderRadius: 6,
+                  border: '1px solid var(--border-light)', background: 'var(--bg-light)',
+                  color: 'var(--text-secondary)', cursor: 'pointer',
+                }}>
+                Update
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                style={{
+                  ...SANS, fontSize: 12, padding: '4px 10px', borderRadius: 6,
+                  border: '1px solid #FCA5A5', background: '#FEF2F2',
+                  color: '#DC2626', cursor: 'pointer', opacity: deleting ? 0.6 : 1,
+                }}>
+                {deleting ? '…' : 'Remove'}
+              </button>
+            </>
+          ) : (
+            <>
+              <span style={{
+                ...MONO, fontSize: 11, fontWeight: 600,
+                padding: '3px 10px', borderRadius: 12,
+                background: '#F3F4F6', color: '#9CA3AF',
+                border: '1px solid #E5E7EB',
+              }}>NOT SET</span>
+              <button
+                onClick={() => setEditing(true)}
+                style={{
+                  ...SANS, fontSize: 12, padding: '4px 12px', borderRadius: 6,
+                  border: `1px solid ${meta.color}60`, background: `${meta.color}10`,
+                  color: meta.color, cursor: 'pointer', fontWeight: 600,
+                }}>
+                Set Key
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {editing && (
+        <div style={{ marginTop: 12 }}>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <div style={{ position: 'relative', flex: 1 }}>
+              <input
+                type={showValue ? 'text' : 'password'}
+                placeholder={`Paste your ${meta.label}…`}
+                value={value}
+                onChange={e => setValue(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleSave()}
+                autoFocus
+                style={{
+                  ...MONO, fontSize: 13, width: '100%', boxSizing: 'border-box',
+                  padding: '8px 36px 8px 12px', borderRadius: 7,
+                  border: error ? '1px solid #EF4444' : '1px solid var(--border-light)',
+                  outline: 'none', background: 'var(--bg-page)', color: 'var(--text-dark)',
+                }}
+              />
+              <button
+                tabIndex={-1}
+                onClick={() => setShowValue(v => !v)}
+                style={{
+                  position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
+                  background: 'none', border: 'none', cursor: 'pointer', padding: 2,
+                  color: '#9CA3AF',
+                }}>
+                {showValue ? (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+                    <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+                    <line x1="1" y1="1" x2="23" y2="23"/>
+                  </svg>
+                ) : (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                  </svg>
+                )}
+              </button>
+            </div>
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              style={{
+                ...SANS, fontSize: 13, padding: '8px 16px', borderRadius: 7,
+                border: 'none', background: meta.color, color: '#fff',
+                cursor: 'pointer', fontWeight: 600, opacity: saving ? 0.7 : 1,
+                whiteSpace: 'nowrap',
+              }}>
+              {saving ? 'Saving…' : 'Save'}
+            </button>
+            <button
+              onClick={() => { setEditing(false); setValue(''); setError('') }}
+              style={{
+                ...SANS, fontSize: 13, padding: '8px 12px', borderRadius: 7,
+                border: '1px solid var(--border-light)', background: 'var(--bg-light)',
+                color: 'var(--text-secondary)', cursor: 'pointer',
+              }}>
+              Cancel
+            </button>
+          </div>
+          {error && (
+            <div style={{ ...SANS, fontSize: 12, color: '#EF4444', marginTop: 6 }}>{error}</div>
+          )}
+        </div>
+      )}
+
+      {showDeleteConfirm && (
+        <ConfirmModal
+          message={`Remove the ${meta.label}? Agents using this provider will need a key reconfigured.`}
+          confirmLabel="Remove Key"
+          onConfirm={confirmDelete}
+          onClose={() => setShowDeleteConfirm(false)}
+        />
+      )}
+    </div>
+  )
+}
+
 function ApiKeysSection() {
-  const keys = [
-    { label: 'OpenAI API Key', envVar: 'OPENAI_API_KEY', color: '#10A37F' },
-    { label: 'Anthropic API Key', envVar: 'ANTHROPIC_API_KEY', color: '#D97706' },
-  ]
+  const [statuses, setStatuses] = useState<KeyStatus[]>([])
+  const [loading, setLoading] = useState(true)
+
+  const reload = useCallback(() => {
+    listApiKeys()
+      .then(setStatuses)
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [])
+
+  useEffect(() => { reload() }, [reload])
 
   return (
     <div>
       <SectionHeading
         label="INTEGRATIONS"
         title="API Keys"
-        subtitle="Keys are read from environment variables on the server. They are never exposed through this UI."
+        subtitle="Set API keys for each provider. Keys are stored encrypted and scoped to your organisation."
       />
 
       <div style={{
@@ -413,55 +628,33 @@ function ApiKeysSection() {
         overflow: 'hidden',
         marginBottom: 16,
       }}>
-        {keys.map((key, idx) => (
-          <div
-            key={key.envVar}
-            style={{
-              padding: '16px 20px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              borderBottom: idx < keys.length - 1 ? '1px solid var(--border-light)' : 'none',
-            }}
-          >
-            <div>
-              <div style={{
-                ...MONO, fontSize: 13, fontWeight: 600, color: 'var(--text-dark)',
-                marginBottom: 3,
-              }}>
-                {key.label}
-              </div>
-              <div style={{
-                ...MONO, fontSize: 10, color: '#9CA3AF', letterSpacing: '0.06em',
-              }}>
-                {key.envVar}
-              </div>
-            </div>
-            <div style={{
-              ...MONO, fontSize: 11, fontWeight: 600,
-              padding: '4px 12px', borderRadius: 12,
-              background: `${key.color}18`,
-              color: key.color,
-              border: `1px solid ${key.color}40`,
-            }}>
-              CONFIGURED
-            </div>
+        {loading ? (
+          <div style={{ ...SANS, fontSize: 13, color: '#9CA3AF', padding: '20px 24px' }}>
+            Loading…
           </div>
-        ))}
+        ) : statuses.length === 0 ? (
+          <div style={{ ...SANS, fontSize: 13, color: '#9CA3AF', padding: '20px 24px' }}>
+            No providers available.
+          </div>
+        ) : (
+          statuses.map(s => (
+            <ApiKeyRow key={s.provider} status={s} onSaved={reload} onDeleted={reload} />
+          ))
+        )}
+        {/* remove the bottom border from the last row */}
+        <style>{`.api-key-last { border-bottom: none !important; }`}</style>
       </div>
 
       <div style={{
-        ...SANS,
-        fontSize: 12,
-        color: '#9CA3AF',
+        ...SANS, fontSize: 12, color: '#9CA3AF',
         padding: '10px 14px',
         background: 'var(--bg-light)',
         border: '1px solid var(--border-light)',
         borderRadius: 7,
         lineHeight: 1.5,
       }}>
-        API keys are configured via environment variables on the server. To update a key, redeploy
-        the backend with the new value. Keys are never transmitted to or stored by this UI.
+        Keys are encrypted with AES-256 and stored per organisation. They are never returned to the
+        browser after saving. If no key is configured here, the server falls back to its environment variable.
       </div>
     </div>
   )
@@ -502,7 +695,6 @@ export default function Settings() {
     <div style={{
       padding: '36px 48px',
       width: '100%',
-      maxWidth: 900,
       boxSizing: 'border-box',
     }}>
 

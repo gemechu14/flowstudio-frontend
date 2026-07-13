@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import ConfirmModal from '../components/ui/ConfirmModal'
 import { AgentRecord, listAgents } from '../api/agents'
 import {
   WorkflowRecord, WorkflowNode, WorkflowEdge, WorkflowRun, NodeRunResult, ExecutionMode,
@@ -771,7 +772,9 @@ function RunResultPanel({
   const [checkpoint, setCheckpoint] = useState<CheckpointInfo | null>(null)
   const [humanInput, setHumanInput] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [resumeError, setResumeError] = useState('')
   const [runnerExpand, setRunnerExpand] = useState<{ label: string; value: string } | null>(null)
+  const [showEmptyConfirm, setShowEmptyConfirm] = useState(false)
 
   // Fetch checkpoint detail when status changes to awaiting
   useEffect(() => {
@@ -784,8 +787,8 @@ function RunResultPanel({
     }
   }, [run.status, run.run_id, workflowId])
 
-  const handleResume = async () => {
-    if (!humanInput.trim() && !confirm('Submit empty input?')) return
+  const doResume = async () => {
+    setShowEmptyConfirm(false)
     setSubmitting(true)
     try {
       const updated = await resumeRun(workflowId, run.run_id, humanInput || 'APPROVE')
@@ -793,10 +796,15 @@ function RunResultPanel({
       setCheckpoint(null)
       onResumed(updated)
     } catch (e: any) {
-      alert(e.message || String(e))
+      setResumeError(e.message || String(e))
     } finally {
       setSubmitting(false)
     }
+  }
+
+  const handleResume = () => {
+    if (!humanInput.trim()) { setShowEmptyConfirm(true); return }
+    doResume()
   }
 
   const statusColor =
@@ -935,6 +943,9 @@ function RunResultPanel({
           >
             {submitting ? 'Submitting…' : '▶ Resume workflow'}
           </button>
+          {resumeError && (
+            <span style={{ ...MONO, fontSize: 11, color: '#EF4444', marginTop: 4, display: 'block' }}>{resumeError}</span>
+          )}
         </div>
       )}
 
@@ -1073,6 +1084,16 @@ function RunResultPanel({
     </div>
 
       {expandModal}
+
+      {showEmptyConfirm && (
+        <ConfirmModal
+          message="No input provided. Submit anyway and let the agent decide how to proceed?"
+          confirmLabel="Submit"
+          confirmColor="#7C3AED"
+          onConfirm={doResume}
+          onClose={() => setShowEmptyConfirm(false)}
+        />
+      )}
     </>
   )
 }
@@ -1088,6 +1109,8 @@ function RunHistoryPanel({
   workflowId: string
   onRunsChanged: () => void
 }) {
+  const [showClearConfirm, setShowClearConfirm] = useState(false)
+
   const statusColor = (s: string) =>
     s === 'completed' ? '#10B981' : s === 'running' ? '#3B82F6' : s === 'awaiting_checkpoint' ? '#7C3AED' : '#EF4444'
   const statusIcon = (s: string) =>
@@ -1099,8 +1122,10 @@ function RunHistoryPanel({
     onRunsChanged()
   }
 
-  const handleClearAll = async () => {
-    if (!confirm('Delete all run history and clear agent memory for this workflow?')) return
+  const handleClearAll = () => setShowClearConfirm(true)
+
+  const confirmClearAll = async () => {
+    setShowClearConfirm(false)
     await clearAllRuns(workflowId)
     onRunsChanged()
   }
@@ -1166,6 +1191,15 @@ function RunHistoryPanel({
           )}
         </div>
       ))}
+
+      {showClearConfirm && (
+        <ConfirmModal
+          message="Delete all run history and clear agent memory for this workflow? This cannot be undone."
+          confirmLabel="Clear All"
+          onConfirm={confirmClearAll}
+          onClose={() => setShowClearConfirm(false)}
+        />
+      )}
     </div>
   )
 }
@@ -1432,6 +1466,8 @@ export default function WorkflowsPage() {
   const [agents, setAgents] = useState<AgentRecord[]>([])
   const [selected, setSelected] = useState<WorkflowRecord | null>(null)
   const [loading, setLoading] = useState(true)
+  const [wfSearch, setWfSearch] = useState('')
+  const [wfModeFilter, setWfModeFilter] = useState<ExecutionMode | ''>('')
 
   // Canvas state
   const [nodes, setNodes] = useState<WorkflowNode[]>([])
@@ -1466,6 +1502,7 @@ export default function WorkflowsPage() {
   const [enableMemory, setEnableMemory] = useState(false)
   const [convergenceExpr, setConvergenceExpr] = useState('')
   const [running, setRunning] = useState(false)
+  const [deleteWfTarget, setDeleteWfTarget] = useState<string | null>(null)
   const [currentRun, setCurrentRun] = useState<WorkflowRun | null>(null)
   const [runError, setRunError] = useState('')
 
@@ -1931,8 +1968,12 @@ export default function WorkflowsPage() {
 
   // ── delete workflow ───────────────────────────────────────────────────────
 
-  const doDeleteWorkflow = async (wfId: string) => {
-    if (!confirm('Delete this workflow and all its run history?')) return
+  const doDeleteWorkflow = (wfId: string) => setDeleteWfTarget(wfId)
+
+  const confirmDeleteWorkflow = async () => {
+    if (!deleteWfTarget) return
+    const wfId = deleteWfTarget
+    setDeleteWfTarget(null)
     await deleteWorkflow(wfId)
     const remaining = workflows.filter(w => w.workflow_id !== wfId)
     setWorkflows(remaining)
@@ -1967,8 +2008,8 @@ export default function WorkflowsPage() {
   }, [])
 
   const doRun = async () => {
-    if (!selected) { alert('Save the workflow first.'); return }
-    if (!initialInput.trim()) { alert('Enter an initial prompt.'); return }
+    if (!selected) { setRunError('Save the workflow first.'); return }
+    if (!initialInput.trim()) { setRunError('Enter an initial prompt before running.'); return }
     if (pollRunRef.current) clearTimeout(pollRunRef.current)
     setRunning(true); setRunError(''); setCurrentRun(null); setSelectedHistoryRun(null)
     try {
@@ -2187,11 +2228,49 @@ export default function WorkflowsPage() {
           >+ New</button>
         </div>
 
+        {/* Search + mode filter */}
+        <div style={{ padding: '8px 10px', borderBottom: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <input
+            value={wfSearch}
+            onChange={e => setWfSearch(e.target.value)}
+            placeholder="Search workflows…"
+            style={{
+              width: '100%', boxSizing: 'border-box',
+              padding: '5px 8px', fontSize: 11, ...MONO,
+              background: 'var(--bg-page)', color: 'var(--text-body)',
+              border: '1px solid var(--border)', borderRadius: 5, outline: 'none',
+            }}
+          />
+          <select
+            value={wfModeFilter}
+            onChange={e => setWfModeFilter(e.target.value as ExecutionMode | '')}
+            style={{
+              width: '100%', boxSizing: 'border-box',
+              padding: '5px 8px', fontSize: 11, ...MONO,
+              background: 'var(--bg-page)', color: 'var(--text-body)',
+              border: '1px solid var(--border)', borderRadius: 5, outline: 'none', cursor: 'pointer',
+            }}
+          >
+            <option value="">All modes</option>
+            <option value="sequential">Sequential</option>
+            <option value="parallel">Parallel</option>
+            <option value="hierarchical">Hierarchical</option>
+            <option value="hybrid">Hybrid</option>
+            <option value="collaborative">Collaborative</option>
+            <option value="event_driven">Event driven</option>
+          </select>
+        </div>
+
         <div style={{ flex: 1, overflow: 'auto' }}>
           {loading && (
             <div style={{ padding: 14, color: 'var(--text-muted)', fontSize: 12 }}>Loading…</div>
           )}
-          {workflows.map(wf => (
+          {workflows
+            .filter(wf =>
+              (!wfSearch || wf.name.toLowerCase().includes(wfSearch.toLowerCase())) &&
+              (!wfModeFilter || wf.execution_mode === wfModeFilter)
+            )
+            .map(wf => (
             <div
               key={wf.workflow_id}
               onClick={() => loadWorkflow(wf)}
@@ -2230,6 +2309,7 @@ export default function WorkflowsPage() {
                 setSelectedHistoryRun(r)
                 setCurrentRun(null)
                 setInitialInput(r.initial_input)
+                setRunError('')
                 setRunPanelH(420)
               }}
               selectedRunId={selectedHistoryRun?.run_id}
@@ -2958,6 +3038,15 @@ export default function WorkflowsPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {deleteWfTarget && (
+        <ConfirmModal
+          message="Delete this workflow and all its run history? This cannot be undone."
+          confirmLabel="Delete Workflow"
+          onConfirm={confirmDeleteWorkflow}
+          onClose={() => setDeleteWfTarget(null)}
+        />
       )}
     </div>
   )

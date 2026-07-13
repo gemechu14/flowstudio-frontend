@@ -1,4 +1,5 @@
-import { useLocation } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { useAuth } from '../../contexts/AuthContext'
 
 const PAGE_TITLES: Record<string, { title: string; subtitle: string }> = {
   '/dashboard': { title: 'Dashboard', subtitle: 'Platform overview and activity' },
@@ -7,11 +8,20 @@ const PAGE_TITLES: Record<string, { title: string; subtitle: string }> = {
   '/workflows': { title: 'Workflows', subtitle: 'Build and run agentic workflow pipelines' },
   '/data-sources': { title: 'Data Sources', subtitle: 'Connect documents, databases, and websites to your agents' },
   '/settings': { title: 'Settings', subtitle: 'Platform configuration and preferences' },
+  '/profile': { title: 'Profile', subtitle: 'Manage your account and personal information' },
 }
 
 export default function TopBar() {
   const location = useLocation()
+  const navigate = useNavigate()
+  const { user } = useAuth()
   const info = PAGE_TITLES[location.pathname] ?? { title: 'Platform', subtitle: '' }
+
+  const initials = user
+    ? (user.first_name && user.last_name
+      ? `${user.first_name[0]}${user.last_name[0]}`
+      : user.email?.[0] ?? '?').toUpperCase()
+    : '?'
 
   return (
     <header
@@ -87,63 +97,45 @@ export default function TopBar() {
         </div>
 
         {/* Divider */}
-        <div
-          style={{
-            width: 1,
-            height: 20,
-            background: 'var(--border-light)',
-            margin: '0 4px',
-          }}
-        />
+        <div style={{ width: 1, height: 20, background: 'var(--border-light)', margin: '0 4px' }} />
 
         {/* Notification bell */}
         <button
           style={{
-            width: 32,
-            height: 32,
+            width: 32, height: 32,
             borderRadius: 'var(--radius-md)',
             border: '1px solid var(--border-light)',
-            background: 'transparent',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
+            background: 'transparent', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
             color: 'var(--text-body)',
           }}
           title="Notifications"
         >
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-            <path
-              d="M8 1C5.79086 1 4 2.79086 4 5V9L2 11H14L12 9V5C12 2.79086 10.2091 1 8 1Z"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinejoin="round"
-            />
+            <path d="M8 1C5.79086 1 4 2.79086 4 5V9L2 11H14L12 9V5C12 2.79086 10.2091 1 8 1Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
             <path d="M6.5 13C6.5 13.8284 7.17157 14.5 8 14.5C8.82843 14.5 9.5 13.8284 9.5 13" stroke="currentColor" strokeWidth="1.5" />
           </svg>
         </button>
 
-        {/* Avatar */}
-        <div
+        {/* Avatar — navigates to /profile */}
+        <button
+          onClick={() => navigate('/profile')}
+          title="Go to profile"
           style={{
-            width: 32,
-            height: 32,
+            width: 32, height: 32,
             borderRadius: '50%',
             background: 'var(--blue-dim)',
             border: '1.5px solid var(--blue-border)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontFamily: 'var(--font-mono)',
-            fontSize: 11,
-            fontWeight: 700,
+            fontSize: 11, fontWeight: 700,
             color: 'var(--blue)',
             cursor: 'pointer',
+            padding: 0,
           }}
-          title="Profile"
         >
-          E
-        </div>
+          {initials}
+        </button>
       </div>
     </header>
   )

@@ -4,6 +4,7 @@ import {
   listTools, uploadTool, approveTool, rejectTool, deleteTool,
   testTool, getToolSource,
 } from '../api/tools'
+import ConfirmModal from '../components/ui/ConfirmModal'
 
 // ─── design tokens (inline, no dep on component system) ──────────────────────
 
@@ -47,9 +48,20 @@ function Chip({ label, color = '#1D5FFA' }: { label: string; color?: string }) {
 function CodePanel({ toolId, onClose }: { toolId: string; onClose: () => void }) {
   const [source, setSource] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [copied, setCopied] = useState(false)
+
   useEffect(() => {
     getToolSource(toolId).then(s => { setSource(s); setLoading(false) }).catch(() => setLoading(false))
   }, [toolId])
+
+  const handleCopy = () => {
+    if (!source) return
+    navigator.clipboard.writeText(source).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
+
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 200,
@@ -68,10 +80,41 @@ function CodePanel({ toolId, onClose }: { toolId: string; onClose: () => void })
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         }}>
           <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-heading)' }}>Source Code</span>
-          <button onClick={onClose} style={{
-            background: 'none', border: 'none', color: 'var(--text-muted)',
-            cursor: 'pointer', fontSize: 18, lineHeight: 1,
-          }}>×</button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button
+              onClick={handleCopy}
+              disabled={!source || loading}
+              style={{
+                ...MONO, fontSize: 11, padding: '4px 12px',
+                background: copied ? '#10B98120' : 'var(--bg-page)',
+                border: `1px solid ${copied ? '#10B98144' : 'var(--border)'}`,
+                color: copied ? '#10B981' : 'var(--text-muted)',
+                borderRadius: 6, cursor: !source || loading ? 'default' : 'pointer',
+                display: 'flex', alignItems: 'center', gap: 5, transition: 'all 0.15s',
+              }}
+            >
+              {copied ? (
+                <>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                  Copied
+                </>
+              ) : (
+                <>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                  </svg>
+                  Copy
+                </>
+              )}
+            </button>
+            <button onClick={onClose} style={{
+              background: 'none', border: 'none', color: 'var(--text-muted)',
+              cursor: 'pointer', fontSize: 18, lineHeight: 1,
+            }}>×</button>
+          </div>
         </div>
         <div style={{ flex: 1, overflow: 'auto', padding: 20 }}>
           {loading ? (
@@ -242,6 +285,104 @@ function RejectModal({ tool, onConfirm, onClose }: {
   )
 }
 
+// ─── Python syntax highlighter ────────────────────────────────────────────────
+
+const PY_KEYWORDS = new Set(['def','class','return','import','from','if','else','elif','for','while','in','not','and','or','True','False','None','with','as','try','except','finally','raise','pass','break','continue','lambda','yield','async','await','is','global','nonlocal','del','assert'])
+const PY_BUILTINS = new Set(['str','int','float','bool','list','dict','set','tuple','print','len','range','type','object','isinstance','hasattr','getattr','setattr','enumerate','zip','map','filter','sorted','reversed','any','all','min','max','sum','abs','round','open','super'])
+
+function esc(s: string) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
+
+function highlightPython(code: string): string {
+  let out = ''
+  let i = 0
+  const n = code.length
+
+  while (i < n) {
+    // Comment — bright enough to read, muted enough to not distract
+    if (code[i] === '#') {
+      const end = code.indexOf('\n', i)
+      const seg = end === -1 ? code.slice(i) : code.slice(i, end)
+      out += `<span style="color:#6272a4;font-style:italic">${esc(seg)}</span>`
+      i += seg.length
+      continue
+    }
+    // Triple-quoted string
+    if ((code[i] === '"' || code[i] === "'") && code.slice(i, i + 3) === code[i].repeat(3)) {
+      const q = code[i].repeat(3)
+      const end = code.indexOf(q, i + 3)
+      const seg = end === -1 ? code.slice(i) : code.slice(i, end + 3)
+      out += `<span style="color:#f1fa8c">${esc(seg)}</span>`
+      i += seg.length
+      continue
+    }
+    // Single-quoted string
+    if (code[i] === '"' || code[i] === "'") {
+      const q = code[i]; let j = i + 1
+      while (j < n && code[j] !== q && code[j] !== '\n') { if (code[j] === '\\') j++; j++ }
+      const seg = code.slice(i, Math.min(j + 1, n))
+      out += `<span style="color:#f1fa8c">${esc(seg)}</span>`
+      i = Math.min(j + 1, n)
+      continue
+    }
+    // Decorator
+    if (code[i] === '@') {
+      let j = i + 1
+      while (j < n && /[\w.]/.test(code[j])) j++
+      out += `<span style="color:#ff79c6">${esc(code.slice(i, j))}</span>`
+      i = j; continue
+    }
+    // Number
+    if (/\d/.test(code[i]) && (i === 0 || !/\w/.test(code[i - 1]))) {
+      let j = i
+      while (j < n && /[\d._xXbBoOeEaAbBcCdDfF]/.test(code[j])) j++
+      out += `<span style="color:#ffb86c">${esc(code.slice(i, j))}</span>`
+      i = j; continue
+    }
+    // Word
+    if (/[a-zA-Z_]/.test(code[i])) {
+      let j = i
+      while (j < n && /\w/.test(code[j])) j++
+      const word = code.slice(i, j)
+      const after = code[j]
+      if (word === 'self' || word === 'cls') {
+        out += `<span style="color:#ff79c6;font-style:italic">${word}</span>`
+      } else if (PY_KEYWORDS.has(word)) {
+        out += `<span style="color:#bd93f9;font-weight:700">${word}</span>`
+      } else if (PY_BUILTINS.has(word)) {
+        out += `<span style="color:#8be9fd">${word}</span>`
+      } else if (after === '(') {
+        out += `<span style="color:#50fa7b">${esc(word)}</span>`
+      } else if (/^[A-Z]/.test(word)) {
+        out += `<span style="color:#ffb86c">${esc(word)}</span>`
+      } else {
+        out += esc(word)
+      }
+      i = j; continue
+    }
+    // Operators
+    if (/[+\-*/%=<>!&|^~]/.test(code[i])) {
+      out += `<span style="color:#ff79c6">${esc(code[i])}</span>`
+      i++; continue
+    }
+    // Brackets
+    if (/[()[\]{}]/.test(code[i])) {
+      const depth = '([{'.includes(code[i]) ? 0 : 1
+      const colors = ['#f8f8f2', '#ff79c6', '#50fa7b']
+      out += `<span style="color:${colors[depth % 3]}">${esc(code[i])}</span>`
+      i++; continue
+    }
+    // Colon
+    if (code[i] === ':') {
+      out += `<span style="color:#ff79c6">:</span>`
+      i++; continue
+    }
+    out += esc(code[i]); i++
+  }
+  return out
+}
+
 // ─── editor panel ────────────────────────────────────────────────────────────
 
 const TOOL_TEMPLATE = `from agentcore.object_model.tool import Tool, Parameter
@@ -250,18 +391,39 @@ const TOOL_TEMPLATE = `from agentcore.object_model.tool import Tool, Parameter
 class MyTool(Tool):
     def __init__(self):
         super().__init__(
+            # 'name' is how agents call this tool — use snake_case, no spaces
             name="my_tool",
-            description="Describe what this tool does for the LLM",
+            # 'description' is shown to the LLM — be specific so it knows when to use this tool
+            description="Describe exactly what this tool does and when to use it",
             parameters=[
-                Parameter(name="input", type="string", description="The input text"),
+                # Required parameter — type can be "string", "integer", "number", "boolean"
+                Parameter(name="input", type="string", description="The input text to process"),
+                # Optional parameter example (not listed in 'required' below)
+                # Parameter(name="max_results", type="integer", description="Max items to return (default: 10)"),
             ],
+            # List only the parameter names that are mandatory
             required={"input"},
         )
 
-    def run(self, input: str) -> str:
-        # Your logic here
-        return f"Result: {input}"
+    def run(self, **kwargs) -> str:
+        input_text = kwargs.get("input", "")
+        # max_results = int(kwargs.get("max_results", 10))
+
+        # Your logic here — return a plain string the LLM can read
+        return f"Result: {input_text}"
 `
+
+// IDE color palette
+const IDE = {
+  bg:       '#282a36',
+  gutter:   '#21222c',
+  lineNum:  '#6272a4',
+  text:     '#f8f8f2',
+  border:   '#44475a',
+  cursor:   '#f8f8f2',
+  inputBg:  '#21222c',
+  inputBdr: '#6272a4',
+}
 
 function EditorPanel({ onUploaded }: { onUploaded: (t: ToolRecord) => void }) {
   const [code, setCode] = useState(TOOL_TEMPLATE)
@@ -270,7 +432,7 @@ function EditorPanel({ onUploaded }: { onUploaded: (t: ToolRecord) => void }) {
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState('')
   const [warnings, setWarnings] = useState<string[]>([])
-  const lineCount = code.split('\n').length
+  const lines = code.split('\n')
 
   const submit = async () => {
     if (!code.trim()) return
@@ -290,122 +452,158 @@ function EditorPanel({ onUploaded }: { onUploaded: (t: ToolRecord) => void }) {
     } finally { setUploading(false) }
   }
 
+  // Shared font/spacing so pre and textarea pixels align perfectly
+  const FONT: React.CSSProperties = {
+    ...MONO, fontSize: 13, lineHeight: '1.65',
+    whiteSpace: 'pre', overflowWrap: 'normal', tabSize: 4,
+  }
+
   return (
-    <div style={{
-      background: 'var(--bg-card)', border: '1px solid var(--border)',
-      borderRadius: 10, padding: 20, marginBottom: 24,
-    }}>
-      <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-heading)', marginBottom: 14 }}>
-        Write Custom Tool
-      </div>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: IDE.bg, overflow: 'hidden' }}>
 
-      {/* Filename + requirements row */}
-      <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
-        <div style={{ flex: 1 }}>
-          <div style={{ ...MONO, fontSize: 10, color: 'var(--text-muted)', marginBottom: 4 }}>FILENAME</div>
-          <input
-            value={filename}
-            onChange={e => setFilename(e.target.value)}
-            placeholder="my_tool.py"
-            style={{
-              width: '100%', fontSize: 12, padding: '7px 10px',
-              background: 'var(--bg-page)', color: 'var(--text-body)',
-              border: '1px solid var(--border)', borderRadius: 6, ...MONO,
-              boxSizing: 'border-box',
-            }}
-          />
-        </div>
-        <div style={{ flex: 2 }}>
-          <div style={{ ...MONO, fontSize: 10, color: 'var(--text-muted)', marginBottom: 4 }}>
-            REQUIREMENTS <span style={{ color: '#6B7280' }}>(optional — pip packages)</span>
-          </div>
-          <input
-            value={requirements}
-            onChange={e => setRequirements(e.target.value)}
-            placeholder="e.g. requests, pandas>=2.0"
-            style={{
-              width: '100%', fontSize: 12, padding: '7px 10px',
-              background: 'var(--bg-page)', color: 'var(--text-body)',
-              border: '1px solid var(--border)', borderRadius: 6, ...MONO,
-              boxSizing: 'border-box',
-            }}
-          />
-        </div>
-      </div>
-
-      {/* Code editor with line numbers */}
-      <div style={{
-        display: 'flex', border: '1px solid var(--border)', borderRadius: 8,
-        overflow: 'hidden', marginBottom: 12, background: 'var(--bg-page)',
-      }}>
-        {/* Line numbers */}
-        <div style={{
-          ...MONO, fontSize: 12, lineHeight: '1.6', padding: '12px 10px',
-          color: 'var(--text-muted)', background: 'var(--bg-card)',
-          borderRight: '1px solid var(--border)', userSelect: 'none',
-          minWidth: 40, textAlign: 'right', flexShrink: 0,
-        }}>
-          {Array.from({ length: lineCount }, (_, i) => (
-            <div key={i}>{i + 1}</div>
+      {/* Title bar */}
+      <div style={{ background: IDE.gutter, padding: '9px 16px', borderBottom: `1px solid ${IDE.border}`, display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
+        <div style={{ display: 'flex', gap: 6 }}>
+          {['#ff5f57','#febc2e','#28c840'].map(c => (
+            <span key={c} style={{ width: 12, height: 12, borderRadius: '50%', background: c, display: 'inline-block' }} />
           ))}
         </div>
-        {/* Textarea */}
-        <textarea
-          value={code}
-          onChange={e => setCode(e.target.value)}
-          spellCheck={false}
-          rows={Math.max(16, lineCount + 2)}
-          style={{
-            flex: 1, ...MONO, fontSize: 12, lineHeight: '1.6',
-            padding: '12px 14px', resize: 'vertical',
-            background: 'transparent', color: 'var(--text-body)',
-            border: 'none', outline: 'none', whiteSpace: 'pre', overflowWrap: 'normal',
-            overflowX: 'auto', tabSize: 4,
-          }}
-          onKeyDown={e => {
-            if (e.key === 'Tab') {
-              e.preventDefault()
-              const el = e.currentTarget
-              const start = el.selectionStart
-              const end = el.selectionEnd
-              const next = code.slice(0, start) + '    ' + code.slice(end)
-              setCode(next)
-              requestAnimationFrame(() => { el.selectionStart = el.selectionEnd = start + 4 })
-            }
-          }}
-        />
+        <div style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
+          <span style={{ ...MONO, fontSize: 11, color: '#6e7191', background: `${IDE.border}aa`, padding: '2px 14px', borderRadius: 4 }}>
+            {filename}
+          </span>
+        </div>
+        <span style={{ ...MONO, fontSize: 10, color: IDE.lineNum }}>{lines.length} lines</span>
       </div>
 
-      {error && (
-        <div style={{
-          ...MONO, fontSize: 11, color: '#EF4444', marginBottom: 10,
-          padding: '8px 10px', background: '#EF444420',
-          border: '1px solid #EF444440', borderRadius: 6,
-        }}>{error}</div>
-      )}
-      {warnings.length > 0 && (
-        <div style={{
-          ...MONO, fontSize: 11, color: '#F59E0B', marginBottom: 10,
-          padding: '8px 10px', background: '#F59E0B20',
-          border: '1px solid #F59E0B40', borderRadius: 6,
-        }}>⚠ {warnings.join(' · ')}</div>
-      )}
+      {/* Filename + requirements */}
+      <div style={{ display: 'flex', gap: 10, padding: '10px 16px', background: IDE.gutter, borderBottom: `1px solid ${IDE.border}`, flexShrink: 0 }}>
+        <div style={{ flex: 1 }}>
+          <div style={{ ...MONO, fontSize: 9, color: '#6e7191', marginBottom: 3, letterSpacing: '0.1em' }}>FILENAME</div>
+          <input value={filename} onChange={e => setFilename(e.target.value)} placeholder="my_tool.py"
+            style={{ width: '100%', fontSize: 12, padding: '5px 10px', background: IDE.inputBg, color: IDE.text, border: `1px solid ${IDE.inputBdr}`, borderRadius: 5, ...MONO, boxSizing: 'border-box', outline: 'none' }} />
+        </div>
+        <div style={{ flex: 2 }}>
+          <div style={{ ...MONO, fontSize: 9, color: '#6e7191', marginBottom: 3, letterSpacing: '0.1em' }}>
+            REQUIREMENTS <span style={{ color: '#45475a' }}>(optional — pip packages)</span>
+          </div>
+          <input value={requirements} onChange={e => setRequirements(e.target.value)} placeholder="e.g. requests, pandas>=2.0"
+            style={{ width: '100%', fontSize: 12, padding: '5px 10px', background: IDE.inputBg, color: IDE.text, border: `1px solid ${IDE.inputBdr}`, borderRadius: 5, ...MONO, boxSizing: 'border-box', outline: 'none' }} />
+        </div>
+      </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <button
-          onClick={submit} disabled={!code.trim() || uploading}
-          style={{
-            ...MONO, fontSize: 12, padding: '8px 20px',
-            background: !code.trim() || uploading ? 'var(--border)' : '#1D5FFA',
-            color: !code.trim() || uploading ? 'var(--text-muted)' : '#fff',
-            border: 'none', borderRadius: 6,
-            cursor: !code.trim() || uploading ? 'not-allowed' : 'pointer',
-            fontWeight: 700,
-          }}
-        >{uploading ? 'Uploading…' : 'Submit for Review'}</button>
-        <span style={{ ...MONO, fontSize: 10, color: 'var(--text-muted)' }}>
-          {lineCount} lines · Tab key inserts 4 spaces
-        </span>
+      {/*
+        Code area — single scroll container handles BOTH axes.
+        Line numbers are `position: sticky; left: 0` so they stay visible
+        during horizontal scroll without any JS sync.
+        The code content is `min-width: max-content` so the container grows
+        to fit long lines and the native scrollbar appears automatically.
+      */}
+      {/*
+        Single scroll container for BOTH axes.
+        overflow: auto creates the scrollable viewport.
+        Line numbers use position: sticky left: 0 — they pin during H scroll.
+        Code content uses minWidth: 100% (fills container when code is short)
+        and width: max-content (grows wider than container when lines are long),
+        which is what makes the H scrollbar appear.
+      */}
+      <div style={{ flex: 1, overflow: 'auto', minHeight: 0, background: IDE.bg }}>
+        {/* Inner row: line numbers + code, width driven by content */}
+        <div style={{ display: 'inline-flex', minWidth: '100%', minHeight: '100%' }}>
+
+          {/* Line numbers — sticky to the left edge while scrolling horizontally */}
+          <div style={{
+            ...FONT,
+            position: 'sticky', left: 0, zIndex: 3,
+            padding: '14px 12px 14px 14px',
+            color: IDE.lineNum, background: IDE.gutter,
+            borderRight: `1px solid ${IDE.border}`,
+            userSelect: 'none', flexShrink: 0,
+            minWidth: 48, textAlign: 'right',
+          }}>
+            {lines.map((_, i) => <div key={i}>{i + 1}</div>)}
+          </div>
+
+          {/* Code content: width determined by pre content → causes H overflow */}
+          <div style={{ position: 'relative', flex: 1 }}>
+            {/* Highlighted display (behind textarea) */}
+            <pre
+              aria-hidden
+              style={{
+                ...FONT,
+                padding: '14px 32px 14px 16px',
+                margin: 0, color: IDE.text,
+                background: 'transparent',
+                pointerEvents: 'none',
+                width: 'max-content',    // grows to fit longest line
+                minWidth: '100%',        // at least fills the flex container
+              }}
+              dangerouslySetInnerHTML={{ __html: highlightPython(code) + '\n' }}
+            />
+            {/* Transparent editable layer — same size as the pre */}
+            <textarea
+              value={code}
+              onChange={e => setCode(e.target.value)}
+              spellCheck={false}
+              style={{
+                ...FONT,
+                padding: '14px 32px 14px 16px',
+                position: 'absolute', inset: 0,
+                width: '100%', height: '100%',
+                color: 'transparent', caretColor: IDE.text,
+                background: 'transparent',
+                border: 'none', outline: 'none', resize: 'none',
+                overflow: 'hidden',      // parent container handles scroll
+                boxSizing: 'border-box',
+              }}
+              onKeyDown={e => {
+                if (e.key === 'Tab') {
+                  e.preventDefault()
+                  const el = e.currentTarget
+                  const start = el.selectionStart; const end = el.selectionEnd
+                  const next = code.slice(0, start) + '    ' + code.slice(end)
+                  setCode(next)
+                  requestAnimationFrame(() => { el.selectionStart = el.selectionEnd = start + 4 })
+                }
+              }}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Status bar */}
+      <div style={{ background: '#1D5FFA', padding: '3px 16px', display: 'flex', alignItems: 'center', gap: 16, flexShrink: 0 }}>
+        <span style={{ ...MONO, fontSize: 10, color: '#ffffffcc' }}>Python</span>
+        <span style={{ ...MONO, fontSize: 10, color: '#ffffff77' }}>UTF-8</span>
+        <span style={{ ...MONO, fontSize: 10, color: '#ffffff77' }}>Tab: 4 spaces</span>
+      </div>
+
+      {/* Footer */}
+      <div style={{ padding: '10px 16px', background: IDE.gutter, borderTop: `1px solid ${IDE.border}`, flexShrink: 0 }}>
+        {error && (
+          <div style={{ ...MONO, fontSize: 11, color: '#EF4444', marginBottom: 8, padding: '7px 10px', background: '#EF444420', border: '1px solid #EF444440', borderRadius: 6 }}>
+            {error}
+          </div>
+        )}
+        {warnings.length > 0 && (
+          <div style={{ ...MONO, fontSize: 11, color: '#F59E0B', marginBottom: 8, padding: '7px 10px', background: '#F59E0B20', border: '1px solid #F59E0B40', borderRadius: 6 }}>
+            ⚠ {warnings.join(' · ')}
+          </div>
+        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <button
+            onClick={submit} disabled={!code.trim() || uploading}
+            style={{
+              ...MONO, fontSize: 12, padding: '7px 22px',
+              background: !code.trim() || uploading ? '#313244' : '#1D5FFA',
+              color: !code.trim() || uploading ? IDE.lineNum : '#fff',
+              border: 'none', borderRadius: 6,
+              cursor: !code.trim() || uploading ? 'not-allowed' : 'pointer',
+              fontWeight: 700,
+            }}
+          >{uploading ? 'Uploading…' : 'Submit for Review'}</button>
+          <span style={{ ...MONO, fontSize: 10, color: IDE.lineNum }}>{lines.length} lines · Tab = 4 spaces</span>
+        </div>
       </div>
     </div>
   )
@@ -446,7 +644,7 @@ function UploadPanel({ onUploaded }: { onUploaded: (t: ToolRecord) => void }) {
   return (
     <div style={{
       background: 'var(--bg-card)', border: '1px solid var(--border)',
-      borderRadius: 10, padding: 20, marginBottom: 24,
+      borderRadius: 10, padding: 20,
     }}>
       <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-heading)', marginBottom: 14 }}>
         Upload Custom Tool
@@ -600,11 +798,9 @@ function ToolRow({ tool, onApprove, onRejectClick, onDelete, onTest, onViewSourc
               </Btn>
             </>
           )}
-          {tool.status === 'approved' && (
-            <Btn onClick={e => { e.stopPropagation(); onTest() }} color="#1D5FFA">
-              ▶ Test
-            </Btn>
-          )}
+          <Btn onClick={e => { e.stopPropagation(); onTest() }} color="#1D5FFA">
+            ▶ Test
+          </Btn>
           <Btn onClick={e => { e.stopPropagation(); onViewSource() }} color="#6B7280">
             {'</>'}
           </Btn>
@@ -719,16 +915,86 @@ function Btn({ children, onClick, color, disabled }: {
   )
 }
 
+// ─── right-panel empty state ──────────────────────────────────────────────────
+
+function RightEmptyState({ onEditor, onUpload }: { onEditor: () => void; onUpload: () => void }) {
+  return (
+    <div style={{
+      height: '100%', display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'flex-start', gap: 20, padding: '28px 32px',
+    }}>
+      <div style={{ textAlign: 'center' }}>
+        <div style={{
+          width: 56, height: 56, borderRadius: 14, background: '#1D5FFA12',
+          border: '1px solid #1D5FFA28', display: 'flex', alignItems: 'center',
+          justifyContent: 'center', margin: '0 auto 16px',
+        }}>
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#1D5FFA" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="16 18 22 12 16 6"/>
+            <polyline points="8 6 2 12 8 18"/>
+          </svg>
+        </div>
+        <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-heading)', marginBottom: 6 }}>
+          Add a Custom Tool
+        </div>
+        <div style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.6, maxWidth: 280 }}>
+          Write Python code directly in the editor, or upload an existing <span style={{ ...MONO, color: '#1D5FFA' }}>.py</span> file. Tools go through a review process before agents can use them.
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', gap: 10, flexDirection: 'column', width: '100%', maxWidth: 260 }}>
+        <button onClick={onEditor} style={{
+          ...MONO, fontSize: 12, padding: '10px 0', width: '100%',
+          background: '#7C3AED', color: '#fff', border: 'none',
+          borderRadius: 8, cursor: 'pointer', fontWeight: 700,
+        }}>✎ Write Code</button>
+        <button onClick={onUpload} style={{
+          ...MONO, fontSize: 12, padding: '10px 0', width: '100%',
+          background: 'var(--bg-card)', color: '#1D5FFA',
+          border: '1px solid #1D5FFA44', borderRadius: 8, cursor: 'pointer', fontWeight: 700,
+        }}>↑ Upload .py File</button>
+      </div>
+
+      <div style={{
+        width: '100%', maxWidth: 320, background: 'var(--bg-card)',
+        border: '1px solid var(--border)', borderRadius: 10, padding: '16px 20px',
+      }}>
+        <div style={{ ...MONO, fontSize: 9, color: 'var(--text-muted)', letterSpacing: '0.12em', marginBottom: 10 }}>
+          TOOL LIFECYCLE
+        </div>
+        {[
+          { step: '1', label: 'Upload or write a .py tool', color: '#1D5FFA' },
+          { step: '2', label: 'Review risk flags & approve', color: '#F59E0B' },
+          { step: '3', label: 'Test before deploying', color: '#7C3AED' },
+          { step: '4', label: 'Agents can now use it', color: '#10B981' },
+        ].map(({ step, label, color }) => (
+          <div key={step} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+            <span style={{
+              width: 20, height: 20, borderRadius: '50%', background: `${color}18`,
+              border: `1px solid ${color}40`, display: 'flex', alignItems: 'center',
+              justifyContent: 'center', flexShrink: 0,
+              ...MONO, fontSize: 9, fontWeight: 700, color,
+            }}>{step}</span>
+            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{label}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // ─── main page ───────────────────────────────────────────────────────────────
 
 export default function Tools() {
   const [tools, setTools] = useState<ToolRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<ToolStatus | 'all'>('all')
+  const [search, setSearch] = useState('')
   const [showAdd, setShowAdd] = useState<'upload' | 'editor' | false>(false)
   const [viewSourceId, setViewSourceId] = useState<string | null>(null)
   const [testTool_, setTestTool] = useState<ToolRecord | null>(null)
   const [rejectTarget, setRejectTarget] = useState<ToolRecord | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<ToolRecord | null>(null)
 
   const reload = useCallback(() => {
     listTools().then(setTools).catch(() => {}).finally(() => setLoading(false))
@@ -749,8 +1015,13 @@ export default function Tools() {
   }
 
   const handleDelete = async (tool: ToolRecord) => {
-    if (!confirm(`Delete tool "${tool.name}"?`)) return
-    await deleteTool(tool.tool_id)
+    setDeleteTarget(tool)
+  }
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return
+    await deleteTool(deleteTarget.tool_id)
+    setDeleteTarget(null)
     reload()
   }
 
@@ -761,123 +1032,182 @@ export default function Tools() {
     rejected: tools.filter(t => t.status === 'rejected').length,
   }
 
-  const filtered = activeTab === 'all' ? tools : tools.filter(t => t.status === activeTab)
+  const byTab = activeTab === 'all' ? tools : tools.filter(t => t.status === activeTab)
+  const filtered = search.trim()
+    ? byTab.filter(t =>
+        t.name.toLowerCase().includes(search.toLowerCase()) ||
+        (t.description || '').toLowerCase().includes(search.toLowerCase())
+      )
+    : byTab
 
   return (
-    <div style={{ padding: '36px 48px', width: '100%', maxWidth: 980 }}>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 28 }}>
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+
+      {/* ── Top header ── */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '16px 24px', borderBottom: '1px solid var(--border)',
+        flexShrink: 0, background: 'var(--bg-card)',
+      }}>
         <div>
-          <div style={{ ...MONO, fontSize: 10, fontWeight: 600, letterSpacing: '0.14em', color: '#1D5FFA', marginBottom: 6 }}>
+          <div style={{ ...MONO, fontSize: 9, fontWeight: 700, letterSpacing: '0.14em', color: '#1D5FFA', marginBottom: 4 }}>
             CONFIGURATION
           </div>
-          <h2 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-heading)', margin: 0 }}>
+          <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-heading)', margin: 0 }}>
             Tool Management
           </h2>
-          <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>
-            Upload custom tools, review risk flags, approve for agent use.
-          </p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <button
             onClick={() => setShowAdd(showAdd === 'editor' ? false : 'editor')}
             style={{
-              ...MONO, fontSize: 12, padding: '8px 16px',
-              background: showAdd === 'editor' ? '#7C3AED33' : '#7C3AED',
-              color: '#fff', border: 'none', borderRadius: 7,
-              cursor: 'pointer', fontWeight: 700,
+              ...MONO, fontSize: 12, padding: '7px 14px',
+              background: showAdd === 'editor' ? '#7C3AED22' : '#7C3AED',
+              color: showAdd === 'editor' ? '#7C3AED' : '#fff',
+              border: showAdd === 'editor' ? '1px solid #7C3AED44' : 'none',
+              borderRadius: 7, cursor: 'pointer', fontWeight: 700,
             }}
           >{showAdd === 'editor' ? '✕ Cancel' : '✎ Write Code'}</button>
           <button
             onClick={() => setShowAdd(showAdd === 'upload' ? false : 'upload')}
             style={{
-              ...MONO, fontSize: 12, padding: '8px 16px',
-              background: showAdd === 'upload' ? '#1D5FFA33' : '#1D5FFA',
-              color: '#fff', border: 'none', borderRadius: 7,
-              cursor: 'pointer', fontWeight: 700,
+              ...MONO, fontSize: 12, padding: '7px 14px',
+              background: showAdd === 'upload' ? '#1D5FFA22' : '#1D5FFA',
+              color: showAdd === 'upload' ? '#1D5FFA' : '#fff',
+              border: showAdd === 'upload' ? '1px solid #1D5FFA44' : 'none',
+              borderRadius: 7, cursor: 'pointer', fontWeight: 700,
             }}
           >{showAdd === 'upload' ? '✕ Cancel' : '↑ Upload File'}</button>
         </div>
       </div>
 
-      {/* Editor / upload panels */}
-      {showAdd === 'editor' && (
-        <EditorPanel onUploaded={_t => {
-          reload()
-          setShowAdd(false)
-          setActiveTab('pending')
-        }} />
-      )}
-      {showAdd === 'upload' && (
-        <UploadPanel onUploaded={_t => {
-          reload()
-          setShowAdd(false)
-          setActiveTab('pending')
-        }} />
-      )}
+      {/* ── Two-column body ── */}
+      <div style={{ flex: 1, display: 'flex', minHeight: 0, overflow: 'hidden' }}>
 
-      {/* Tabs */}
-      <div style={{ display: 'flex', gap: 4, marginBottom: 20, borderBottom: '1px solid var(--border)', paddingBottom: 0 }}>
-        {TAB_LABELS.map(tab => {
-          const active = activeTab === tab.key
-          const cnt = counts[tab.key] ?? 0
-          const isAlert = tab.key === 'pending' && cnt > 0
-          return (
-            <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              style={{
-                ...MONO, fontSize: 12, padding: '8px 16px',
-                background: 'none', border: 'none',
-                borderBottom: `2px solid ${active ? '#1D5FFA' : 'transparent'}`,
-                color: active ? '#1D5FFA' : isAlert ? '#F59E0B' : 'var(--text-muted)',
-                cursor: 'pointer', fontWeight: active ? 700 : 500,
-                marginBottom: -1,
-              }}
-            >
-              {tab.label}
-              {cnt > 0 && (
-                <span style={{
-                  marginLeft: 6, fontSize: 10, padding: '1px 5px',
-                  background: isAlert ? '#F59E0B33' : '#1D5FFA22',
-                  color: isAlert ? '#F59E0B' : '#1D5FFA',
-                  borderRadius: 10, fontWeight: 700,
-                }}>{cnt}</span>
-              )}
-            </button>
-          )
-        })}
-      </div>
-
-      {/* Tool list */}
-      {loading ? (
-        <div style={{ ...MONO, fontSize: 12, color: 'var(--text-muted)', padding: '40px 0', textAlign: 'center' }}>
-          Loading tools…
-        </div>
-      ) : filtered.length === 0 ? (
+        {/* Left: tabs + tool list */}
         <div style={{
-          textAlign: 'center', padding: '56px 0',
-          color: 'var(--text-muted)', fontSize: 13,
+          flex: '0 0 54%', display: 'flex', flexDirection: 'column',
+          borderRight: '1px solid var(--border)', overflow: 'hidden',
+          background: 'var(--bg-page)',
         }}>
-          {activeTab === 'pending'
-            ? 'No tools pending review.'
-            : activeTab === 'approved'
-              ? 'No approved tools yet. Upload and approve a tool to get started.'
-              : 'No tools in this category.'}
+          {/* Tabs */}
+          <div style={{
+            display: 'flex', gap: 0, paddingLeft: 20,
+            borderBottom: '1px solid var(--border)', flexShrink: 0,
+            background: 'var(--bg-card)',
+          }}>
+            {TAB_LABELS.map(tab => {
+              const active = activeTab === tab.key
+              const cnt = counts[tab.key] ?? 0
+              const isAlert = tab.key === 'pending' && cnt > 0
+              return (
+                <button
+                  key={tab.key}
+                  onClick={() => setActiveTab(tab.key)}
+                  style={{
+                    ...MONO, fontSize: 11, padding: '10px 14px',
+                    background: 'none', border: 'none',
+                    borderBottom: `2px solid ${active ? '#1D5FFA' : 'transparent'}`,
+                    color: active ? '#1D5FFA' : isAlert ? '#F59E0B' : 'var(--text-muted)',
+                    cursor: 'pointer', fontWeight: active ? 700 : 500,
+                    marginBottom: -1, whiteSpace: 'nowrap',
+                  }}
+                >
+                  {tab.label}
+                  {cnt > 0 && (
+                    <span style={{
+                      marginLeft: 5, fontSize: 9, padding: '1px 5px',
+                      background: isAlert ? '#F59E0B22' : '#1D5FFA18',
+                      color: isAlert ? '#F59E0B' : '#1D5FFA',
+                      borderRadius: 10, fontWeight: 700,
+                    }}>{cnt}</span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+
+          {/* Search */}
+          <div style={{ padding: '10px 20px', borderBottom: '1px solid var(--border)', flexShrink: 0, background: 'var(--bg-card)' }}>
+            <div style={{ position: 'relative' }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }}>
+                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+              <input
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Search tools by name or description…"
+                style={{
+                  width: '100%', fontSize: 12, padding: '7px 10px 7px 32px',
+                  background: 'var(--bg-page)', color: 'var(--text-body)',
+                  border: '1px solid var(--border)', borderRadius: 6,
+                  boxSizing: 'border-box', outline: 'none', ...MONO,
+                }}
+              />
+              {search && (
+                <button onClick={() => setSearch('')} style={{
+                  position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
+                  background: 'none', border: 'none', color: 'var(--text-muted)',
+                  cursor: 'pointer', fontSize: 14, lineHeight: 1, padding: 0,
+                }}>×</button>
+              )}
+            </div>
+          </div>
+
+          {/* Tool list (scrollable) */}
+          <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
+            {loading ? (
+              <div style={{ ...MONO, fontSize: 12, color: 'var(--text-muted)', padding: '40px 0', textAlign: 'center' }}>
+                Loading tools…
+              </div>
+            ) : filtered.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '56px 0', color: 'var(--text-muted)', fontSize: 13 }}>
+                {search.trim()
+                  ? `No tools match "${search}"`
+                  : activeTab === 'pending' ? 'No tools pending review.'
+                  : activeTab === 'approved' ? 'No approved tools yet.'
+                  : 'No tools in this category.'}
+              </div>
+            ) : (
+              filtered.map(tool => (
+                <ToolRow
+                  key={tool.tool_id}
+                  tool={tool}
+                  onApprove={() => handleApprove(tool)}
+                  onRejectClick={() => setRejectTarget(tool)}
+                  onDelete={() => handleDelete(tool)}
+                  onTest={() => setTestTool(tool)}
+                  onViewSource={() => setViewSourceId(tool.tool_id)}
+                />
+              ))
+            )}
+          </div>
         </div>
-      ) : (
-        filtered.map(tool => (
-          <ToolRow
-            key={tool.tool_id}
-            tool={tool}
-            onApprove={() => handleApprove(tool)}
-            onRejectClick={() => setRejectTarget(tool)}
-            onDelete={() => handleDelete(tool)}
-            onTest={() => setTestTool(tool)}
-            onViewSource={() => setViewSourceId(tool.tool_id)}
-          />
-        ))
-      )}
+
+        {/* Right: editor / upload / empty state — flex column so children can fill height */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#fafafb' }}>
+          {showAdd === 'editor' && (
+            // no padding wrapper — editor fills 100%
+            <EditorPanel onUploaded={_t => {
+              reload(); setShowAdd(false); setActiveTab('pending')
+            }} />
+          )}
+          {showAdd === 'upload' && (
+            <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
+              <UploadPanel onUploaded={_t => {
+                reload(); setShowAdd(false); setActiveTab('pending')
+              }} />
+            </div>
+          )}
+          {!showAdd && (
+            <RightEmptyState
+              onEditor={() => setShowAdd('editor')}
+              onUpload={() => setShowAdd('upload')}
+            />
+          )}
+        </div>
+      </div>
 
       {/* Modals / panels */}
       {viewSourceId && (
@@ -891,6 +1221,14 @@ export default function Tools() {
           tool={rejectTarget}
           onConfirm={handleReject}
           onClose={() => setRejectTarget(null)}
+        />
+      )}
+      {deleteTarget && (
+        <ConfirmModal
+          message={`Delete tool "${deleteTarget.name}"? This cannot be undone.`}
+          confirmLabel="Delete Tool"
+          onConfirm={confirmDelete}
+          onClose={() => setDeleteTarget(null)}
         />
       )}
     </div>
