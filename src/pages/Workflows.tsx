@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { BASE_URL } from '../api/client'
 import ConfirmModal from '../components/ui/ConfirmModal'
 import { AgentRecord, listAgents } from '../api/agents'
 import {
@@ -1259,7 +1260,7 @@ function _TriggersPanel({ workflowId, onClose }: { workflowId: string; onClose: 
   }
 
   const webhookUrl = (id: string) =>
-    `http://localhost:8000/triggers/webhooks/${encodeURIComponent(id)}/trigger`
+    `${BASE_URL}/triggers/webhooks/${encodeURIComponent(id)}/trigger`
 
   const copyToClipboard = (text: string, id: string) => {
     navigator.clipboard.writeText(text).then(() => {

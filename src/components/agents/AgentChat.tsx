@@ -56,9 +56,16 @@ async function* streamAgent(
   datasource_ids: string[],
   signal: AbortSignal,
 ): AsyncGenerator<StreamEvent> {
+  const token = localStorage.getItem('cl_token')
+  const activeTenant = localStorage.getItem('cl_active_tenant')
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  if (token) headers['Authorization'] = `Bearer ${token}`
+  if (activeTenant) {
+    try { headers['x-active-tenant'] = JSON.parse(activeTenant).tenant_id } catch {}
+  }
   const res = await fetch(`${BASE_URL}/agents/${agentId}/stream`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify({ message, history, datasource_ids }),
     signal,
   })

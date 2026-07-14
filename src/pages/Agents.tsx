@@ -77,13 +77,14 @@ export default function Agents() {
 
   const confirmDelete = async () => {
     if (!deleteTarget) return
+    const agentId = deleteTarget.agent_id
     setDeleteTarget(null)
-    setDeletingId(deleteTarget.agent_id)
+    setDeletingId(agentId)
     try {
-      await deleteAgent(deleteTarget.agent_id)
-      setAgents((prev) => prev.filter((a) => a.agent_id !== deleteTarget.agent_id))
-    } catch {
-      // stay in list
+      await deleteAgent(agentId)
+      setAgents((prev) => prev.filter((a) => a.agent_id !== agentId))
+    } catch (e: unknown) {
+      console.error('Failed to delete agent', e)
     } finally {
       setDeletingId(null)
     }

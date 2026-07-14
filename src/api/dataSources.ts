@@ -1,6 +1,6 @@
-import { apiFetch, getToken } from './client'
+import { apiFetch, getToken, BASE_URL } from './client'
 
-const BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
+const BASE = BASE_URL
 
 export type SourceType = 'document' | 'database' | 'website'
 

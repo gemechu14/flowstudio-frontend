@@ -2,6 +2,7 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { logout } from '../../api/auth'
+import { BASE_URL } from '../../api/client'
 
 const NAV_ITEMS = [
   {
@@ -90,7 +91,7 @@ export default function Sidebar() {
   useEffect(() => {
     if (!isSuperAdmin) return
     const token = localStorage.getItem('cl_token')
-    fetch('http://localhost:8000/admin/tenants', {
+    fetch(`${BASE_URL}/admin/tenants`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     })
       .then(r => r.ok ? r.json() : [])

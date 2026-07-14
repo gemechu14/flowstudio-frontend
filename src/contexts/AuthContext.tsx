@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { AuthUser } from '../api/auth'
-import { getToken } from '../api/client'
+import { getToken, BASE_URL } from '../api/client'
 
 interface AuthContextValue {
   user: AuthUser | null
@@ -28,7 +28,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } catch {}
       }
       // Verify token against /auth/me
-      fetch(`${import.meta.env.VITE_API_URL ?? 'http://localhost:8000'}/auth/me`, {
+      fetch(`${BASE_URL}/auth/me`, {
         headers: { Authorization: `Bearer ${token}` },
       })
         .then(r => r.ok ? r.json() : null)
