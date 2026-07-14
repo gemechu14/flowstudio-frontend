@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import Sidebar from './components/layout/Sidebar'
@@ -11,9 +12,26 @@ import Settings from './pages/Settings'
 import Profile from './pages/Profile'
 import Login from './pages/Login'
 import ErrorBoundary from './components/ErrorBoundary'
+import BackendErrorScreen from './components/BackendErrorScreen'
 
 function AppShell() {
   const { user, isLoading } = useAuth()
+  const [backendUnreachable, setBackendUnreachable] = useState(false)
+
+  useEffect(() => {
+    const handler = () => setBackendUnreachable(true)
+    window.addEventListener('backend:unreachable', handler)
+    return () => window.removeEventListener('backend:unreachable', handler)
+  }, [])
+
+  function handleRetry() {
+    setBackendUnreachable(false)
+    window.location.reload()
+  }
+
+  if (backendUnreachable) {
+    return <BackendErrorScreen onRetry={handleRetry} />
+  }
 
   if (isLoading) {
     return (

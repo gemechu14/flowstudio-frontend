@@ -21,6 +21,17 @@ export function clearToken(): void {
   localStorage.removeItem('cl_token')
 }
 
+export class NetworkError extends Error {
+  constructor() {
+    super('Unable to reach the server')
+    this.name = 'NetworkError'
+  }
+}
+
+function emitBackendUnreachable() {
+  window.dispatchEvent(new CustomEvent('backend:unreachable'))
+}
+
 export async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   const token = getToken()
   const headers: Record<string, string> = {
@@ -33,7 +44,19 @@ export async function apiFetch<T>(path: string, options?: RequestInit): Promise<
   }
   if (options?.body && !(options.body instanceof FormData) && !headers['Content-Type']) headers['Content-Type'] = 'application/json'
 
-  const res = await fetch(`${BASE_URL}${path}`, { ...options, headers })
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 15_000)
+
+  let res: Response
+  try {
+    res = await fetch(`${BASE_URL}${path}`, { ...options, headers, signal: controller.signal })
+  } catch {
+    emitBackendUnreachable()
+    throw new NetworkError()
+  } finally {
+    clearTimeout(timeout)
+  }
+
   if (res.status === 401) {
     clearToken()
     window.location.href = '/login'

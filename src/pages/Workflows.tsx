@@ -1204,14 +1204,11 @@ function RunHistoryPanel({
   )
 }
 
-// ─── triggers panel ───────────────────────────────────────────────────────────
+// ─── triggers panel (disabled — coming soon) ─────────────────────────────────
 
-interface TriggersPanelProps {
-  workflowId: string
-  onClose: () => void
-}
-
-function TriggersPanel({ workflowId, onClose }: TriggersPanelProps) {
+// @ts-nocheck-start — entire TriggersPanel block kept for reference, not used
+// @ts-ignore — kept for reference, not used while Triggers is coming soon
+function _TriggersPanel({ workflowId, onClose }: { workflowId: string; onClose: () => void }) {
   const [schedules, setSchedules] = useState<ScheduleTrigger[]>([])
   const [webhooks, setWebhooks] = useState<WebhookTrigger[]>([])
   const [loadingTriggers, setLoadingTriggers] = useState(true)
@@ -1526,10 +1523,6 @@ export default function WorkflowsPage() {
   const runPanelMinH = 36
   const resizeDragRef = useRef<{ startY: number; startH: number } | null>(null)
 
-  // Triggers panel
-  const [showTriggersPanel, setShowTriggersPanel] = useState(false)
-  const triggersRef = useRef<HTMLDivElement>(null)
-
   const canvasRef = useRef<HTMLDivElement>(null)
 
   // Run panel drag-resize
@@ -1544,17 +1537,6 @@ export default function WorkflowsPage() {
     window.addEventListener('mouseup', onUp)
     return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
   }, [])
-
-  // Close triggers panel on outside click
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (triggersRef.current && !triggersRef.current.contains(e.target as Node)) {
-        setShowTriggersPanel(false)
-      }
-    }
-    if (showTriggersPanel) document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [showTriggersPanel])
 
   // Load on mount
   useEffect(() => {
@@ -1576,7 +1558,6 @@ export default function WorkflowsPage() {
     setLoopIterations(wf.loop_iterations || 3)
     setEnableMemory(wf.enable_memory || false)
     setConvergenceExpr(wf.convergence_expr || '')
-    setShowTriggersPanel(false)
     // DAG nodes take precedence; convert legacy steps otherwise
     if (wf.nodes && wf.nodes.length > 0) {
       setNodes(wf.nodes)
@@ -1963,7 +1944,6 @@ export default function WorkflowsPage() {
     setEdges([])
     setCurrentRun(null)
     setRuns([])
-    setShowTriggersPanel(false)
   }
 
   // ── delete workflow ───────────────────────────────────────────────────────
@@ -1974,7 +1954,12 @@ export default function WorkflowsPage() {
     if (!deleteWfTarget) return
     const wfId = deleteWfTarget
     setDeleteWfTarget(null)
-    await deleteWorkflow(wfId)
+    try {
+      await deleteWorkflow(wfId)
+    } catch (e: unknown) {
+      setRunError(e instanceof Error ? e.message : 'Failed to delete workflow')
+      return
+    }
     const remaining = workflows.filter(w => w.workflow_id !== wfId)
     setWorkflows(remaining)
     if (selected?.workflow_id === wfId) {
@@ -2468,29 +2453,22 @@ export default function WorkflowsPage() {
             {saving ? 'Saving…' : 'Save'}
           </button>
 
-          {/* Triggers button */}
-          <div ref={triggersRef} style={{ position: 'relative' }}>
+          {/* Triggers button — coming soon */}
+          <div style={{ position: 'relative' }}>
             <button
-              onClick={() => setShowTriggersPanel(!showTriggersPanel)}
-              disabled={!selected}
+              disabled
+              title="Triggers coming soon"
               style={{
                 ...MONO, fontSize: 11, padding: '4px 12px',
-                background: showTriggersPanel ? '#7C3AED22' : 'var(--bg-page)',
-                color: showTriggersPanel ? '#7C3AED' : 'var(--text-body)',
-                border: `1px solid ${showTriggersPanel ? '#7C3AED44' : 'var(--border)'}`,
-                borderRadius: 5, cursor: selected ? 'pointer' : 'default',
-                opacity: selected ? 1 : 0.5,
+                background: 'var(--bg-page)',
+                color: 'var(--text-body)',
+                border: '1px solid var(--border)',
+                borderRadius: 5, cursor: 'not-allowed',
+                opacity: 0.35,
               }}
             >
               ⚡ Triggers
             </button>
-
-            {showTriggersPanel && selected && (
-              <TriggersPanel
-                workflowId={selected.workflow_id}
-                onClose={() => setShowTriggersPanel(false)}
-              />
-            )}
           </div>
 
           {saveMsg && (

@@ -185,11 +185,11 @@ export default function Sidebar() {
       {/* Logo */}
       <div style={{ padding: '24px 20px 20px', borderBottom: '1px solid var(--border-dark)' }}>
         <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: 13, letterSpacing: '0.12em', color: 'var(--text-light)', display: 'flex', alignItems: 'center' }}>
-          <span>CRESTWARD LABS</span>
+          <span>FLOWSTUDIO</span>
           <span style={{ display: 'inline-block', width: 8, height: 14, background: 'var(--blue)', marginLeft: 3, borderRadius: 1, animation: 'blink 1.2s step-end infinite' }} />
         </div>
         <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-light-subtle)', letterSpacing: '0.10em', marginTop: 4, textTransform: 'uppercase' }}>
-          Agentic Platform
+          Powered by Crestward Labs
         </div>
       </div>
 

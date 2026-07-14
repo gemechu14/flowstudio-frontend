@@ -56,11 +56,11 @@ export default function Login() {
         {/* Logo */}
         <div style={{ marginBottom: 32, textAlign: 'center' }}>
           <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: 16, color: '#fff', letterSpacing: '0.12em' }}>
-            CRESTWARD LABS
+            FLOWSTUDIO
             <span style={{ display: 'inline-block', width: 8, height: 14, background: 'var(--blue)', marginLeft: 3, borderRadius: 1, verticalAlign: 'middle' }} />
           </div>
           <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.12em', marginTop: 4, textTransform: 'uppercase' }}>
-            Agentic Platform
+            Powered by Crestward Labs
           </div>
         </div>
 
