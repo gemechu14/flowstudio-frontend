@@ -8,7 +8,7 @@ import { AgentRecord, listAgents, deleteAgent } from '../api/agents'
 import { listTools } from '../api/tools'
 import { listWorkflows, WorkflowRecord } from '../api/workflows'
 
-const BUILTIN_TOOLS = ['web_search', 'run_sql', 'send_slack', 'get_schema']
+const BUILTIN_TOOLS: string[] = []
 
 type PanelState =
   | { open: false }
