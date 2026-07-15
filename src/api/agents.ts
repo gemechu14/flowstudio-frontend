@@ -1,5 +1,10 @@
 import { apiFetch } from './client'
 
+export interface McpToolSelection {
+  server_id: string
+  tool_name: string
+}
+
 export interface AgentRecord {
   agent_id: string
   name: string
@@ -9,6 +14,7 @@ export interface AgentRecord {
   provider: 'openai' | 'anthropic'
   tool_names: string[]
   datasource_ids: string[]
+  mcp_tools: McpToolSelection[]
   created_at: string
   updated_at: string
 }
@@ -21,6 +27,7 @@ export interface AgentBody {
   provider?: 'openai' | 'anthropic'
   tool_names?: string[]
   datasource_ids?: string[]
+  mcp_tools?: McpToolSelection[]
 }
 
 export async function listAgents(): Promise<AgentRecord[]> {

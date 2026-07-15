@@ -7,6 +7,7 @@ export interface McpServer {
   name: string
   url: string
   enabled: boolean
+  headers: Record<string, string>
   last_synced_at: string | null
   created_at: string
 }
@@ -22,11 +23,11 @@ export function listMcpServers(): Promise<McpServer[]> {
   return apiFetch<McpServer[]>('/mcp-servers')
 }
 
-export function createMcpServer(name: string, url: string): Promise<McpServer> {
+export function createMcpServer(name: string, url: string, headers: Record<string, string> = {}): Promise<McpServer> {
   return apiFetch<McpServer>('/mcp-servers', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, url }),
+    body: JSON.stringify({ name, url, headers }),
   })
 }
 

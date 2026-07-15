@@ -316,7 +316,7 @@ export default function Agents() {
                       )}
 
                       {/* Tools */}
-                      {agent.tool_names.length > 0 ? (
+                      {(agent.tool_names.length > 0 || (agent.mcp_tools ?? []).length > 0) ? (
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: agentWorkflows.length > 0 ? 8 : 0 }}>
                           <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-body)', marginRight: 2 }}>
                             Tools:
@@ -324,6 +324,11 @@ export default function Agents() {
                           {agent.tool_names.map((t) => (
                             <span key={t} style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--blue)', background: 'var(--blue-dim)', border: '1px solid var(--blue-border)', borderRadius: 4, padding: '1px 8px' }}>
                               {t}
+                            </span>
+                          ))}
+                          {(agent.mcp_tools ?? []).map((m) => (
+                            <span key={`${m.server_id}:${m.tool_name}`} style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: '#059669', background: '#d1fae5', border: '1px solid #6ee7b7', borderRadius: 4, padding: '1px 8px' }}>
+                              {m.tool_name}
                             </span>
                           ))}
                         </div>

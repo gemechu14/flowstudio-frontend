@@ -59,6 +59,9 @@ function AddServerForm({ onCreated, onCancel }: {
 }) {
   const [name, setName] = useState('')
   const [url, setUrl] = useState('')
+  const [headerKey, setHeaderKey] = useState('')
+  const [headerVal, setHeaderVal] = useState('')
+  const [headers, setHeaders] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -82,7 +85,7 @@ function AddServerForm({ onCreated, onCancel }: {
     if (!trimName || !trimUrl) { setError('Name and URL are required.'); return }
     setSaving(true); setError('')
     try {
-      const server = await createMcpServer(trimName, trimUrl)
+      const server = await createMcpServer(trimName, trimUrl, headers)
       onCreated(server)
     } catch (err: any) {
       setError(err.message || String(err))
@@ -127,6 +130,53 @@ function AddServerForm({ onCreated, onCancel }: {
             placeholder="http://localhost:3001/mcp"
             style={inputStyle}
           />
+        </div>
+      </div>
+
+      {/* Headers */}
+      <div style={{ marginBottom: 10 }}>
+        <div style={{ ...MONO, fontSize: 10, color: '#6B7280', marginBottom: 4 }}>
+          AUTH HEADERS <span style={{ fontWeight: 400, opacity: 0.7 }}>(optional — e.g. Authorization: Bearer &lt;token&gt;)</span>
+        </div>
+        {/* Existing headers */}
+        {Object.entries(headers).map(([k, v]) => (
+          <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+            <span style={{ ...MONO, fontSize: 11, flex: '0 0 180px', color: 'var(--text-dark)', background: 'var(--bg-light)', border: '1px solid var(--border-light)', borderRadius: 5, padding: '5px 8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{k}</span>
+            <span style={{ ...MONO, fontSize: 11, flex: 1, color: 'var(--text-body)', background: 'var(--bg-light)', border: '1px solid var(--border-light)', borderRadius: 5, padding: '5px 8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{v}</span>
+            <button type="button" onClick={() => setHeaders(prev => { const n = { ...prev }; delete n[k]; return n })} style={{ background: 'none', border: 'none', color: '#EF4444', cursor: 'pointer', fontSize: 14, padding: '0 4px', lineHeight: 1 }}>×</button>
+          </div>
+        ))}
+        {/* Add new header row */}
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          <input
+            value={headerKey}
+            onChange={e => setHeaderKey(e.target.value)}
+            placeholder="Authorization"
+            style={{ ...inputStyle, flex: '0 0 180px' }}
+          />
+          <input
+            value={headerVal}
+            onChange={e => setHeaderVal(e.target.value)}
+            placeholder="Bearer <token>"
+            style={{ ...inputStyle, flex: 1 }}
+            onKeyDown={e => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                const k = headerKey.trim(); const v = headerVal.trim()
+                if (k && v) { setHeaders(prev => ({ ...prev, [k]: v })); setHeaderKey(''); setHeaderVal('') }
+              }
+            }}
+          />
+          <button
+            type="button"
+            onClick={() => {
+              const k = headerKey.trim(); const v = headerVal.trim()
+              if (k && v) { setHeaders(prev => ({ ...prev, [k]: v })); setHeaderKey(''); setHeaderVal('') }
+            }}
+            style={{ ...MONO, fontSize: 11, padding: '6px 12px', background: 'transparent', border: '1px solid var(--border-light)', color: '#6B7280', borderRadius: 6, cursor: 'pointer', whiteSpace: 'nowrap' }}
+          >
+            + Add
+          </button>
         </div>
       </div>
 

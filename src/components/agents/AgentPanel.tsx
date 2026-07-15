@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { AgentRecord, AgentBody, createAgent, updateAgent } from '../../api/agents'
 import { DataSourceRecord, listDataSources } from '../../api/dataSources'
+import { listMcpServers, getMcpServerTools, McpServerRecord, McpToolInfo } from '../../api/mcp'
 import { ApiError } from '../../api/client'
 import Button from '../ui/Button'
 
@@ -61,12 +62,36 @@ export default function AgentPanel({ mode, agent, availableTools, onSave, onClos
   const [selectedTools, setSelectedTools] = useState<Set<string>>(new Set(agent?.tool_names ?? []))
   const [selectedSources, setSelectedSources] = useState<Set<string>>(new Set(agent?.datasource_ids ?? []))
   const [availableSources, setAvailableSources] = useState<DataSourceRecord[]>([])
+  // MCP: {server_id}:{tool_name} → selected
+  const [selectedMcpTools, setSelectedMcpTools] = useState<Set<string>>(
+    new Set((agent?.mcp_tools ?? []).map(m => `${m.server_id}:${m.tool_name}`))
+  )
+  const [mcpServers, setMcpServers] = useState<McpServerRecord[]>([])
+  const [mcpToolsByServer, setMcpToolsByServer] = useState<Record<string, McpToolInfo[]>>({})
+  const [loadingMcp, setLoadingMcp] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
   useEffect(() => {
     setTimeout(() => setVisible(true), 10)
     listDataSources().then(setAvailableSources).catch(() => {})
+    setLoadingMcp(true)
+    listMcpServers()
+      .then(async (servers) => {
+        const enabled = servers.filter(s => s.enabled)
+        setMcpServers(enabled)
+        const toolMap: Record<string, McpToolInfo[]> = {}
+        await Promise.all(
+          enabled.map(s =>
+            getMcpServerTools(s.server_id)
+              .then(tools => { toolMap[s.server_id] = tools })
+              .catch(() => { toolMap[s.server_id] = [] })
+          )
+        )
+        setMcpToolsByServer(toolMap)
+      })
+      .catch(() => {})
+      .finally(() => setLoadingMcp(false))
   }, [])
 
   const handleClose = () => {
@@ -88,6 +113,28 @@ export default function AgentPanel({ mode, agent, availableTools, onSave, onClos
       const next = new Set(prev)
       if (next.has(sourceId)) next.delete(sourceId)
       else next.add(sourceId)
+      return next
+    })
+  }
+
+  const toggleMcpTool = (serverId: string, toolName: string) => {
+    const key = `${serverId}:${toolName}`
+    setSelectedMcpTools((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  }
+
+  const toggleMcpServer = (serverId: string) => {
+    const serverTools = mcpToolsByServer[serverId] ?? []
+    const allKeys = serverTools.map(t => `${serverId}:${t.name}`)
+    const allSelected = allKeys.every(k => selectedMcpTools.has(k))
+    setSelectedMcpTools((prev) => {
+      const next = new Set(prev)
+      if (allSelected) allKeys.forEach(k => next.delete(k))
+      else allKeys.forEach(k => next.add(k))
       return next
     })
   }
@@ -114,6 +161,10 @@ export default function AgentPanel({ mode, agent, availableTools, onSave, onClos
     setSaving(true)
     setError('')
     try {
+      const mcpToolsList = [...selectedMcpTools].map(key => {
+        const idx = key.indexOf(':')
+        return { server_id: key.slice(0, idx), tool_name: key.slice(idx + 1) }
+      })
       const body: AgentBody = {
         name: name.trim(),
         description,
@@ -122,6 +173,7 @@ export default function AgentPanel({ mode, agent, availableTools, onSave, onClos
         provider,
         tool_names: [...selectedTools],
         datasource_ids: [...selectedSources],
+        mcp_tools: mcpToolsList,
       }
       const result = mode === 'create'
         ? await createAgent(body)
@@ -416,6 +468,99 @@ export default function AgentPanel({ mode, agent, availableTools, onSave, onClos
               }}>
                 <svg width="9" height="9" viewBox="0 0 10 10" fill="none"><path d="M5.5 1L2 5.5h3.5L4.5 9 8 4.5H4.5L5.5 1Z" fill="currentColor"/></svg>
                 These tools are added automatically when the agent runs.
+              </div>
+            )}
+          </div>
+
+          {/* MCP Tools */}
+          <div>
+            <label style={LABEL_STYLE}>
+              MCP Tools ({selectedMcpTools.size} selected)
+            </label>
+            {loadingMcp ? (
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-body)', padding: '10px 0' }}>
+                Loading MCP servers…
+              </div>
+            ) : mcpServers.length === 0 ? (
+              <div style={{
+                padding: '14px 16px', borderRadius: 8,
+                background: 'rgba(11,16,32,0.03)',
+                border: '1px solid var(--border-light)',
+                fontFamily: 'var(--font-mono)', fontSize: 12,
+                color: 'var(--text-body)',
+              }}>
+                No MCP servers configured — add one in Settings.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {mcpServers.map(server => {
+                  const tools = mcpToolsByServer[server.server_id] ?? []
+                  const allKeys = tools.map(t => `${server.server_id}:${t.name}`)
+                  const selectedCount = allKeys.filter(k => selectedMcpTools.has(k)).length
+                  const allSelected = tools.length > 0 && selectedCount === tools.length
+                  return (
+                    <div key={server.server_id} style={{
+                      border: '1px solid var(--border-light)', borderRadius: 8, overflow: 'hidden',
+                    }}>
+                      {/* Server header row */}
+                      <div style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        padding: '8px 12px',
+                        background: 'rgba(11,16,32,0.03)',
+                        borderBottom: tools.length > 0 ? '1px solid var(--border-light)' : 'none',
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 600, color: 'var(--text-dark)' }}>
+                            {server.name}
+                          </span>
+                          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-body)' }}>
+                            {tools.length} tool{tools.length !== 1 ? 's' : ''}
+                          </span>
+                        </div>
+                        {tools.length > 0 && (
+                          <button
+                            onClick={() => toggleMcpServer(server.server_id)}
+                            style={{
+                              fontFamily: 'var(--font-mono)', fontSize: 11,
+                              padding: '3px 10px', borderRadius: 5, cursor: 'pointer',
+                              border: `1px solid ${allSelected ? 'var(--blue-border)' : 'var(--border-light)'}`,
+                              background: allSelected ? 'var(--blue-dim)' : 'transparent',
+                              color: allSelected ? 'var(--blue)' : 'var(--text-body)',
+                            }}
+                          >
+                            {allSelected ? 'Deselect all' : 'Select all'}
+                          </button>
+                        )}
+                      </div>
+                      {/* Tool list */}
+                      {tools.length > 0 && (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, padding: '10px 12px' }}>
+                          {tools.map(tool => {
+                            const key = `${server.server_id}:${tool.name}`
+                            const active = selectedMcpTools.has(key)
+                            return (
+                              <button
+                                key={tool.name}
+                                onClick={() => toggleMcpTool(server.server_id, tool.name)}
+                                title={tool.description}
+                                style={{
+                                  fontFamily: 'var(--font-mono)', fontSize: 12,
+                                  padding: '4px 11px', borderRadius: 5, cursor: 'pointer',
+                                  border: `1px solid ${active ? 'var(--blue-border)' : 'var(--border-light)'}`,
+                                  background: active ? 'var(--blue-dim)' : 'transparent',
+                                  color: active ? 'var(--blue)' : 'var(--text-body)',
+                                  transition: 'all 0.12s',
+                                }}
+                              >
+                                {active && '✓ '}{tool.name}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
             )}
           </div>
