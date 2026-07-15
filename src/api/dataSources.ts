@@ -19,12 +19,24 @@ export interface DataSourceRecord {
   updated_at: string
 }
 
+export interface ColumnInfo {
+  name: string
+  type: string
+}
+
+export interface TableInfo {
+  name: string
+  columns: ColumnInfo[]
+}
+
 export interface CreateDataSourcePayload {
   name: string
   description?: string
   source_type: SourceType
   connection_url?: string
   allowed_tables?: string[]
+  row_filters?: Record<string, string>
+  column_redactions?: Record<string, string[]>
   seed_url?: string
   crawl_schedule?: string
 }
@@ -41,6 +53,10 @@ export async function listDataSources(): Promise<DataSourceRecord[]> {
 
 export async function createDataSource(payload: CreateDataSourcePayload): Promise<DataSourceRecord> {
   return apiFetch('/data-sources', { method: 'POST', body: JSON.stringify(payload) })
+}
+
+export async function updateDataSource(sourceId: string, payload: Partial<CreateDataSourcePayload>): Promise<DataSourceRecord> {
+  return apiFetch(`/data-sources/${sourceId}`, { method: 'PUT', body: JSON.stringify(payload) })
 }
 
 export async function deleteDataSource(sourceId: string): Promise<void> {
@@ -90,4 +106,11 @@ export async function deleteFile(sourceId: string, filename: string): Promise<vo
 
 export async function crawlWebsite(sourceId: string): Promise<{ pages_crawled: number; chunks_added: number }> {
   return apiFetch(`/data-sources/${sourceId}/crawl`, { method: 'POST' })
+}
+
+export async function schemaFromUrl(connection_url: string): Promise<{ tables: TableInfo[] }> {
+  return apiFetch('/data-sources/schema-from-url', {
+    method: 'POST',
+    body: JSON.stringify({ connection_url }),
+  })
 }
