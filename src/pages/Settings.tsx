@@ -1054,7 +1054,7 @@ curl -X POST "${fireUrl}?mode=sync&timeout=120" \\
                 Supported operators:
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 10 }}>
-                {['=', '!=', '>', '<', '>=', '<=', 'LIKE', 'NOT LIKE', 'IN', 'NOT IN'].map(op => (
+                {['=', '!=', '>', '<', '>=', '<=', 'LIKE', 'NOT LIKE', 'ILIKE', 'NOT ILIKE', 'IN', 'NOT IN'].map(op => (
                   <span key={op} style={{
                     ...MONO, fontSize: 9, padding: '1px 6px', borderRadius: 3,
                     background: '#1D5FFA15', color: '#1D5FFA',
