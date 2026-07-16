@@ -402,7 +402,7 @@ export default function AgentPanel({ mode, agent, availableTools, onSave, onClos
           {/* Tools */}
           <div>
             <label style={LABEL_STYLE}>Tools ({selectedTools.size} selected)</label>
-            {availableTools.length === 0 ? (
+            {availableTools.length === 0 && autoInjectedTools.length === 0 ? (
               <div style={{
                 padding: '14px 16px', borderRadius: 8,
                 background: 'rgba(11,16,32,0.03)',
