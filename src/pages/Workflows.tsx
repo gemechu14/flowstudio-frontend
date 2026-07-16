@@ -253,7 +253,7 @@ function CanvasNodeCard({
         )}
 
         {/* Agent selector — agent / orchestrator / collab / fan_in only (not subworkflow) */}
-        {node.node_type !== 'switch' && node.node_type !== 'condition' && node.node_type !== 'fan_out' && node.node_type !== 'loop' && node.node_type !== 'subworkflow' && (
+        {node.node_type !== 'switch' && node.node_type !== 'condition' && node.node_type !== 'fan_out' && node.node_type !== 'loop' && node.node_type !== 'subworkflow' && node.node_type !== 'collaborative_node' && (
         <select
           value={node.agent_id || ''}
           onChange={e => {
