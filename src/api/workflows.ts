@@ -118,6 +118,7 @@ export interface ScheduleTrigger {
   trigger_id: string
   workflow_id: string
   cron_expr: string
+  timezone: string
   enabled: boolean
   last_run_at: string | null
 }
@@ -242,11 +243,12 @@ export async function listSchedules(workflow_id: string): Promise<ScheduleTrigge
 export async function createSchedule(
   workflow_id: string,
   cron_expr: string,
+  timezone: string = 'UTC',
 ): Promise<ScheduleTrigger> {
   return apiFetch<ScheduleTrigger>('/triggers/schedules', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ workflow_id, cron_expr }),
+    body: JSON.stringify({ workflow_id, cron_expr, timezone }),
   })
 }
 
@@ -275,4 +277,11 @@ export async function createWebhook(workflow_id: string): Promise<WebhookTrigger
 
 export async function deleteWebhook(webhook_id: string): Promise<void> {
   await apiFetch(`/triggers/webhooks/${encodeURIComponent(webhook_id)}`, { method: 'DELETE' })
+}
+
+export async function rotateWebhookSecret(webhook_id: string): Promise<WebhookTrigger> {
+  return apiFetch<WebhookTrigger>(
+    `/triggers/webhooks/${encodeURIComponent(webhook_id)}/rotate-secret`,
+    { method: 'POST' },
+  )
 }

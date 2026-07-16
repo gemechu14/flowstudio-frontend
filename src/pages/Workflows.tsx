@@ -2454,23 +2454,6 @@ export default function WorkflowsPage() {
             {saving ? 'Saving…' : 'Save'}
           </button>
 
-          {/* Triggers button — coming soon */}
-          <div style={{ position: 'relative' }}>
-            <button
-              disabled
-              title="Triggers coming soon"
-              style={{
-                ...MONO, fontSize: 11, padding: '4px 12px',
-                background: 'var(--bg-page)',
-                color: 'var(--text-body)',
-                border: '1px solid var(--border)',
-                borderRadius: 5, cursor: 'not-allowed',
-                opacity: 0.35,
-              }}
-            >
-              ⚡ Triggers
-            </button>
-          </div>
 
           {saveMsg && (
             <span style={{ ...MONO, fontSize: 11, color: '#10B981' }}>{saveMsg}</span>
