@@ -1076,7 +1076,7 @@ function RunResultPanel({
                 borderRadius: 5, padding: '5px 8px',
               }}>
                 <span style={{ ...MONO, fontSize: 10, color: TEAL, fontWeight: 700, flexShrink: 0 }}>{k}</span>
-                <span style={{ ...MONO, fontSize: 10, color: 'var(--text-body)', flex: 1, wordBreak: 'break-all' }}>{v}</span>
+                <span style={{ ...MONO, fontSize: 10, color: 'var(--text-body)', flex: 1, wordBreak: 'break-all' }}>{typeof v === 'string' ? v : JSON.stringify(v)}</span>
               </div>
             ))}
           </div>

@@ -1,10 +1,25 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   ToolRecord, ToolStatus,
   listTools, uploadTool, approveTool, rejectTool, deleteTool,
   testTool, getToolSource,
+  generateToolWithAi, AiChatMessage,
 } from '../api/tools'
 import ConfirmModal from '../components/ui/ConfirmModal'
+
+const ANTHROPIC_MODELS = [
+  { id: 'claude-sonnet-5', label: 'Claude Sonnet 5' },
+  { id: 'claude-sonnet-4-6', label: 'Claude Sonnet 4.6' },
+  { id: 'claude-opus-4-8', label: 'Claude Opus 4.8' },
+  { id: 'claude-haiku-4-5', label: 'Claude Haiku 4.5' },
+  { id: 'claude-fable-5', label: 'Claude Fable 5' },
+]
+const OPENAI_MODELS = [
+  { id: 'gpt-4.1', label: 'GPT-4.1' },
+  { id: 'gpt-4.1-mini', label: 'GPT-4.1 mini' },
+  { id: 'gpt-4o', label: 'GPT-4o' },
+  { id: 'gpt-4o-mini', label: 'GPT-4o mini' },
+]
 
 // ─── design tokens (inline, no dep on component system) ──────────────────────
 
@@ -383,6 +398,186 @@ function highlightPython(code: string): string {
   return out
 }
 
+// ─── AI assistant panel ───────────────────────────────────────────────────────
+
+function AiPanel({ code, onCodeUpdate, onRequirementsUpdate, onFilenameUpdate, provider, setProvider, modelId, setModelId, messages, setMessages }: {
+  code: string; onCodeUpdate: (c: string) => void; onRequirementsUpdate: (r: string) => void; onFilenameUpdate: (f: string) => void
+  provider: 'anthropic' | 'openai'; setProvider: (p: 'anthropic' | 'openai') => void
+  modelId: string; setModelId: (m: string) => void
+  messages: AiChatMessage[]; setMessages: React.Dispatch<React.SetStateAction<AiChatMessage[]>>
+}) {
+  const [input, setInput] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const bottomRef = useRef<HTMLDivElement>(null)
+
+  const models = provider === 'anthropic' ? ANTHROPIC_MODELS : OPENAI_MODELS
+
+  useEffect(() => {
+    if (provider === 'anthropic') setModelId(ANTHROPIC_MODELS[0].id)
+    else setModelId(OPENAI_MODELS[0].id)
+  }, [provider])
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages, loading])
+
+  const send = async () => {
+    const text = input.trim()
+    if (!text || loading) return
+    setInput('')
+    setError('')
+    const newMessages: AiChatMessage[] = [...messages, { role: 'user', content: text }]
+    setMessages(newMessages)
+    setLoading(true)
+    try {
+      const res = await generateToolWithAi(provider, modelId, newMessages, code)
+      if (res.code) {
+        onCodeUpdate(res.code)
+        const nameMatch = res.code.match(/name\s*=\s*["']([a-z_][a-z0-9_]*)["']/)
+        if (nameMatch) onFilenameUpdate(`${nameMatch[1]}.py`)
+      }
+      if (res.requirements) onRequirementsUpdate(res.requirements)
+      setMessages(prev => [...prev, { role: 'assistant', content: res.message }])
+    } catch (e: any) {
+      const detail = e.detail || e.message || String(e)
+      setError(typeof detail === 'string' ? detail : JSON.stringify(detail))
+    } finally { setLoading(false) }
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#1e2030', borderLeft: `1px solid ${IDE.border}` }}>
+      {/* Header */}
+      <div style={{ padding: '10px 14px', borderBottom: `1px solid ${IDE.border}`, background: IDE.gutter, flexShrink: 0 }}>
+        <div style={{ ...MONO, fontSize: 10, color: '#a78bfa', fontWeight: 700, letterSpacing: '0.08em', marginBottom: 8 }}>✨ AI ASSISTANT</div>
+        {/* Provider toggle */}
+        <div style={{ display: 'flex', gap: 4, marginBottom: 8 }}>
+          {(['anthropic', 'openai'] as const).map(p => (
+            <button key={p} onClick={() => setProvider(p)} style={{
+              ...MONO, fontSize: 10, padding: '3px 10px', borderRadius: 4, cursor: 'pointer',
+              border: `1px solid ${provider === p ? '#a78bfa' : IDE.border}`,
+              background: provider === p ? '#a78bfa22' : 'transparent',
+              color: provider === p ? '#a78bfa' : IDE.lineNum,
+            }}>
+              {p === 'anthropic' ? 'Anthropic' : 'OpenAI'}
+            </button>
+          ))}
+        </div>
+        {/* Model selector */}
+        <select
+          value={modelId}
+          onChange={e => setModelId(e.target.value)}
+          style={{
+            width: '100%', ...MONO, fontSize: 11, padding: '4px 8px',
+            background: IDE.inputBg, color: IDE.text,
+            border: `1px solid ${IDE.inputBdr}`, borderRadius: 4, outline: 'none',
+          }}
+        >
+          {models.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}
+        </select>
+      </div>
+
+      {/* Messages */}
+      <div style={{ flex: 1, overflow: 'auto', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 10, minHeight: 0 }}>
+        {messages.length === 0 && (
+          <div style={{ ...MONO, fontSize: 11, color: IDE.lineNum, lineHeight: 1.7 }}>
+            <div style={{ marginBottom: 8 }}>Describe the tool you want:</div>
+            {[
+              '"A tool that fetches the weather for a city"',
+              '"Add an optional timeout parameter"',
+              '"Make it return JSON instead of plain text"',
+            ].map(s => (
+              <div key={s} onClick={() => setInput(s.replace(/"/g, ''))} style={{
+                cursor: 'pointer', padding: '5px 8px', borderRadius: 5, marginBottom: 4,
+                border: `1px solid ${IDE.border}`, color: '#a78bfa',
+                transition: 'background 0.1s',
+              }} onMouseEnter={e => (e.currentTarget.style.background = '#a78bfa15')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                {s}
+              </div>
+            ))}
+          </div>
+        )}
+        {messages.map((m, i) => (
+          <div key={i} style={{
+            alignSelf: m.role === 'user' ? 'flex-end' : 'flex-start',
+            maxWidth: '90%',
+            padding: '7px 10px', borderRadius: 8,
+            background: m.role === 'user' ? '#7C3AED33' : '#1e2433',
+            border: `1px solid ${m.role === 'user' ? '#7C3AED55' : IDE.border}`,
+            ...MONO, fontSize: 11, color: m.role === 'user' ? '#c4b5fd' : IDE.text,
+            lineHeight: 1.6,
+          }}>
+            {m.role === 'user' ? m.content : (
+              <span dangerouslySetInnerHTML={{ __html:
+                m.content
+                  .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                  .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                  .replace(/\*(.+?)\*/g, '<em>$1</em>')
+                  .replace(/^- (.+)$/gm, '• $1')
+                  .replace(/\n/g, '<br/>')
+              }} />
+            )}
+          </div>
+        ))}
+        {loading && (
+          <div style={{ alignSelf: 'flex-start', ...MONO, fontSize: 11, color: '#a78bfa', padding: '6px 10px' }}>
+            ✦ Generating…
+          </div>
+        )}
+        {error && (
+          <div style={{
+            ...MONO, fontSize: 11, color: '#f87171', padding: '8px 10px',
+            background: '#f8717115', border: '1px solid #f8717140', borderRadius: 6, lineHeight: 1.6,
+          }}>
+            ⚠ {error}
+          </div>
+        )}
+        <div ref={bottomRef} />
+      </div>
+
+      {/* Input */}
+      <div style={{ padding: '10px 14px', borderTop: `1px solid ${IDE.border}`, background: IDE.gutter, flexShrink: 0 }}>
+          <textarea
+            value={input}
+            onChange={e => {
+              setInput(e.target.value)
+              e.target.style.height = 'auto'
+              e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px'
+            }}
+            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }}
+            placeholder={messages.length === 0 ? 'Describe the tool you want…' : 'Ask to change something…'}
+            rows={2}
+            style={{
+              width: '100%', ...MONO, fontSize: 11, padding: '7px 10px',
+              background: IDE.inputBg, color: IDE.text,
+              border: `1px solid ${IDE.inputBdr}`, borderRadius: 6,
+              resize: 'none', outline: 'none', lineHeight: 1.5,
+              overflowY: 'auto', minHeight: 42, maxHeight: 120,
+              boxSizing: 'border-box',
+            }}
+          />
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 }}>
+          <span style={{ ...MONO, fontSize: 9, color: IDE.lineNum }}>Enter to send · Shift+Enter for newline</span>
+          <button onClick={send} disabled={!input.trim() || loading} style={{
+            width: 28, height: 28, borderRadius: 6,
+            background: !input.trim() || loading ? '#313244' : '#7C3AED',
+            color: !input.trim() || loading ? IDE.lineNum : '#fff',
+            border: 'none', cursor: !input.trim() || loading ? 'not-allowed' : 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            flexShrink: 0,
+          }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="22" y1="2" x2="11" y2="13" />
+              <polygon points="22 2 15 22 11 13 2 9 22 2" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── editor panel ────────────────────────────────────────────────────────────
 
 const TOOL_TEMPLATE = `from agentcore.object_model.tool import Tool, Parameter
@@ -432,6 +627,10 @@ function EditorPanel({ onUploaded }: { onUploaded: (t: ToolRecord) => void }) {
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState('')
   const [warnings, setWarnings] = useState<string[]>([])
+  const [aiOpen, setAiOpen] = useState(false)
+  const [aiProvider, setAiProvider] = useState<'anthropic' | 'openai'>('anthropic')
+  const [aiModelId, setAiModelId] = useState('claude-sonnet-5')
+  const [aiMessages, setAiMessages] = useState<AiChatMessage[]>([])
   const lines = code.split('\n')
 
   const submit = async () => {
@@ -473,6 +672,16 @@ function EditorPanel({ onUploaded }: { onUploaded: (t: ToolRecord) => void }) {
             {filename}
           </span>
         </div>
+        <button
+          onClick={() => setAiOpen(o => !o)}
+          style={{
+            ...MONO, fontSize: 11, padding: '3px 12px', borderRadius: 5, cursor: 'pointer',
+            border: `1px solid ${aiOpen ? '#a78bfa' : IDE.border}`,
+            background: aiOpen ? '#a78bfa22' : 'transparent',
+            color: aiOpen ? '#a78bfa' : IDE.lineNum,
+            transition: 'all 0.15s',
+          }}
+        >✨ AI</button>
         <span style={{ ...MONO, fontSize: 10, color: IDE.lineNum }}>{lines.length} lines</span>
       </div>
 
@@ -507,103 +716,119 @@ function EditorPanel({ onUploaded }: { onUploaded: (t: ToolRecord) => void }) {
         and width: max-content (grows wider than container when lines are long),
         which is what makes the H scrollbar appear.
       */}
-      <div style={{ flex: 1, overflow: 'auto', minHeight: 0, background: IDE.bg }}>
-        {/* Inner row: line numbers + code, width driven by content */}
-        <div style={{ display: 'inline-flex', minWidth: '100%', minHeight: '100%' }}>
+      {/* Editor + AI panel side by side */}
+      <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
 
-          {/* Line numbers — sticky to the left edge while scrolling horizontally */}
-          <div style={{
-            ...FONT,
-            position: 'sticky', left: 0, zIndex: 3,
-            padding: '14px 12px 14px 14px',
-            color: IDE.lineNum, background: IDE.gutter,
-            borderRight: `1px solid ${IDE.border}`,
-            userSelect: 'none', flexShrink: 0,
-            minWidth: 48, textAlign: 'right',
-          }}>
-            {lines.map((_, i) => <div key={i}>{i + 1}</div>)}
+        {/* Editor column */}
+        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
+
+          {/* Code area */}
+          <div style={{ flex: 1, overflow: 'auto', minHeight: 0, background: IDE.bg }}>
+            <div style={{ display: 'inline-flex', minWidth: '100%', minHeight: '100%' }}>
+              <div style={{
+                ...FONT,
+                position: 'sticky', left: 0, zIndex: 3,
+                padding: '14px 12px 14px 14px',
+                color: IDE.lineNum, background: IDE.gutter,
+                borderRight: `1px solid ${IDE.border}`,
+                userSelect: 'none', flexShrink: 0,
+                minWidth: 48, textAlign: 'right',
+              }}>
+                {lines.map((_, i) => <div key={i}>{i + 1}</div>)}
+              </div>
+              <div style={{ position: 'relative', flex: 1 }}>
+                <pre
+                  aria-hidden
+                  style={{
+                    ...FONT,
+                    padding: '14px 32px 14px 16px',
+                    margin: 0, color: IDE.text,
+                    background: 'transparent',
+                    pointerEvents: 'none',
+                    width: 'max-content',
+                    minWidth: '100%',
+                  }}
+                  dangerouslySetInnerHTML={{ __html: highlightPython(code) + '\n' }}
+                />
+                <textarea
+                  value={code}
+                  onChange={e => setCode(e.target.value)}
+                  spellCheck={false}
+                  style={{
+                    ...FONT,
+                    padding: '14px 32px 14px 16px',
+                    position: 'absolute', inset: 0,
+                    width: '100%', height: '100%',
+                    color: 'transparent', caretColor: IDE.text,
+                    background: 'transparent',
+                    border: 'none', outline: 'none', resize: 'none',
+                    overflow: 'hidden',
+                    boxSizing: 'border-box',
+                  }}
+                  onKeyDown={e => {
+                    if (e.key === 'Tab') {
+                      e.preventDefault()
+                      const el = e.currentTarget
+                      const start = el.selectionStart; const end = el.selectionEnd
+                      const next = code.slice(0, start) + '    ' + code.slice(end)
+                      setCode(next)
+                      requestAnimationFrame(() => { el.selectionStart = el.selectionEnd = start + 4 })
+                    }
+                  }}
+                />
+              </div>
+            </div>
           </div>
 
-          {/* Code content: width determined by pre content → causes H overflow */}
-          <div style={{ position: 'relative', flex: 1 }}>
-            {/* Highlighted display (behind textarea) */}
-            <pre
-              aria-hidden
-              style={{
-                ...FONT,
-                padding: '14px 32px 14px 16px',
-                margin: 0, color: IDE.text,
-                background: 'transparent',
-                pointerEvents: 'none',
-                width: 'max-content',    // grows to fit longest line
-                minWidth: '100%',        // at least fills the flex container
-              }}
-              dangerouslySetInnerHTML={{ __html: highlightPython(code) + '\n' }}
-            />
-            {/* Transparent editable layer — same size as the pre */}
-            <textarea
-              value={code}
-              onChange={e => setCode(e.target.value)}
-              spellCheck={false}
-              style={{
-                ...FONT,
-                padding: '14px 32px 14px 16px',
-                position: 'absolute', inset: 0,
-                width: '100%', height: '100%',
-                color: 'transparent', caretColor: IDE.text,
-                background: 'transparent',
-                border: 'none', outline: 'none', resize: 'none',
-                overflow: 'hidden',      // parent container handles scroll
-                boxSizing: 'border-box',
-              }}
-              onKeyDown={e => {
-                if (e.key === 'Tab') {
-                  e.preventDefault()
-                  const el = e.currentTarget
-                  const start = el.selectionStart; const end = el.selectionEnd
-                  const next = code.slice(0, start) + '    ' + code.slice(end)
-                  setCode(next)
-                  requestAnimationFrame(() => { el.selectionStart = el.selectionEnd = start + 4 })
-                }
-              }}
-            />
+          {/* Status bar */}
+          <div style={{ background: '#1D5FFA', padding: '3px 16px', display: 'flex', alignItems: 'center', gap: 16, flexShrink: 0 }}>
+            <span style={{ ...MONO, fontSize: 10, color: '#ffffffcc' }}>Python</span>
+            <span style={{ ...MONO, fontSize: 10, color: '#ffffff77' }}>UTF-8</span>
+            <span style={{ ...MONO, fontSize: 10, color: '#ffffff77' }}>Tab: 4 spaces</span>
           </div>
+
+          {/* Footer */}
+          <div style={{ padding: '10px 16px', background: IDE.gutter, borderTop: `1px solid ${IDE.border}`, flexShrink: 0 }}>
+            {error && (
+              <div style={{ ...MONO, fontSize: 11, color: '#EF4444', marginBottom: 8, padding: '7px 10px', background: '#EF444420', border: '1px solid #EF444440', borderRadius: 6 }}>
+                {error}
+              </div>
+            )}
+            {warnings.length > 0 && (
+              <div style={{ ...MONO, fontSize: 11, color: '#F59E0B', marginBottom: 8, padding: '7px 10px', background: '#F59E0B20', border: '1px solid #F59E0B40', borderRadius: 6 }}>
+                ⚠ {warnings.join(' · ')}
+              </div>
+            )}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <button
+                onClick={submit} disabled={!code.trim() || uploading}
+                style={{
+                  ...MONO, fontSize: 12, padding: '7px 22px',
+                  background: !code.trim() || uploading ? '#313244' : '#1D5FFA',
+                  color: !code.trim() || uploading ? IDE.lineNum : '#fff',
+                  border: 'none', borderRadius: 6,
+                  cursor: !code.trim() || uploading ? 'not-allowed' : 'pointer',
+                  fontWeight: 700,
+                }}
+              >{uploading ? 'Uploading…' : 'Submit for Review'}</button>
+              <span style={{ ...MONO, fontSize: 10, color: IDE.lineNum }}>{lines.length} lines · Tab = 4 spaces</span>
+            </div>
+          </div>
+
         </div>
-      </div>
 
-      {/* Status bar */}
-      <div style={{ background: '#1D5FFA', padding: '3px 16px', display: 'flex', alignItems: 'center', gap: 16, flexShrink: 0 }}>
-        <span style={{ ...MONO, fontSize: 10, color: '#ffffffcc' }}>Python</span>
-        <span style={{ ...MONO, fontSize: 10, color: '#ffffff77' }}>UTF-8</span>
-        <span style={{ ...MONO, fontSize: 10, color: '#ffffff77' }}>Tab: 4 spaces</span>
-      </div>
-
-      {/* Footer */}
-      <div style={{ padding: '10px 16px', background: IDE.gutter, borderTop: `1px solid ${IDE.border}`, flexShrink: 0 }}>
-        {error && (
-          <div style={{ ...MONO, fontSize: 11, color: '#EF4444', marginBottom: 8, padding: '7px 10px', background: '#EF444420', border: '1px solid #EF444440', borderRadius: 6 }}>
-            {error}
+        {/* AI panel */}
+        {aiOpen && (
+          <div style={{ width: 400, flexShrink: 0 }}>
+            <AiPanel
+              code={code} onCodeUpdate={setCode} onRequirementsUpdate={setRequirements} onFilenameUpdate={setFilename}
+              provider={aiProvider} setProvider={setAiProvider}
+              modelId={aiModelId} setModelId={setAiModelId}
+              messages={aiMessages} setMessages={setAiMessages}
+            />
           </div>
         )}
-        {warnings.length > 0 && (
-          <div style={{ ...MONO, fontSize: 11, color: '#F59E0B', marginBottom: 8, padding: '7px 10px', background: '#F59E0B20', border: '1px solid #F59E0B40', borderRadius: 6 }}>
-            ⚠ {warnings.join(' · ')}
-          </div>
-        )}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <button
-            onClick={submit} disabled={!code.trim() || uploading}
-            style={{
-              ...MONO, fontSize: 12, padding: '7px 22px',
-              background: !code.trim() || uploading ? '#313244' : '#1D5FFA',
-              color: !code.trim() || uploading ? IDE.lineNum : '#fff',
-              border: 'none', borderRadius: 6,
-              cursor: !code.trim() || uploading ? 'not-allowed' : 'pointer',
-              fontWeight: 700,
-            }}
-          >{uploading ? 'Uploading…' : 'Submit for Review'}</button>
-          <span style={{ ...MONO, fontSize: 10, color: IDE.lineNum }}>{lines.length} lines · Tab = 4 spaces</span>
-        </div>
+
       </div>
     </div>
   )
@@ -995,6 +1220,7 @@ export default function Tools() {
   const [testTool_, setTestTool] = useState<ToolRecord | null>(null)
   const [rejectTarget, setRejectTarget] = useState<ToolRecord | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<ToolRecord | null>(null)
+  const [listCollapsed, setListCollapsed] = useState(false)
 
   const reload = useCallback(() => {
     listTools().then(setTools).catch(() => {}).finally(() => setLoading(false))
@@ -1082,13 +1308,15 @@ export default function Tools() {
       </div>
 
       {/* ── Two-column body ── */}
-      <div style={{ flex: 1, display: 'flex', minHeight: 0, overflow: 'hidden' }}>
+      <div style={{ flex: 1, display: 'flex', minHeight: 0, overflow: 'hidden', position: 'relative' }}>
 
         {/* Left: tabs + tool list */}
         <div style={{
-          flex: '0 0 54%', display: 'flex', flexDirection: 'column',
+          flex: listCollapsed ? '0 0 0' : '0 0 54%',
+          display: 'flex', flexDirection: 'column',
           borderRight: '1px solid var(--border)', overflow: 'hidden',
           background: 'var(--bg-page)',
+          transition: 'flex 0.2s ease',
         }}>
           {/* Tabs */}
           <div style={{
@@ -1186,11 +1414,29 @@ export default function Tools() {
         </div>
 
         {/* Right: editor / upload / empty state — flex column so children can fill height */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#fafafb' }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#fafafb', position: 'relative' }}>
+          {/* Collapse/expand toggle */}
+          <button
+            onClick={() => setListCollapsed(c => !c)}
+            title={listCollapsed ? 'Show tool list' : 'Hide tool list'}
+            style={{
+              position: 'absolute', top: '50%', left: 0,
+              transform: 'translateY(-50%)',
+              zIndex: 10, width: 18, height: 48,
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border)',
+              borderLeft: 'none',
+              borderRadius: '0 6px 6px 0',
+              cursor: 'pointer', padding: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: 'var(--text-muted)', fontSize: 10,
+              boxShadow: '2px 0 6px rgba(0,0,0,0.06)',
+            }}
+          >{listCollapsed ? '›' : '‹'}</button>
           {showAdd === 'editor' && (
             // no padding wrapper — editor fills 100%
             <EditorPanel onUploaded={_t => {
-              reload(); setShowAdd(false); setActiveTab('pending')
+              reload(); setShowAdd(false); setActiveTab('pending'); setListCollapsed(false)
             }} />
           )}
           {showAdd === 'upload' && (

@@ -32,7 +32,7 @@ function emitBackendUnreachable() {
   window.dispatchEvent(new CustomEvent('backend:unreachable'))
 }
 
-export async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
+export async function apiFetch<T>(path: string, options?: RequestInit & { timeoutMs?: number }): Promise<T> {
   const token = getToken()
   const headers: Record<string, string> = {
     ...(options?.headers as Record<string, string> | undefined),
@@ -45,7 +45,7 @@ export async function apiFetch<T>(path: string, options?: RequestInit): Promise<
   if (options?.body && !(options.body instanceof FormData) && !headers['Content-Type']) headers['Content-Type'] = 'application/json'
 
   const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), 15_000)
+  const timeout = setTimeout(() => controller.abort(), options?.timeoutMs ?? 15_000)
 
   let res: Response
   try {

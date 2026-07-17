@@ -90,3 +90,20 @@ export async function testTool(
 export async function deleteTool(toolId: string): Promise<void> {
   await apiFetch(`/tools/${encodeURIComponent(toolId)}`, { method: 'DELETE' })
 }
+
+export interface AiChatMessage { role: 'user' | 'assistant'; content: string }
+export interface AiGenerateResult { code: string; requirements: string; message: string }
+
+export async function generateToolWithAi(
+  provider: 'openai' | 'anthropic',
+  model_id: string,
+  messages: AiChatMessage[],
+  current_code: string,
+): Promise<AiGenerateResult> {
+  return apiFetch<AiGenerateResult>('/tools/ai/generate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ provider, model_id, messages, current_code }),
+    timeoutMs: 90_000,
+  })
+}

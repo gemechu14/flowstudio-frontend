@@ -402,6 +402,31 @@ export default function AgentPanel({ mode, agent, availableTools, onSave, onClos
           {/* Tools */}
           <div>
             <label style={LABEL_STYLE}>Tools ({selectedTools.size} selected)</label>
+            {/* Orphaned tools — selected but no longer exist */}
+            {(() => {
+              const orphaned = Array.from(selectedTools).filter(t => !availableTools.includes(t))
+              if (orphaned.length === 0) return null
+              return (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+                  {orphaned.map(toolName => (
+                    <span key={toolName} title="Tool was deleted — click × to remove" style={{
+                      fontFamily: 'var(--font-mono)', fontSize: 12,
+                      padding: '4px 6px 4px 11px', borderRadius: 6,
+                      border: '1px solid rgba(248,113,113,0.4)',
+                      background: 'rgba(248,113,113,0.08)',
+                      color: '#f87171',
+                      display: 'inline-flex', alignItems: 'center', gap: 6,
+                    }}>
+                      {toolName}
+                      <button
+                        onClick={() => toggleTool(toolName)}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#f87171', padding: 0, fontSize: 15, lineHeight: 1 }}
+                      >×</button>
+                    </span>
+                  ))}
+                </div>
+              )
+            })()}
             {availableTools.length === 0 && autoInjectedTools.length === 0 ? (
               <div style={{
                 padding: '14px 16px', borderRadius: 8,
@@ -532,6 +557,34 @@ export default function AgentPanel({ mode, agent, availableTools, onSave, onClos
                           </button>
                         )}
                       </div>
+                      {/* Offline selected tools — MCP down but tools were previously selected */}
+                      {tools.length === 0 && (() => {
+                        const offlineKeys = Array.from(selectedMcpTools).filter(k => k.startsWith(`${server.server_id}:`))
+                        if (offlineKeys.length === 0) return null
+                        return (
+                          <div style={{ padding: '8px 12px', display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                            {offlineKeys.map(key => {
+                              const toolName = key.slice(server.server_id.length + 1)
+                              return (
+                                <span key={key} title="MCP server offline — click × to remove" style={{
+                                  fontFamily: 'var(--font-mono)', fontSize: 12,
+                                  padding: '4px 6px 4px 11px', borderRadius: 5,
+                                  border: '1px solid rgba(248,113,113,0.4)',
+                                  background: 'rgba(248,113,113,0.08)',
+                                  color: '#f87171',
+                                  display: 'flex', alignItems: 'center', gap: 6,
+                                }}>
+                                  {toolName}
+                                  <button
+                                    onClick={() => toggleMcpTool(server.server_id, toolName)}
+                                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#f87171', padding: 0, fontSize: 15, lineHeight: 1 }}
+                                  >×</button>
+                                </span>
+                              )
+                            })}
+                          </div>
+                        )
+                      })()}
                       {/* Tool list */}
                       {tools.length > 0 && (
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, padding: '10px 12px' }}>
