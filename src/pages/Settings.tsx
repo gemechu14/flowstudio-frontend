@@ -3,7 +3,7 @@ import ConfirmModal from '../components/ui/ConfirmModal'
 import {
   McpServer, McpTool,
   listMcpServers, createMcpServer, deleteMcpServer,
-  syncMcpServer, getMcpServerTools,
+  syncMcpServer, getMcpServerTools, updateMcpServer,
 } from '../api/mcpServers'
 import { type KeyStatus, listApiKeys, saveApiKey, deleteApiKey } from '../api/apiKeys'
 import {
@@ -59,6 +59,178 @@ function SectionHeading({ label, title, subtitle }: {
   )
 }
 
+// ─── auth picker (Postman-style) ──────────────────────────────────────────────
+
+type AuthType = 'none' | 'bearer' | 'apikey' | 'basic'
+
+function authToHeaders(type: AuthType, fields: Record<string, string>): Record<string, string> {
+  if (type === 'bearer' && fields.token) {
+    return { Authorization: `Bearer ${fields.token}` }
+  }
+  if (type === 'apikey' && fields.key && fields.value) {
+    return { [fields.key]: fields.value }
+  }
+  if (type === 'basic' && fields.username) {
+    const encoded = btoa(`${fields.username}:${fields.password ?? ''}`)
+    return { Authorization: `Basic ${encoded}` }
+  }
+  return {}
+}
+
+function headersToAuth(headers: Record<string, string>): { type: AuthType; fields: Record<string, string> } {
+  const auth = headers['Authorization'] ?? headers['authorization'] ?? ''
+  if (auth.startsWith('Bearer ')) return { type: 'bearer', fields: { token: auth.slice(7) } }
+  if (auth.startsWith('Basic ')) {
+    try {
+      const decoded = atob(auth.slice(6))
+      const sep = decoded.indexOf(':')
+      return { type: 'basic', fields: { username: decoded.slice(0, sep), password: decoded.slice(sep + 1) } }
+    } catch { /* fall through */ }
+  }
+  // custom API key header
+  const entries = Object.entries(headers)
+  if (entries.length === 1) return { type: 'apikey', fields: { key: entries[0][0], value: entries[0][1] } }
+  return { type: 'none', fields: {} }
+}
+
+const AUTH_TYPES: { value: AuthType; label: string }[] = [
+  { value: 'none',   label: 'No Auth' },
+  { value: 'bearer', label: 'Bearer Token' },
+  { value: 'apikey', label: 'API Key' },
+  { value: 'basic',  label: 'Basic Auth' },
+]
+
+function AuthPicker({
+  initialHeaders,
+  onChange,
+  inputStyle,
+}: {
+  initialHeaders: Record<string, string>
+  onChange: (headers: Record<string, string>) => void
+  inputStyle: React.CSSProperties
+}) {
+  const parsed = headersToAuth(initialHeaders)
+  const [authType, setAuthType] = useState<AuthType>(parsed.type)
+  const [fields, setFields] = useState<Record<string, string>>(parsed.fields)
+
+  const update = (type: AuthType, newFields: Record<string, string>) => {
+    setAuthType(type)
+    setFields(newFields)
+    onChange(authToHeaders(type, newFields))
+  }
+
+  const setField = (key: string, val: string) => {
+    const next = { ...fields, [key]: val }
+    setFields(next)
+    onChange(authToHeaders(authType, next))
+  }
+
+  const SEL: React.CSSProperties = {
+    ...MONO, fontSize: 12, padding: '6px 10px',
+    background: 'var(--bg-light)', color: 'var(--text-body)',
+    border: '1px solid var(--border-light)', borderRadius: 6,
+    cursor: 'pointer', outline: 'none',
+  }
+
+  const FIELD_LABEL: React.CSSProperties = {
+    ...MONO, fontSize: 10, color: '#6B7280', marginBottom: 4,
+  }
+
+  return (
+    <div>
+      {/* Row 1: dropdown */}
+      <div style={{ marginBottom: authType === 'none' ? 0 : 10 }}>
+        <div style={{ ...MONO, fontSize: 10, color: '#6B7280', marginBottom: 4 }}>AUTH TYPE</div>
+        <select
+          value={authType}
+          onChange={e => update(e.target.value as AuthType, {})}
+          style={{ ...SEL, width: 180 }}
+        >
+          {AUTH_TYPES.map(a => <option key={a.value} value={a.value}>{a.label}</option>)}
+        </select>
+        {authType === 'none' && (
+          <span style={{ ...MONO, fontSize: 11, color: '#9CA3AF', marginLeft: 10 }}>
+            No authentication header will be sent.
+          </span>
+        )}
+      </div>
+
+      {/* Row 2: type-specific fields, full width */}
+      {authType !== 'none' && (
+        <div style={{ display: 'flex', gap: 10 }}>
+
+        {authType === 'bearer' && (
+          <div style={{ flex: 1 }}>
+            <div style={FIELD_LABEL}>TOKEN</div>
+            <input
+              type="password"
+              value={fields.token ?? ''}
+              onChange={e => setField('token', e.target.value)}
+              placeholder="Enter token"
+              style={{ ...inputStyle, width: '100%', boxSizing: 'border-box' }}
+            />
+            {fields.token && (
+              <div style={{ ...MONO, fontSize: 10, color: '#9CA3AF', marginTop: 4 }}>
+                Sends: Authorization: Bearer ••••••
+              </div>
+            )}
+          </div>
+        )}
+
+        {authType === 'apikey' && (
+          <>
+            <div style={{ flex: '0 0 200px' }}>
+              <div style={FIELD_LABEL}>HEADER NAME</div>
+              <input
+                value={fields.key ?? ''}
+                onChange={e => setField('key', e.target.value)}
+                placeholder="X-API-Key"
+                style={{ ...inputStyle, width: '100%', boxSizing: 'border-box' }}
+              />
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={FIELD_LABEL}>VALUE</div>
+              <input
+                type="password"
+                value={fields.value ?? ''}
+                onChange={e => setField('value', e.target.value)}
+                placeholder="Your API key"
+                style={{ ...inputStyle, width: '100%', boxSizing: 'border-box' }}
+              />
+            </div>
+          </>
+        )}
+
+        {authType === 'basic' && (
+          <>
+            <div style={{ flex: 1 }}>
+              <div style={FIELD_LABEL}>USERNAME</div>
+              <input
+                value={fields.username ?? ''}
+                onChange={e => setField('username', e.target.value)}
+                placeholder="username"
+                style={{ ...inputStyle, width: '100%', boxSizing: 'border-box' }}
+              />
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={FIELD_LABEL}>PASSWORD</div>
+              <input
+                type="password"
+                value={fields.password ?? ''}
+                onChange={e => setField('password', e.target.value)}
+                placeholder="password"
+                style={{ ...inputStyle, width: '100%', boxSizing: 'border-box' }}
+              />
+            </div>
+          </>
+        )}
+
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── inline add-server form ───────────────────────────────────────────────────
 
 function AddServerForm({ onCreated, onCancel }: {
@@ -67,8 +239,6 @@ function AddServerForm({ onCreated, onCancel }: {
 }) {
   const [name, setName] = useState('')
   const [url, setUrl] = useState('')
-  const [headerKey, setHeaderKey] = useState('')
-  const [headerVal, setHeaderVal] = useState('')
   const [headers, setHeaders] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -82,7 +252,6 @@ function AddServerForm({ onCreated, onCancel }: {
     border: '1px solid var(--border-light)',
     borderRadius: 6,
     boxSizing: 'border-box',
-    width: '100%',
     outline: 'none',
   }
 
@@ -119,14 +288,14 @@ function AddServerForm({ onCreated, onCancel }: {
       }}>
         NEW MCP SERVER
       </div>
-      <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
+      <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
         <div style={{ flex: '0 0 200px' }}>
           <div style={{ ...MONO, fontSize: 10, color: '#6B7280', marginBottom: 4 }}>NAME</div>
           <input
             value={name}
             onChange={e => setName(e.target.value)}
             placeholder="my-mcp-server"
-            style={inputStyle}
+            style={{ ...inputStyle, width: '100%' }}
             autoFocus
           />
         </div>
@@ -136,56 +305,14 @@ function AddServerForm({ onCreated, onCancel }: {
             value={url}
             onChange={e => setUrl(e.target.value)}
             placeholder="http://localhost:3001/mcp"
-            style={inputStyle}
+            style={{ ...inputStyle, width: '100%' }}
           />
         </div>
       </div>
 
-      {/* Headers */}
-      <div style={{ marginBottom: 10 }}>
-        <div style={{ ...MONO, fontSize: 10, color: '#6B7280', marginBottom: 4 }}>
-          AUTH HEADERS <span style={{ fontWeight: 400, opacity: 0.7 }}>(optional — e.g. Authorization: Bearer &lt;token&gt;)</span>
-        </div>
-        {/* Existing headers */}
-        {Object.entries(headers).map(([k, v]) => (
-          <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-            <span style={{ ...MONO, fontSize: 11, flex: '0 0 180px', color: 'var(--text-dark)', background: 'var(--bg-light)', border: '1px solid var(--border-light)', borderRadius: 5, padding: '5px 8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{k}</span>
-            <span style={{ ...MONO, fontSize: 11, flex: 1, color: 'var(--text-body)', background: 'var(--bg-light)', border: '1px solid var(--border-light)', borderRadius: 5, padding: '5px 8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{v}</span>
-            <button type="button" onClick={() => setHeaders(prev => { const n = { ...prev }; delete n[k]; return n })} style={{ background: 'none', border: 'none', color: '#EF4444', cursor: 'pointer', fontSize: 14, padding: '0 4px', lineHeight: 1 }}>×</button>
-          </div>
-        ))}
-        {/* Add new header row */}
-        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-          <input
-            value={headerKey}
-            onChange={e => setHeaderKey(e.target.value)}
-            placeholder="Authorization"
-            style={{ ...inputStyle, flex: '0 0 180px' }}
-          />
-          <input
-            value={headerVal}
-            onChange={e => setHeaderVal(e.target.value)}
-            placeholder="Bearer <token>"
-            style={{ ...inputStyle, flex: 1 }}
-            onKeyDown={e => {
-              if (e.key === 'Enter') {
-                e.preventDefault()
-                const k = headerKey.trim(); const v = headerVal.trim()
-                if (k && v) { setHeaders(prev => ({ ...prev, [k]: v })); setHeaderKey(''); setHeaderVal('') }
-              }
-            }}
-          />
-          <button
-            type="button"
-            onClick={() => {
-              const k = headerKey.trim(); const v = headerVal.trim()
-              if (k && v) { setHeaders(prev => ({ ...prev, [k]: v })); setHeaderKey(''); setHeaderVal('') }
-            }}
-            style={{ ...MONO, fontSize: 11, padding: '6px 12px', background: 'transparent', border: '1px solid var(--border-light)', color: '#6B7280', borderRadius: 6, cursor: 'pointer', whiteSpace: 'nowrap' }}
-          >
-            + Add
-          </button>
-        </div>
+      {/* Auth picker */}
+      <div style={{ marginBottom: 12 }}>
+        <AuthPicker initialHeaders={{}} onChange={setHeaders} inputStyle={inputStyle} />
       </div>
 
       {error && (
@@ -306,6 +433,50 @@ function ServerRow({ server, onDeleted, onSynced }: {
   const [toolsKey, setToolsKey] = useState(0)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
+  // ── edit state ──
+  const [editing, setEditing] = useState(false)
+  const [editUrl, setEditUrl] = useState(server.url)
+  const [editHeaders, setEditHeaders] = useState<Record<string, string>>(server.headers ?? {})
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
+
+  const openEdit = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setEditUrl(server.url)
+    setEditHeaders(server.headers ?? {})
+    setSaveError('')
+    setEditing(true)
+  }
+
+  const handleSaveEdit = async (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setSaving(true); setSaveError('')
+    try {
+      const updated = await updateMcpServer(server.server_id, {
+        url: editUrl.trim() || undefined,
+        headers: editHeaders,
+      })
+      onSynced(updated)
+      setEditing(false)
+    } catch (err: any) {
+      setSaveError(err.message || 'Save failed')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const inputStyle: React.CSSProperties = {
+    ...MONO,
+    fontSize: 12,
+    padding: '6px 10px',
+    background: 'var(--bg-light)',
+    color: 'var(--text-dark)',
+    border: '1px solid var(--border-light)',
+    borderRadius: 6,
+    boxSizing: 'border-box',
+    outline: 'none',
+  }
+
   const handleSync = async (e: React.MouseEvent) => {
     e.stopPropagation()
     setSyncing(true); setSyncError('')
@@ -387,18 +558,29 @@ function ServerRow({ server, onDeleted, onSynced }: {
           <div style={{ color: '#6B7280' }}>{fmtDate(server.last_synced_at)}</div>
         </div>
 
-        {/* Enabled toggle label */}
-        <div style={{
-          ...MONO, fontSize: 10, fontWeight: 600,
-          padding: '2px 8px',
-          borderRadius: 12,
-          background: server.enabled ? '#10B98118' : '#F3F4F6',
-          color: server.enabled ? '#10B981' : '#9CA3AF',
-          border: `1px solid ${server.enabled ? '#10B98140' : '#E5E7EB'}`,
-          flexShrink: 0,
-        }}>
+        {/* Enabled toggle */}
+        <button
+          onClick={async (e) => {
+            e.stopPropagation()
+            try {
+              const updated = await updateMcpServer(server.server_id, { enabled: !server.enabled })
+              onSynced(updated)
+            } catch { /* ignore */ }
+          }}
+          title={server.enabled ? 'Click to disable' : 'Click to enable'}
+          style={{
+            ...MONO, fontSize: 10, fontWeight: 600,
+            padding: '2px 8px',
+            borderRadius: 12,
+            background: server.enabled ? '#10B98118' : '#F3F4F6',
+            color: server.enabled ? '#10B981' : '#9CA3AF',
+            border: `1px solid ${server.enabled ? '#10B98140' : '#E5E7EB'}`,
+            flexShrink: 0,
+            cursor: 'pointer',
+          }}
+        >
           {server.enabled ? 'ENABLED' : 'DISABLED'}
-        </div>
+        </button>
 
         {/* Sync button */}
         <button
@@ -414,6 +596,21 @@ function ServerRow({ server, onDeleted, onSynced }: {
           }}
         >
           {syncing ? 'Syncing…' : 'Sync'}
+        </button>
+
+        {/* Edit button */}
+        <button
+          onClick={openEdit}
+          style={{
+            ...MONO, fontSize: 11, padding: '5px 10px',
+            background: '#F59E0B18',
+            border: '1px solid #F59E0B44',
+            color: '#D97706',
+            borderRadius: 5, cursor: 'pointer',
+            fontWeight: 600, flexShrink: 0,
+          }}
+        >
+          Edit
         </button>
 
         {/* Delete button */}
@@ -446,6 +643,59 @@ function ServerRow({ server, onDeleted, onSynced }: {
           borderTop: '1px solid #EF444425',
         }}>
           Sync error: {syncError}
+        </div>
+      )}
+
+      {/* Edit panel */}
+      {editing && (
+        <div
+          style={{
+            borderTop: '1px solid #F59E0B44',
+            background: '#FFFBEB',
+            padding: '14px 18px',
+          }}
+          onClick={e => e.stopPropagation()}
+        >
+          <div style={{ ...MONO, fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', color: '#D97706', marginBottom: 12 }}>
+            EDIT SERVER
+          </div>
+
+          {/* URL */}
+          <div style={{ marginBottom: 10 }}>
+            <div style={{ ...MONO, fontSize: 10, color: '#6B7280', marginBottom: 4 }}>URL</div>
+            <input
+              value={editUrl}
+              onChange={e => setEditUrl(e.target.value)}
+              style={{ ...inputStyle, width: '100%' }}
+            />
+          </div>
+
+          {/* Auth picker */}
+          <div style={{ marginBottom: 10 }}>
+            <AuthPicker
+              initialHeaders={server.headers ?? {}}
+              onChange={setEditHeaders}
+              inputStyle={inputStyle}
+            />
+          </div>
+
+          {saveError && (
+            <div style={{ ...MONO, fontSize: 11, color: '#EF4444', marginBottom: 8, padding: '6px 10px', background: '#EF444415', border: '1px solid #EF444440', borderRadius: 6 }}>
+              {saveError}
+            </div>
+          )}
+
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              onClick={handleSaveEdit}
+              disabled={saving}
+              style={{ ...MONO, fontSize: 12, padding: '6px 16px', background: saving ? '#D9770688' : '#D97706', color: '#fff', border: 'none', borderRadius: 6, cursor: saving ? 'wait' : 'pointer', fontWeight: 700 }}
+            >{saving ? 'Saving…' : 'Save Changes'}</button>
+            <button
+              onClick={e => { e.stopPropagation(); setEditing(false); setSaveError('') }}
+              style={{ ...MONO, fontSize: 12, padding: '6px 14px', background: 'transparent', border: '1px solid var(--border-light)', color: '#6B7280', borderRadius: 6, cursor: 'pointer' }}
+            >Cancel</button>
+          </div>
         </div>
       )}
 

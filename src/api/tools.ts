@@ -87,6 +87,13 @@ export async function testTool(
   })
 }
 
+export async function updateTool(toolId: string, file: File, requirements = ''): Promise<UploadResult> {
+  const form = new FormData()
+  form.append('file', file)
+  form.append('requirements', requirements)
+  return apiFetch<UploadResult>(`/tools/${encodeURIComponent(toolId)}`, { method: 'PUT', body: form })
+}
+
 export async function deleteTool(toolId: string): Promise<void> {
   await apiFetch(`/tools/${encodeURIComponent(toolId)}`, { method: 'DELETE' })
 }

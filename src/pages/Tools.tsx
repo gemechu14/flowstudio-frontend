@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   ToolRecord, ToolStatus,
-  listTools, uploadTool, approveTool, rejectTool, deleteTool,
+  listTools, uploadTool, updateTool, approveTool, rejectTool, deleteTool,
   testTool, getToolSource,
   generateToolWithAi, AiChatMessage,
 } from '../api/tools'
@@ -432,12 +432,12 @@ function AiPanel({ code, onCodeUpdate, onRequirementsUpdate, onFilenameUpdate, p
     setLoading(true)
     try {
       const res = await generateToolWithAi(provider, modelId, newMessages, code)
-      if (res.code) {
+      if (res.code && res.code.trim() !== code.trim()) {
         onCodeUpdate(res.code)
         const nameMatch = res.code.match(/name\s*=\s*["']([a-z_][a-z0-9_]*)["']/)
         if (nameMatch) onFilenameUpdate(`${nameMatch[1]}.py`)
+        if (res.requirements) onRequirementsUpdate(res.requirements)
       }
-      if (res.requirements) onRequirementsUpdate(res.requirements)
       setMessages(prev => [...prev, { role: 'assistant', content: res.message }])
     } catch (e: any) {
       const detail = e.detail || e.message || String(e)
@@ -620,10 +620,17 @@ const IDE = {
   inputBdr: '#6272a4',
 }
 
-function EditorPanel({ onUploaded }: { onUploaded: (t: ToolRecord) => void }) {
-  const [code, setCode] = useState(TOOL_TEMPLATE)
-  const [filename, setFilename] = useState('my_tool.py')
-  const [requirements, setRequirements] = useState('')
+interface EditMode {
+  tool_id: string
+  display_name: string
+  initial_code: string
+  initial_requirements: string
+}
+
+function EditorPanel({ onUploaded, editMode, onCancel }: { onUploaded: (t: ToolRecord) => void; editMode?: EditMode | null; onCancel?: () => void }) {
+  const [code, setCode] = useState(editMode?.initial_code ?? TOOL_TEMPLATE)
+  const [filename, setFilename] = useState(editMode?.display_name ?? 'my_tool.py')
+  const [requirements, setRequirements] = useState(editMode?.initial_requirements ?? '')
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState('')
   const [warnings, setWarnings] = useState<string[]>([])
@@ -640,10 +647,12 @@ function EditorPanel({ onUploaded }: { onUploaded: (t: ToolRecord) => void }) {
       const blob = new Blob([code], { type: 'text/x-python' })
       const fname = filename.endsWith('.py') ? filename : `${filename}.py`
       const file = new File([blob], fname, { type: 'text/x-python' })
-      const res = await uploadTool(file, requirements)
+      const res = editMode
+        ? await updateTool(editMode.tool_id, file, requirements)
+        : await uploadTool(file, requirements)
       setWarnings(res.warnings)
       onUploaded(res.tool)
-      setCode(TOOL_TEMPLATE); setFilename('my_tool.py'); setRequirements('')
+      if (!editMode) { setCode(TOOL_TEMPLATE); setFilename('my_tool.py'); setRequirements('') }
     } catch (e: any) {
       const detail = e.detail
       if (detail?.errors) setError(detail.errors.join(' · '))
@@ -667,7 +676,12 @@ function EditorPanel({ onUploaded }: { onUploaded: (t: ToolRecord) => void }) {
             <span key={c} style={{ width: 12, height: 12, borderRadius: '50%', background: c, display: 'inline-block' }} />
           ))}
         </div>
-        <div style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
+        <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8 }}>
+          {editMode && (
+            <span style={{ ...MONO, fontSize: 9, color: '#F59E0B', background: '#F59E0B18', border: '1px solid #F59E0B40', padding: '2px 8px', borderRadius: 4, letterSpacing: '0.08em' }}>
+              EDITING
+            </span>
+          )}
           <span style={{ ...MONO, fontSize: 11, color: '#6e7191', background: `${IDE.border}aa`, padding: '2px 14px', borderRadius: 4 }}>
             {filename}
           </span>
@@ -810,7 +824,19 @@ function EditorPanel({ onUploaded }: { onUploaded: (t: ToolRecord) => void }) {
                   cursor: !code.trim() || uploading ? 'not-allowed' : 'pointer',
                   fontWeight: 700,
                 }}
-              >{uploading ? 'Uploading…' : 'Submit for Review'}</button>
+              >{uploading ? (editMode ? 'Saving…' : 'Uploading…') : editMode ? 'Save Changes' : 'Submit for Review'}</button>
+              {editMode && onCancel && (
+                <button
+                  onClick={onCancel}
+                  disabled={uploading}
+                  style={{
+                    ...MONO, fontSize: 12, padding: '7px 16px',
+                    background: 'transparent', color: IDE.lineNum,
+                    border: `1px solid ${IDE.border}`, borderRadius: 6,
+                    cursor: uploading ? 'not-allowed' : 'pointer',
+                  }}
+                >Cancel</button>
+              )}
               <span style={{ ...MONO, fontSize: 10, color: IDE.lineNum }}>{lines.length} lines · Tab = 4 spaces</span>
             </div>
           </div>
@@ -956,13 +982,14 @@ function UploadPanel({ onUploaded }: { onUploaded: (t: ToolRecord) => void }) {
 
 // ─── tool row ─────────────────────────────────────────────────────────────────
 
-function ToolRow({ tool, onApprove, onRejectClick, onDelete, onTest, onViewSource }: {
+function ToolRow({ tool, onApprove, onRejectClick, onDelete, onTest, onViewSource, onEdit }: {
   tool: ToolRecord
   onApprove: () => void
   onRejectClick: () => void
   onDelete: () => void
   onTest: () => void
   onViewSource: () => void
+  onEdit: () => void
 }) {
   const [approving, setApproving] = useState(false)
   const [expanded, setExpanded] = useState(false)
@@ -1025,6 +1052,9 @@ function ToolRow({ tool, onApprove, onRejectClick, onDelete, onTest, onViewSourc
           )}
           <Btn onClick={e => { e.stopPropagation(); onTest() }} color="#1D5FFA">
             ▶ Test
+          </Btn>
+          <Btn onClick={e => { e.stopPropagation(); onEdit() }} color="#F59E0B">
+            ✎ Edit
           </Btn>
           <Btn onClick={e => { e.stopPropagation(); onViewSource() }} color="#6B7280">
             {'</>'}
@@ -1215,7 +1245,8 @@ export default function Tools() {
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<ToolStatus | 'all'>('all')
   const [search, setSearch] = useState('')
-  const [showAdd, setShowAdd] = useState<'upload' | 'editor' | false>(false)
+  const [showAdd, setShowAdd] = useState<'upload' | 'editor' | 'edit' | false>(false)
+  const [editTarget, setEditTarget] = useState<EditMode | null>(null)
   const [viewSourceId, setViewSourceId] = useState<string | null>(null)
   const [testTool_, setTestTool] = useState<ToolRecord | null>(null)
   const [rejectTarget, setRejectTarget] = useState<ToolRecord | null>(null)
@@ -1238,6 +1269,13 @@ export default function Tools() {
     await rejectTool(rejectTarget.tool_id, reason)
     setRejectTarget(null)
     reload()
+  }
+
+  const handleEdit = async (tool: ToolRecord) => {
+    const source = await getToolSource(tool.tool_id)
+    setEditTarget({ tool_id: tool.tool_id, display_name: tool.display_name || `${tool.name}.py`, initial_code: source, initial_requirements: tool.requirements })
+    setShowAdd('edit')
+    setListCollapsed(false)
   }
 
   const handleDelete = async (tool: ToolRecord) => {
@@ -1285,7 +1323,7 @@ export default function Tools() {
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <button
-            onClick={() => setShowAdd(showAdd === 'editor' ? false : 'editor')}
+            onClick={() => { setEditTarget(null); setShowAdd(showAdd === 'editor' ? false : 'editor') }}
             style={{
               ...MONO, fontSize: 12, padding: '7px 14px',
               background: showAdd === 'editor' ? '#7C3AED22' : '#7C3AED',
@@ -1295,7 +1333,7 @@ export default function Tools() {
             }}
           >{showAdd === 'editor' ? '✕ Cancel' : '✎ Write Code'}</button>
           <button
-            onClick={() => setShowAdd(showAdd === 'upload' ? false : 'upload')}
+            onClick={() => { setEditTarget(null); setShowAdd(showAdd === 'upload' ? false : 'upload') }}
             style={{
               ...MONO, fontSize: 12, padding: '7px 14px',
               background: showAdd === 'upload' ? '#1D5FFA22' : '#1D5FFA',
@@ -1407,6 +1445,7 @@ export default function Tools() {
                   onDelete={() => handleDelete(tool)}
                   onTest={() => setTestTool(tool)}
                   onViewSource={() => setViewSourceId(tool.tool_id)}
+                  onEdit={() => handleEdit(tool)}
                 />
               ))
             )}
@@ -1434,10 +1473,18 @@ export default function Tools() {
             }}
           >{listCollapsed ? '›' : '‹'}</button>
           {showAdd === 'editor' && (
-            // no padding wrapper — editor fills 100%
             <EditorPanel onUploaded={_t => {
               reload(); setShowAdd(false); setActiveTab('pending'); setListCollapsed(false)
             }} />
+          )}
+          {showAdd === 'edit' && editTarget && (
+            <EditorPanel
+              editMode={editTarget}
+              onUploaded={_t => {
+                reload(); setShowAdd(false); setEditTarget(null); setActiveTab('pending'); setListCollapsed(false)
+              }}
+              onCancel={() => { setShowAdd(false); setEditTarget(null) }}
+            />
           )}
           {showAdd === 'upload' && (
             <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>

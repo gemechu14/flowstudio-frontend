@@ -35,8 +35,19 @@ export function deleteMcpServer(id: string): Promise<void> {
   return apiFetch<void>(`/mcp-servers/${id}`, { method: 'DELETE' })
 }
 
-export function syncMcpServer(id: string): Promise<{ tools: string[] }> {
-  return apiFetch<{ tools: string[] }>(`/mcp-servers/${id}/sync`, { method: 'POST' })
+export function syncMcpServer(id: string): Promise<{ tool_names: string[] }> {
+  return apiFetch<{ tool_names: string[] }>(`/mcp-servers/${id}/sync`, { method: 'POST' })
+}
+
+export function updateMcpServer(
+  id: string,
+  updates: { name?: string; url?: string; enabled?: boolean; headers?: Record<string, string> },
+): Promise<McpServer> {
+  return apiFetch<McpServer>(`/mcp-servers/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(updates),
+  })
 }
 
 export function getMcpServerTools(id: string): Promise<{ tools: McpTool[] }> {

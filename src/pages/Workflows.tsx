@@ -1995,7 +1995,6 @@ export default function WorkflowsPage() {
 
   const doRun = async () => {
     if (!selected) { setRunError('Save the workflow first.'); return }
-    if (!initialInput.trim()) { setRunError('Enter an initial prompt before running.'); return }
     if (pollRunRef.current) clearTimeout(pollRunRef.current)
     setRunning(true); setRunError(''); setCurrentRun(null); setSelectedHistoryRun(null)
     try {
