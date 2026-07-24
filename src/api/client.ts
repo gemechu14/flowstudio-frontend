@@ -66,5 +66,6 @@ export async function apiFetch<T>(path: string, options?: RequestInit & { timeou
     const body = await res.json().catch(() => ({ detail: res.statusText }))
     throw new ApiError(res.status, (body as { detail?: unknown }).detail ?? body)
   }
+  if (res.status === 204 || res.headers.get('content-length') === '0') return undefined as T
   return res.json() as Promise<T>
 }

@@ -124,6 +124,8 @@ function CreateModal({ onClose, onCreated }: {
   const [dbPass, setDbPass] = useState('')
   const [seedUrl, setSeedUrl] = useState('')
   const [crawlSchedule, setCrawlSchedule] = useState('manual')
+  const [maxPages, setMaxPages] = useState(7)
+  const [allowExternal, setAllowExternal] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   // DB access control state
@@ -223,7 +225,7 @@ function CreateModal({ onClose, onCreated }: {
             }).filter(([, sql]) => sql)
           ),
         } : {}),
-        ...(type === 'website' ? { seed_url: seedUrl, crawl_schedule: crawlSchedule } : {}),
+        ...(type === 'website' ? { seed_url: seedUrl, crawl_schedule: crawlSchedule, max_pages: maxPages, allow_external: allowExternal } : {}),
       }
       onCreated(await createDataSource(payload))
     } catch (e: unknown) {
@@ -251,7 +253,7 @@ function CreateModal({ onClose, onCreated }: {
   const TYPE_CARDS = [
     { type: 'document' as SourceType, title: 'Document collection', desc: 'PDF, DOCX, CSV, XLSX, TXT, Markdown — semantic search via embeddings' },
     { type: 'database' as SourceType, title: 'Database', desc: 'PostgreSQL, MySQL, SQLite, SQL Server — schema inspection + read-only SQL' },
-    { type: 'website'  as SourceType, title: 'Website crawler', desc: 'Automatically crawl and index any public website, up to 50 pages' },
+    { type: 'website'  as SourceType, title: 'Website crawler', desc: 'Automatically crawl and index any public website — configurable max pages and domain scope' },
   ]
 
   return (
@@ -479,7 +481,39 @@ function CreateModal({ onClose, onCreated }: {
                     placeholder="https://docs.example.com"
                     onFocus={e => onFocus(e, TYPE_META.website.color)} onBlur={onBlur} />
                   <div style={{ fontSize: 11, color: 'var(--text-body)', marginTop: 5 }}>
-                    Crawler stays on the same domain · max 50 pages · 0.5 s delay between requests
+                    0.5 s polite delay between requests
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 12 }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={labelStyle}>Max pages</label>
+                    <input
+                      style={inputStyle} type="number" min={1} max={20}
+                      value={maxPages} onChange={e => setMaxPages(Math.min(20, Math.max(1, parseInt(e.target.value) || 7)))}
+                      onFocus={e => onFocus(e, TYPE_META.website.color)} onBlur={onBlur}
+                    />
+                  </div>
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', paddingBottom: 2 }}>
+                    <label style={{ ...labelStyle, marginBottom: 10 }}>Allow external links</label>
+                    <button onClick={() => setAllowExternal(v => !v)} style={{
+                      display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px',
+                      borderRadius: 7, border: `1px solid ${allowExternal ? TYPE_META.website.color : 'var(--border-light)'}`,
+                      background: allowExternal ? TYPE_META.website.dim : 'transparent',
+                      color: allowExternal ? TYPE_META.website.color : 'var(--text-body)',
+                      cursor: 'pointer', fontSize: 12.5, fontWeight: allowExternal ? 600 : 400, width: '100%',
+                    }}>
+                      <span style={{
+                        width: 32, height: 18, borderRadius: 9, flexShrink: 0, position: 'relative',
+                        background: allowExternal ? TYPE_META.website.color : '#cbd5e1',
+                        transition: 'background 0.2s',
+                      }}>
+                        <span style={{
+                          position: 'absolute', top: 2, left: allowExternal ? 16 : 2, width: 14, height: 14,
+                          borderRadius: '50%', background: '#fff', transition: 'left 0.2s',
+                        }} />
+                      </span>
+                      {allowExternal ? 'Enabled' : 'Disabled'}
+                    </button>
                   </div>
                 </div>
                 <div>
@@ -800,8 +834,10 @@ function EditModal({ source, onClose, onSaved }: {
   const [addColSearch, setAddColSearch] = useState('')
 
   // ── website ───────────────────────────────────────────────────────────────
-  const [seedUrl,      setSeedUrl]      = useState(source.seed_url)
+  const [seedUrl,       setSeedUrl]       = useState(source.seed_url)
   const [crawlSchedule, setCrawlSchedule] = useState(source.crawl_schedule)
+  const [maxPages,      setMaxPages]      = useState(Math.min(20, source.max_pages ?? 7))
+  const [allowExternal, setAllowExternal] = useState(Boolean(source.allow_external))
 
   // load schema on open for db sources
   useEffect(() => {
@@ -867,7 +903,7 @@ function EditModal({ source, onClose, onSaved }: {
             }).filter(([, sql]) => sql)
           ),
         } : {}),
-        ...(source.source_type === 'website' ? { seed_url: seedUrl, crawl_schedule: crawlSchedule } : {}),
+        ...(source.source_type === 'website' ? { seed_url: seedUrl, crawl_schedule: crawlSchedule, max_pages: maxPages, allow_external: allowExternal } : {}),
       }
       onSaved(await updateDataSource(source.source_id, payload))
     } catch (e: unknown) {
@@ -995,6 +1031,36 @@ function EditModal({ source, onClose, onSaved }: {
                   <div>
                     <label style={lbl}>Seed URL</label>
                     <input style={inp} value={seedUrl} onChange={e => setSeedUrl(e.target.value)} spellCheck={false} />
+                  </div>
+                  <div style={{ display: 'flex', gap: 12 }}>
+                    <div style={{ flex: 1 }}>
+                      <label style={lbl}>Max pages</label>
+                      <input
+                        style={inp} type="number" min={1} max={20}
+                        value={maxPages} onChange={e => setMaxPages(Math.min(20, Math.max(1, parseInt(e.target.value) || 7)))}
+                      />
+                    </div>
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', paddingBottom: 2 }}>
+                      <label style={{ ...lbl, marginBottom: 10 }}>Allow external links</label>
+                      <button onClick={() => setAllowExternal(v => !v)} style={{
+                        display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px',
+                        borderRadius: 7, border: `1px solid ${allowExternal ? t.color : 'var(--border-light)'}`,
+                        background: allowExternal ? t.dim : 'transparent',
+                        color: allowExternal ? t.color : 'var(--text-body)',
+                        cursor: 'pointer', fontSize: 12.5, fontWeight: allowExternal ? 600 : 400, width: '100%',
+                      }}>
+                        <span style={{
+                          width: 32, height: 18, borderRadius: 9, flexShrink: 0, position: 'relative',
+                          background: allowExternal ? t.color : '#cbd5e1', transition: 'background 0.2s',
+                        }}>
+                          <span style={{
+                            position: 'absolute', top: 2, left: allowExternal ? 16 : 2, width: 14, height: 14,
+                            borderRadius: '50%', background: '#fff', transition: 'left 0.2s',
+                          }} />
+                        </span>
+                        {allowExternal ? 'Enabled' : 'Disabled'}
+                      </button>
+                    </div>
                   </div>
                   <div>
                     <label style={lbl}>Crawl schedule</label>
@@ -1429,9 +1495,14 @@ function SourceDetail({ source, onDeleted, onUpdated }: { source: DataSourceReco
 
   const confirmDeleteFile = async () => {
     if (!fileToDelete) return
-    await deleteFile(source.source_id, fileToDelete)
-    setFiles(await listFiles(source.source_id))
-    setFileToDelete(null)
+    try {
+      await deleteFile(source.source_id, fileToDelete)
+      setFiles(await listFiles(source.source_id))
+    } catch (e: unknown) {
+      setNotice({ ok: false, msg: e instanceof Error ? e.message : 'Delete failed' })
+    } finally {
+      setFileToDelete(null)
+    }
   }
 
   const handleCrawl = async () => {

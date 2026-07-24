@@ -15,6 +15,8 @@ export interface DataSourceRecord {
   column_redactions: Record<string, string[]>
   seed_url: string
   crawl_schedule: string
+  max_pages: number
+  allow_external: number
   created_at: string
   updated_at: string
 }
@@ -39,6 +41,8 @@ export interface CreateDataSourcePayload {
   column_redactions?: Record<string, string[]>
   seed_url?: string
   crawl_schedule?: string
+  max_pages?: number  // 1–20
+  allow_external?: boolean
 }
 
 export interface FileInfo {
