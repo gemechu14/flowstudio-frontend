@@ -61,6 +61,16 @@ const NAV_ITEMS = [
     ),
   },
   {
+    path: '/channels',
+    label: 'Channels',
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M2 4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1H9l-3 2v-2H3a1 1 0 0 1-1-1V4Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+        <path d="M5 7h6M5 9.5h3.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+      </svg>
+    ),
+  },
+  {
     path: '/settings',
     label: 'Settings',
     icon: (

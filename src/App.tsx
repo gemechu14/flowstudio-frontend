@@ -9,6 +9,7 @@ import Agents from './pages/Agents'
 import Workflows from './pages/Workflows'
 import DataSources from './pages/DataSources'
 import Settings from './pages/Settings'
+import Channels from './pages/Channels'
 import Profile from './pages/Profile'
 import Login from './pages/Login'
 import ErrorBoundary from './components/ErrorBoundary'
@@ -64,6 +65,7 @@ function AppShell() {
             <Route path="/agents" element={<Agents />} />
             <Route path="/data-sources" element={<DataSources />} />
             <Route path="/workflows" element={<ErrorBoundary><Workflows /></ErrorBoundary>} />
+            <Route path="/channels" element={<Channels />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />

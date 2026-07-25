@@ -1969,6 +1969,7 @@ export default function Settings() {
 
       {/* ── Section 3: Triggers ─────────────────────────────────────────── */}
       <TriggersSection />
+
     </div>
   )
 }

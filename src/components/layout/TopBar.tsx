@@ -7,6 +7,7 @@ const PAGE_TITLES: Record<string, { title: string; subtitle: string }> = {
   '/agents': { title: 'Agents', subtitle: 'Configure and monitor AI agents' },
   '/workflows': { title: 'Workflows', subtitle: 'Build and run agentic workflow pipelines' },
   '/data-sources': { title: 'Data Sources', subtitle: 'Connect documents, databases, and websites to your agents' },
+  '/channels': { title: 'Channels', subtitle: 'Connect Slack, Telegram, Discord, and WhatsApp to your workflows' },
   '/settings': { title: 'Settings', subtitle: 'Platform configuration and preferences' },
   '/profile': { title: 'Profile', subtitle: 'Manage your account and personal information' },
 }
