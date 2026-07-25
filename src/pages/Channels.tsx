@@ -96,6 +96,11 @@ function ChannelRow({ config, onUpdated, onDeleted }: {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [toggling, setToggling] = useState(false)
   const [showSetup, setShowSetup] = useState(false)
+  const [showEdit, setShowEdit] = useState(false)
+  const [editConversational, setEditConversational] = useState<boolean>(
+    Boolean(config.extra_config?.conversational)
+  )
+  const [saving, setSaving] = useState(false)
 
   const wUrl = webhookUrl(config.channel_type, config.webhook_secret)
 
@@ -117,6 +122,17 @@ function ChannelRow({ config, onUpdated, onDeleted }: {
   const confirmDelete = async () => {
     setShowDeleteConfirm(false)
     try { await deleteChannel(config.config_id); onDeleted() } catch { /* ignore */ }
+  }
+
+  const saveEdit = async () => {
+    setSaving(true)
+    try {
+      const updated = await updateChannel(config.config_id, {
+        extra_config: { ...config.extra_config, conversational: editConversational },
+      })
+      onUpdated(updated)
+      setShowEdit(false)
+    } catch { /* ignore */ } finally { setSaving(false) }
   }
 
   const steps = SETUP_STEPS[config.channel_type]
@@ -185,7 +201,7 @@ function ChannelRow({ config, onUpdated, onDeleted }: {
 
         {/* Setup guide toggle */}
         <button
-          onClick={() => setShowSetup(v => !v)}
+          onClick={() => { setShowSetup(v => !v); setShowEdit(false) }}
           style={{
             ...MONO, fontSize: 10, padding: '3px 10px', flexShrink: 0,
             background: showSetup ? '#1D5FFA15' : 'transparent',
@@ -194,6 +210,18 @@ function ChannelRow({ config, onUpdated, onDeleted }: {
             borderRadius: 5, cursor: 'pointer',
           }}
         >{showSetup ? '▲ Setup' : '▼ Setup'}</button>
+
+        {/* Edit */}
+        <button
+          onClick={() => { setShowEdit(v => !v); setShowSetup(false) }}
+          style={{
+            ...MONO, fontSize: 10, padding: '3px 10px', flexShrink: 0,
+            background: showEdit ? '#F59E0B15' : 'transparent',
+            border: `1px solid ${showEdit ? '#F59E0B50' : 'var(--border-light)'}`,
+            color: showEdit ? '#F59E0B' : '#6B7280',
+            borderRadius: 5, cursor: 'pointer',
+          }}
+        >Edit</button>
 
         {/* Remove */}
         <button
@@ -205,6 +233,77 @@ function ChannelRow({ config, onUpdated, onDeleted }: {
           }}
         >Remove</button>
       </div>
+
+      {/* Edit panel */}
+      {showEdit && (
+        <div style={{
+          borderTop: '1px solid var(--border-light)',
+          padding: '14px 20px',
+          background: 'var(--bg-light)',
+        }}>
+          <div style={{ ...MONO, fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', color: '#F59E0B', marginBottom: 12 }}>
+            EDIT SETTINGS
+          </div>
+
+          {/* Conversational mode toggle */}
+          <div
+            style={{
+              display: 'flex', alignItems: 'flex-start', gap: 10,
+              padding: '10px 12px', marginBottom: 12,
+              background: editConversational ? 'rgba(29,95,250,0.06)' : 'rgba(0,0,0,0.03)',
+              border: `1px solid ${editConversational ? 'rgba(29,95,250,0.2)' : 'var(--border-light)'}`,
+              borderRadius: 6, cursor: 'pointer',
+            }}
+            onClick={() => setEditConversational(v => !v)}
+          >
+            <div style={{
+              flexShrink: 0, marginTop: 1,
+              width: 32, height: 18, borderRadius: 9,
+              background: editConversational ? '#1D5FFA' : '#D1D5DB',
+              position: 'relative', transition: 'background 0.15s',
+            }}>
+              <div style={{
+                position: 'absolute', top: 2,
+                left: editConversational ? 16 : 2,
+                width: 14, height: 14, borderRadius: '50%',
+                background: '#fff', transition: 'left 0.15s',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+              }} />
+            </div>
+            <div>
+              <div style={{ ...MONO, fontSize: 11, fontWeight: 600, color: editConversational ? '#1D5FFA' : '#6B7280' }}>
+                CONVERSATIONAL MODE
+              </div>
+              <div style={{ ...SANS, fontSize: 11, color: '#9CA3AF', marginTop: 2, lineHeight: 1.4 }}>
+                {editConversational
+                  ? 'The bot remembers context within each user\'s conversation. History is compressed automatically when it grows large.'
+                  : 'Each message is answered independently. No history is stored. Best for quick one-off queries.'}
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              onClick={saveEdit}
+              disabled={saving}
+              style={{
+                ...MONO, fontSize: 12, padding: '6px 16px',
+                background: saving ? '#F59E0B88' : '#F59E0B',
+                color: '#fff', border: 'none', borderRadius: 6,
+                cursor: saving ? 'wait' : 'pointer', fontWeight: 700,
+              }}
+            >{saving ? 'Saving…' : 'Save'}</button>
+            <button
+              onClick={() => setShowEdit(false)}
+              style={{
+                ...MONO, fontSize: 12, padding: '6px 14px',
+                background: 'transparent', border: '1px solid var(--border-light)',
+                color: '#6B7280', borderRadius: 6, cursor: 'pointer',
+              }}
+            >Cancel</button>
+          </div>
+        </div>
+      )}
 
       {/* Setup steps */}
       {showSetup && (
