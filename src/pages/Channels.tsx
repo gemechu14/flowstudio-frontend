@@ -1,12 +1,29 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import ConfirmModal from '../components/ui/ConfirmModal'
+import { TIMEZONES } from '../constants'
 import {
   ChannelConfig, ChannelType,
   listChannels, createChannel, updateChannel, deleteChannel, webhookUrl,
+  registerTelegramWebhook, registerDiscordCommands, registerWhatsappWebhook,
 } from '../api/channels'
 
 const MONO = { fontFamily: 'var(--font-mono)' }
 const SANS = { fontFamily: 'var(--font-sans)' }
+
+const ANTHROPIC_MODELS = [
+  { id: 'claude-sonnet-5',  label: 'Claude Sonnet 5' },
+  { id: 'claude-sonnet-4-6', label: 'Claude Sonnet 4.6' },
+  { id: 'claude-opus-4-8',  label: 'Claude Opus 4.8' },
+  { id: 'claude-haiku-4-5', label: 'Claude Haiku 4.5' },
+  { id: 'claude-fable-5',   label: 'Claude Fable 5' },
+]
+
+const OPENAI_MODELS = [
+  { id: 'gpt-4.1',      label: 'GPT-4.1' },
+  { id: 'gpt-4.1-mini', label: 'GPT-4.1 mini' },
+  { id: 'gpt-4o',       label: 'GPT-4o' },
+  { id: 'gpt-4o-mini',  label: 'GPT-4o mini' },
+]
 
 const CHANNEL_META: Record<ChannelType, {
   label: string; color: string; placeholder: string; hint: string
@@ -70,19 +87,23 @@ const SETUP_STEPS: Record<ChannelType, { step: string; action: string }[]> = {
     { step: '1', action: 'Open Telegram → message @BotFather → /newbot → follow prompts' },
     { step: '2', action: 'Copy the token BotFather gives you (format: 123456:ABC-…)' },
     { step: '3', action: 'Paste token below → Add Channel → copy the Webhook URL' },
-    { step: '4', action: 'Register the webhook: POST https://api.telegram.org/bot<TOKEN>/setWebhook with url=<Webhook URL>' },
+    { step: '4', action: 'Click "Connect to Telegram" below to register the webhook automatically' },
   ],
   discord: [
     { step: '1', action: 'Go to discord.com/developers/applications → New Application → Bot → Add Bot' },
     { step: '2', action: 'Reset Token → copy it. Enable Message Content Intent under Privileged Gateway Intents' },
-    { step: '3', action: 'Paste token below → Add Channel → copy the Webhook URL' },
-    { step: '4', action: 'Set Interactions Endpoint URL in the app General Information to the Webhook URL' },
+    { step: '3', action: 'General Information → copy the Public Key' },
+    { step: '4', action: 'Paste bot token + public key below → Add Channel → copy the Webhook URL' },
+    { step: '5', action: 'Set Interactions Endpoint URL in General Information to the Webhook URL' },
+    { step: '6', action: 'Invite the bot to your server via OAuth2 → URL Generator (scope: bot)' },
+    { step: '7', action: '@mention the bot in any channel, or DM it directly — no slash command needed' },
   ],
   whatsapp: [
-    { step: '1', action: 'Go to developers.facebook.com → My Apps → Create App → Business → WhatsApp' },
-    { step: '2', action: 'WhatsApp → API Setup → copy the temporary or permanent access token' },
-    { step: '3', action: 'Paste token below → Add Channel → copy the Webhook URL' },
-    { step: '4', action: 'WhatsApp → Configuration → Webhook → paste Webhook URL, set Verify Token, subscribe to messages' },
+    { step: '1', action: 'Go to developers.facebook.com → My Apps → Create App → WhatsApp use case' },
+    { step: '2', action: 'WhatsApp → API Setup → copy the Temporary access token and the WhatsApp Business Account ID' },
+    { step: '3', action: 'Paste token + WABA ID below → Add Channel → copy the Webhook URL' },
+    { step: '4', action: 'Step 2. Production setup → Configure Webhooks → paste Webhook URL, Verify token: flowstudio → Verify and save' },
+    { step: '5', action: 'Click "Connect to WhatsApp" below to subscribe to message events' },
   ],
 }
 
@@ -97,8 +118,20 @@ function ChannelRow({ config, onUpdated, onDeleted }: {
   const [toggling, setToggling] = useState(false)
   const [showSetup, setShowSetup] = useState(false)
   const [showEdit, setShowEdit] = useState(false)
+  const [connecting, setConnecting] = useState(false)
+  const [connectResult, setConnectResult] = useState<{ ok: boolean; message: string } | null>(null)
   const [editConversational, setEditConversational] = useState<boolean>(
     Boolean(config.extra_config?.conversational)
+  )
+  const [editModelId, setEditModelId] = useState<string>(
+    typeof config.extra_config?.model_id === 'string' ? config.extra_config.model_id : ''
+  )
+  const [editTimezone, setEditTimezone] = useState<string>(
+    typeof config.extra_config?.timezone === 'string' ? config.extra_config.timezone : 'UTC'
+  )
+  const [editToken, setEditToken] = useState('')
+  const [editWabaId, setEditWabaId] = useState<string>(
+    typeof config.extra_config?.waba_id === 'string' ? config.extra_config.waba_id : ''
   )
   const [saving, setSaving] = useState(false)
 
@@ -124,13 +157,62 @@ function ChannelRow({ config, onUpdated, onDeleted }: {
     try { await deleteChannel(config.config_id); onDeleted() } catch { /* ignore */ }
   }
 
+  const connectTelegram = async () => {
+    setConnecting(true)
+    setConnectResult(null)
+    try {
+      await registerTelegramWebhook(config.config_id, wUrl)
+      setConnectResult({ ok: true, message: 'Connected! Telegram will now send messages to your bot.' })
+    } catch (err: any) {
+      setConnectResult({ ok: false, message: err.message || 'Failed to register webhook.' })
+    } finally {
+      setConnecting(false)
+    }
+  }
+
+  const connectWhatsapp = async () => {
+    setConnecting(true)
+    setConnectResult(null)
+    try {
+      await registerWhatsappWebhook(config.config_id)
+      setConnectResult({ ok: true, message: 'Connected! WhatsApp will now forward messages to your bot.' })
+    } catch (err: any) {
+      setConnectResult({ ok: false, message: err.message || 'Failed to connect.' })
+    } finally {
+      setConnecting(false)
+    }
+  }
+
+  const connectDiscord = async () => {
+    setConnecting(true)
+    setConnectResult(null)
+    try {
+      await registerDiscordCommands(config.config_id)
+      setConnectResult({ ok: true, message: 'Done! Users can now type /chat in any channel to talk to the bot.' })
+    } catch (err: any) {
+      setConnectResult({ ok: false, message: err.message || 'Failed to register command.' })
+    } finally {
+      setConnecting(false)
+    }
+  }
+
   const saveEdit = async () => {
     setSaving(true)
     try {
-      const updated = await updateChannel(config.config_id, {
-        extra_config: { ...config.extra_config, conversational: editConversational },
-      })
+      const extraConfig: Record<string, unknown> = {
+        ...config.extra_config,
+        conversational: editConversational,
+        model_id: editModelId,
+        timezone: editTimezone.trim() || 'UTC',
+      }
+      if (config.channel_type === 'whatsapp' && editWabaId.trim()) {
+        extraConfig.waba_id = editWabaId.trim()
+      }
+      const updates: Parameters<typeof updateChannel>[1] = { extra_config: extraConfig }
+      if (editToken.trim()) updates.bot_token = editToken.trim()
+      const updated = await updateChannel(config.config_id, updates)
       onUpdated(updated)
+      setEditToken('')
       setShowEdit(false)
     } catch { /* ignore */ } finally { setSaving(false) }
   }
@@ -245,6 +327,87 @@ function ChannelRow({ config, onUpdated, onDeleted }: {
             EDIT SETTINGS
           </div>
 
+          {/* Bot token update */}
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ ...MONO, fontSize: 10, color: '#6B7280', marginBottom: 4 }}>NEW BOT TOKEN <span style={{ color: '#9CA3AF', fontWeight: 400 }}>(leave blank to keep current)</span></div>
+            <input
+              type="password"
+              value={editToken}
+              onChange={e => setEditToken(e.target.value)}
+              placeholder={CHANNEL_META[config.channel_type].placeholder}
+              style={{
+                ...MONO, fontSize: 12, padding: '7px 10px', width: '100%',
+                background: 'var(--bg-page)', color: 'var(--text-dark)',
+                border: '1px solid var(--border-light)', borderRadius: 6,
+                boxSizing: 'border-box', outline: 'none',
+              }}
+            />
+          </div>
+
+          {/* WhatsApp WABA ID */}
+          {config.channel_type === 'whatsapp' && (
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ ...MONO, fontSize: 10, color: '#6B7280', marginBottom: 4 }}>WHATSAPP BUSINESS ACCOUNT ID (WABA ID)</div>
+              <input
+                value={editWabaId}
+                onChange={e => setEditWabaId(e.target.value)}
+                placeholder="e.g. 123456789012345 — from Meta dashboard"
+                style={{
+                  ...MONO, fontSize: 12, padding: '7px 10px', width: '100%',
+                  background: 'var(--bg-page)', color: 'var(--text-dark)',
+                  border: '1px solid var(--border-light)', borderRadius: 6,
+                  boxSizing: 'border-box', outline: 'none',
+                }}
+              />
+              <div style={{ ...SANS, fontSize: 10, color: '#9CA3AF', marginTop: 3 }}>
+                Found in Meta for Developers → WhatsApp → API Setup → WhatsApp Business Account ID
+              </div>
+            </div>
+          )}
+
+          {/* Model selector */}
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ ...MONO, fontSize: 10, color: '#6B7280', marginBottom: 4 }}>AI MODEL</div>
+            <select
+              value={editModelId}
+              onChange={e => setEditModelId(e.target.value)}
+              style={{
+                ...MONO, fontSize: 12, padding: '7px 10px', width: '100%',
+                background: 'var(--bg-page)', color: 'var(--text-dark)',
+                border: '1px solid var(--border-light)', borderRadius: 6, outline: 'none',
+              }}
+            >
+              <option value=''>Auto (fastest available)</option>
+              <optgroup label="Anthropic">
+                {ANTHROPIC_MODELS.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}
+              </optgroup>
+              <optgroup label="OpenAI">
+                {OPENAI_MODELS.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}
+              </optgroup>
+            </select>
+          </div>
+
+          {/* Timezone */}
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ ...MONO, fontSize: 10, color: '#6B7280', marginBottom: 4 }}>SCHEDULE TIMEZONE</div>
+            <select
+              value={editTimezone}
+              onChange={e => setEditTimezone(e.target.value)}
+              style={{
+                ...MONO, fontSize: 12, padding: '7px 10px', width: '100%',
+                background: 'var(--bg-page)', color: 'var(--text-dark)',
+                border: '1px solid var(--border-light)', borderRadius: 6, outline: 'none',
+              }}
+            >
+              {TIMEZONES.map(tz => (
+                <option key={tz.value} value={tz.value}>{tz.label}</option>
+              ))}
+            </select>
+            <div style={{ ...SANS, fontSize: 10, color: '#9CA3AF', marginTop: 3 }}>
+              Used when the bot creates schedules via chat.
+            </div>
+          </div>
+
           {/* Conversational mode toggle */}
           <div
             style={{
@@ -329,6 +492,78 @@ function ChannelRow({ config, onUpdated, onDeleted }: {
               </div>
             ))}
           </div>
+
+          {config.channel_type === 'telegram' && (
+            <div style={{ marginTop: 14 }}>
+              <button
+                onClick={connectTelegram}
+                disabled={connecting}
+                style={{
+                  ...MONO, fontSize: 12, fontWeight: 700,
+                  padding: '7px 16px', borderRadius: 6, border: 'none',
+                  background: connecting ? `${meta.color}88` : meta.color,
+                  color: '#fff', cursor: connecting ? 'wait' : 'pointer',
+                }}
+              >{connecting ? 'Connecting…' : '🔗 Connect to Telegram'}</button>
+              {connectResult && (
+                <div style={{
+                  ...SANS, fontSize: 11, marginTop: 8,
+                  padding: '6px 10px', borderRadius: 6,
+                  color: connectResult.ok ? '#059669' : '#DC2626',
+                  background: connectResult.ok ? '#D1FAE5' : '#FEE2E2',
+                  border: `1px solid ${connectResult.ok ? '#6EE7B7' : '#FCA5A5'}`,
+                }}>{connectResult.message}</div>
+              )}
+            </div>
+          )}
+
+          {config.channel_type === 'whatsapp' && (
+            <div style={{ marginTop: 14 }}>
+              <button
+                onClick={connectWhatsapp}
+                disabled={connecting}
+                style={{
+                  ...MONO, fontSize: 12, fontWeight: 700,
+                  padding: '7px 16px', borderRadius: 6, border: 'none',
+                  background: connecting ? `${meta.color}88` : meta.color,
+                  color: '#fff', cursor: connecting ? 'wait' : 'pointer',
+                }}
+              >{connecting ? 'Connecting…' : '🔗 Connect to WhatsApp'}</button>
+              {connectResult && (
+                <div style={{
+                  ...SANS, fontSize: 11, marginTop: 8,
+                  padding: '6px 10px', borderRadius: 6,
+                  color: connectResult.ok ? '#059669' : '#DC2626',
+                  background: connectResult.ok ? '#D1FAE5' : '#FEE2E2',
+                  border: `1px solid ${connectResult.ok ? '#6EE7B7' : '#FCA5A5'}`,
+                }}>{connectResult.message}</div>
+              )}
+            </div>
+          )}
+
+          {config.channel_type === 'discord' && (
+            <div style={{ marginTop: 14 }}>
+              <button
+                onClick={connectDiscord}
+                disabled={connecting}
+                style={{
+                  ...MONO, fontSize: 12, fontWeight: 700,
+                  padding: '7px 16px', borderRadius: 6, border: 'none',
+                  background: connecting ? `${meta.color}88` : meta.color,
+                  color: '#fff', cursor: connecting ? 'wait' : 'pointer',
+                }}
+              >{connecting ? 'Registering…' : '🔗 Register /chat Command'}</button>
+              {connectResult && (
+                <div style={{
+                  ...SANS, fontSize: 11, marginTop: 8,
+                  padding: '6px 10px', borderRadius: 6,
+                  color: connectResult.ok ? '#059669' : '#DC2626',
+                  background: connectResult.ok ? '#D1FAE5' : '#FEE2E2',
+                  border: `1px solid ${connectResult.ok ? '#6EE7B7' : '#FCA5A5'}`,
+                }}>{connectResult.message}</div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -352,7 +587,11 @@ function AddChannelForm({ onCreated, onCancel, existingTypes }: {
   const available = CHANNEL_TYPES.filter(t => !existingTypes.has(t))
   const [channelType, setChannelType] = useState<ChannelType>(available[0] ?? 'slack')
   const [botToken, setBotToken] = useState('')
+  const [discordPublicKey, setDiscordPublicKey] = useState('')
+  const [whatsappWabaId, setWhatsappWabaId] = useState('')
   const [conversational, setConversational] = useState(false)
+  const [modelId, setModelId] = useState('')
+  const [timezone, setTimezone] = useState('UTC')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -368,9 +607,14 @@ function AddChannelForm({ onCreated, onCancel, existingTypes }: {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!botToken.trim()) { setError('Bot token is required'); return }
+    if (channelType === 'discord' && !discordPublicKey.trim()) { setError('Public Key is required for Discord'); return }
+    if (channelType === 'whatsapp' && !whatsappWabaId.trim()) { setError('WhatsApp Business Account ID is required'); return }
     setSaving(true); setError('')
     try {
-      const config = await createChannel({ channel_type: channelType, bot_token: botToken.trim(), extra_config: { conversational } })
+      const extra: Record<string, unknown> = { conversational, model_id: modelId, timezone: timezone.trim() || 'UTC' }
+      if (channelType === 'discord') extra.public_key = discordPublicKey.trim()
+      if (channelType === 'whatsapp') extra.waba_id = whatsappWabaId.trim()
+      const config = await createChannel({ channel_type: channelType, bot_token: botToken.trim(), extra_config: extra })
       onCreated(config)
     } catch (err: any) {
       setError(err.message || 'Failed to add channel')
@@ -427,6 +671,69 @@ function AddChannelForm({ onCreated, onCancel, existingTypes }: {
             autoFocus
           />
           <div style={{ ...SANS, fontSize: 10, color: '#9CA3AF', marginTop: 3 }}>{meta.hint}</div>
+        </div>
+      </div>
+
+      {channelType === 'discord' && (
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ ...MONO, fontSize: 10, color: '#6B7280', marginBottom: 4 }}>PUBLIC KEY</div>
+          <input
+            value={discordPublicKey}
+            onChange={e => setDiscordPublicKey(e.target.value)}
+            placeholder="From Discord Developer Portal → General Information"
+            style={{ ...inputStyle, width: '100%' }}
+          />
+          <div style={{ ...SANS, fontSize: 10, color: '#9CA3AF', marginTop: 3 }}>Required for Discord to verify requests to your webhook.</div>
+        </div>
+      )}
+
+      {channelType === 'whatsapp' && (
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ ...MONO, fontSize: 10, color: '#6B7280', marginBottom: 4 }}>WHATSAPP BUSINESS ACCOUNT ID (WABA ID)</div>
+          <input
+            value={whatsappWabaId}
+            onChange={e => setWhatsappWabaId(e.target.value)}
+            placeholder="e.g. 123456789012345"
+            style={{ ...inputStyle, width: '100%' }}
+          />
+          <div style={{ ...SANS, fontSize: 10, color: '#9CA3AF', marginTop: 3 }}>
+            Found in Meta for Developers → WhatsApp → API Setup → WhatsApp Business Account ID
+          </div>
+        </div>
+      )}
+
+      {/* Model selector */}
+      <div style={{ marginBottom: 12 }}>
+        <div style={{ ...MONO, fontSize: 10, color: '#6B7280', marginBottom: 4 }}>AI MODEL</div>
+        <select
+          value={modelId}
+          onChange={e => setModelId(e.target.value)}
+          style={{ ...inputStyle, width: '100%' }}
+        >
+          <option value=''>Auto (fastest available)</option>
+          <optgroup label="Anthropic">
+            {ANTHROPIC_MODELS.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}
+          </optgroup>
+          <optgroup label="OpenAI">
+            {OPENAI_MODELS.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}
+          </optgroup>
+        </select>
+      </div>
+
+      {/* Timezone */}
+      <div style={{ marginBottom: 12 }}>
+        <div style={{ ...MONO, fontSize: 10, color: '#6B7280', marginBottom: 4 }}>SCHEDULE TIMEZONE</div>
+        <select
+          value={timezone}
+          onChange={e => setTimezone(e.target.value)}
+          style={{ ...inputStyle, width: '100%' }}
+        >
+          {TIMEZONES.map(tz => (
+            <option key={tz.value} value={tz.value}>{tz.label}</option>
+          ))}
+        </select>
+        <div style={{ ...SANS, fontSize: 10, color: '#9CA3AF', marginTop: 3 }}>
+          Used when the bot creates schedules via chat.
         </div>
       </div>
 
@@ -509,7 +816,7 @@ const GUIDES: Record<ChannelType, GuideStep[]> = {
     },
     {
       title: 'Add Bot Token Scopes',
-      body: <>In the left menu go to <strong>OAuth and Permissions</strong>. Under <strong>Bot Token Scopes</strong> add these seven: <code>chat:write</code>, <code>channels:history</code>, <code>channels:read</code>, <code>app_mentions:read</code>, <code>im:history</code>, <code>im:read</code>, and <code>im:write</code>. The <code>im:write</code> scope is what allows the bot to proactively DM users when a workflow finishes.</>,
+      body: <>In the left menu go to <strong>OAuth and Permissions</strong>. Under <strong>Bot Token Scopes</strong> add these eight: <code>chat:write</code>, <code>channels:history</code>, <code>channels:read</code>, <code>app_mentions:read</code>, <code>im:history</code>, <code>im:read</code>, <code>im:write</code>, and <code>reactions:write</code>. The <code>reactions:write</code> scope is what allows the bot to show a 🤔 indicator on your message while it is thinking.</>,
     },
     {
       title: 'Install the app to your workspace',
@@ -550,22 +857,8 @@ const GUIDES: Record<ChannelType, GuideStep[]> = {
       body: <>Click <strong>Add Channel</strong> above, select <strong>Telegram</strong>, paste the token, and save. Copy the <strong>Webhook URL</strong> that appears.</>,
     },
     {
-      title: 'Register the webhook with Telegram',
-      body: (
-        <>
-          <span>Run this in a terminal, replacing the two placeholders:</span>
-          <pre style={{
-            fontFamily: 'var(--font-mono)', fontSize: 11, lineHeight: 1.6,
-            background: 'var(--bg-dark)', color: '#C9D1D9',
-            border: '1px solid var(--border-light)', borderRadius: 6,
-            padding: '10px 12px', marginTop: 8, overflowX: 'auto',
-            whiteSpace: 'pre',
-          }}>{`curl -X POST \\
-  "https://api.telegram.org/botYOUR_TOKEN/setWebhook" \\
-  -d "url=YOUR_WEBHOOK_URL"`}</pre>
-          <span style={{ display: 'block', marginTop: 8 }}>You should see <code>{"{"}"ok":true{"}"}</code> in the response.</span>
-        </>
-      ),
+      title: 'Connect to Telegram',
+      body: <>Open the channel's <strong>Setup Guide</strong> and click <strong>Connect to Telegram</strong>. FlowStudio will register the webhook with Telegram automatically — no terminal needed.</>,
     },
     {
       title: 'Send your bot a message',
@@ -578,24 +871,28 @@ const GUIDES: Record<ChannelType, GuideStep[]> = {
       body: <>Go to the <a href="https://discord.com/developers/applications" target="_blank" rel="noopener" style={{ color: '#1D5FFA' }}>Discord Developer Portal</a> and click <strong>New Application</strong>. Give it a name and accept the terms.</>,
     },
     {
-      title: 'Create a bot and copy its token',
-      body: <>In the left menu click <strong>Bot</strong>. Click <strong>Reset Token</strong> and copy the result. Scroll down to <strong>Privileged Gateway Intents</strong> and enable <strong>Message Content Intent</strong>. Click <strong>Save Changes</strong>. The token is shown only once, so save it now.</>,
+      title: 'Copy the Public Key and bot token',
+      body: <>On the <strong>General Information</strong> page copy the <strong>Public Key</strong> — you will need it in the next step. Then go to <strong>Bot</strong> in the left menu, click <strong>Reset Token</strong> and copy the token. Scroll down to <strong>Privileged Gateway Intents</strong>, enable <strong>Message Content Intent</strong>, and click <strong>Save Changes</strong>. The token is shown only once, so save it now.</>,
     },
     {
       title: 'Add the channel in FlowStudio',
-      body: <>Click <strong>Add Channel</strong> above, select <strong>Discord</strong>, paste the bot token, and save. Copy the <strong>Webhook URL</strong> that appears.</>,
+      body: <>Click <strong>Add Channel</strong> above, select <strong>Discord</strong>, paste the <strong>bot token</strong> and the <strong>Public Key</strong>, then save. Copy the <strong>Webhook URL</strong> that appears.</>,
     },
     {
       title: 'Set the Interactions Endpoint URL',
-      body: <>Back in the Discord portal go to <strong>General Information</strong>. Paste your Webhook URL into <strong>Interactions Endpoint URL</strong>. Click <strong>Save Changes</strong>. Discord will verify the URL and FlowStudio confirms it automatically.</>,
+      body: <>Back in the Discord portal go to <strong>General Information</strong>. Paste your Webhook URL into <strong>Interactions Endpoint URL</strong> and click <strong>Save Changes</strong>. Discord will call your endpoint to verify it — FlowStudio confirms the signature automatically.</>,
     },
     {
       title: 'Invite the bot to your server',
-      body: <>Go to <strong>OAuth2 &gt; URL Generator</strong>. Check the <code>bot</code> scope, then check <code>Read Messages</code> and <code>Send Messages</code> under Bot Permissions. Copy the generated URL and open it in your browser to add the bot to your server.</>,
+      body: <>Go to <strong>OAuth2 &gt; URL Generator</strong>. Check the <code>bot</code> scope, then under Bot Permissions check <code>View Channels</code>, <code>Read Message History</code>, and <code>Send Messages</code>. Copy the generated URL and open it in your browser to add the bot to your server.</>,
     },
     {
-      title: 'Send the bot a message',
-      body: <>In any server channel the bot has access to, send: <em>"list my workflows"</em>, <em>"run sales report"</em>, or <em>"schedule report every Friday at 5pm"</em>.</>,
+      title: 'Register the /chat slash command',
+      body: <>Open the channel row above, click <strong>Setup</strong>, and press <strong>Register /chat Command</strong>. This registers the global <code>/chat</code> slash command with Discord. It may take a few minutes to appear in all servers.</>,
+    },
+    {
+      title: 'Chat with the bot',
+      body: <>In any server channel the bot has access to, <strong>@mention</strong> it: <em>"@Flowstudio list my workflows"</em>, <em>"@Flowstudio run sales report"</em>. You can also <strong>DM the bot directly</strong> and type without a mention — it responds to all direct messages.</>,
     },
   ],
   whatsapp: [
@@ -608,20 +905,24 @@ const GUIDES: Record<ChannelType, GuideStep[]> = {
       body: <>In the app dashboard find <strong>Add Products to Your App</strong> and click <strong>Set Up</strong> under <strong>WhatsApp</strong>. Link a WhatsApp Business Account. Meta provides a free test number to get started.</>,
     },
     {
-      title: 'Get your access token',
-      body: <>Go to <strong>WhatsApp &gt; API Setup</strong> and copy the <strong>Temporary access token</strong>. For production, generate a permanent system user token at <a href="https://business.facebook.com/settings/system-users" target="_blank" rel="noopener" style={{ color: '#1D5FFA' }}>Business Settings &gt; System Users</a> with <code>whatsapp_business_messaging</code> permission.</>,
+      title: 'Get your access token and WABA ID',
+      body: <>Go to <strong>WhatsApp &gt; API Setup</strong>. Copy the <strong>Temporary access token</strong> and the <strong>WhatsApp Business Account ID</strong> (labeled "WhatsApp Business Account ID" just below the phone number). For production, generate a permanent system user token at <a href="https://business.facebook.com/settings/system-users" target="_blank" rel="noopener" style={{ color: '#1D5FFA' }}>Business Settings &gt; System Users</a> with <code>whatsapp_business_messaging</code> permission.</>,
     },
     {
       title: 'Add the channel in FlowStudio',
-      body: <>Click <strong>Add Channel</strong> above, select <strong>WhatsApp</strong>, paste the access token, and save. Copy the <strong>Webhook URL</strong> that appears.</>,
+      body: <>Click <strong>Add Channel</strong> above, select <strong>WhatsApp</strong>, paste the access token and the WhatsApp Business Account ID, then save. Copy the <strong>Webhook URL</strong> that appears.</>,
     },
     {
-      title: 'Register the webhook in Meta',
-      body: <>In the Meta app go to <strong>WhatsApp &gt; Configuration</strong>. Under <strong>Webhook</strong> click <strong>Edit</strong>. Paste your Webhook URL into <strong>Callback URL</strong>. For <strong>Verify Token</strong> enter any secret word (for example <code>flowstudio</code>). Click <strong>Verify and Save</strong>, then subscribe to the <code>messages</code> field under Webhook fields.</>,
+      title: 'Configure the webhook',
+      body: <>Go to <strong>Step 2. Production setup &gt; Configure Webhooks</strong>. Paste your FlowStudio Webhook URL into <strong>Callback URL</strong>. For <strong>Verify Token</strong> enter <code>flowstudio</code>. Click <strong>Verify and save</strong>.</>,
+    },
+    {
+      title: 'Connect to WhatsApp',
+      body: <>Open the channel row above, click <strong>Setup</strong>, and press <strong>Connect to WhatsApp</strong>. This subscribes your app to the WhatsApp Business Account so incoming messages are forwarded to your bot. Do this every time you add a new WhatsApp channel or rotate the token.</>,
     },
     {
       title: 'Send a test message',
-      body: <>Use the test form in <strong>WhatsApp &gt; API Setup</strong>, or message the number directly. Note: the Meta test number only accepts messages from phone numbers you add in that page. Try: <em>"list my workflows"</em> or <em>"run lead scorer"</em>.</>,
+      body: <>In <strong>Step 1. Try it out</strong>, add your phone number as a recipient and click <strong>Send message</strong>. Once you receive it, reply — your bot will respond. Try: <em>"list my workflows"</em> or <em>"run lead scorer"</em>.</>,
     },
   ],
 }
