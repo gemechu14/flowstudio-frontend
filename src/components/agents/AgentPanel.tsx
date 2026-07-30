@@ -24,6 +24,7 @@ interface AgentPanelProps {
   mode: 'create' | 'edit'
   agent?: AgentRecord
   availableTools: string[]
+  communityTools?: string[]
   onSave: (agent: AgentRecord) => void
   onClose: () => void
 }
@@ -53,7 +54,7 @@ const INPUT_STYLE = {
   boxSizing: 'border-box' as const,
 }
 
-export default function AgentPanel({ mode, agent, availableTools, onSave, onClose }: AgentPanelProps) {
+export default function AgentPanel({ mode, agent, availableTools, communityTools = [], onSave, onClose }: AgentPanelProps) {
   const [visible, setVisible] = useState(false)
   const [name, setName] = useState(agent?.name ?? '')
   const [description, setDescription] = useState(agent?.description ?? '')
@@ -438,8 +439,16 @@ export default function AgentPanel({ mode, agent, availableTools, onSave, onClos
                 No tools available — upload a tool first.
               </div>
             ) : (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                {availableTools.map((toolName) => {
+              <div>
+                {availableTools.length > 0 && (
+                  <>
+                    {communityTools.length > 0 && (
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', color: 'var(--text-body)', marginBottom: 6, textTransform: 'uppercase' }}>
+                        Your Tools
+                      </div>
+                    )}
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: communityTools.length > 0 ? 12 : 0 }}>
+                      {availableTools.map((toolName) => {
                   const active = selectedTools.has(toolName)
                   return (
                     <button
@@ -484,6 +493,41 @@ export default function AgentPanel({ mode, agent, availableTools, onSave, onClos
                     {toolName}
                   </span>
                 ))}
+                    </div>
+                  </>
+                )}
+
+                {communityTools.length > 0 && (
+                  <>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', color: '#10B981', marginBottom: 6, textTransform: 'uppercase' }}>
+                      Community Tools
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                      {communityTools.map((toolName) => {
+                        const active = selectedTools.has(toolName)
+                        return (
+                          <button
+                            key={toolName}
+                            onClick={() => toggleTool(toolName)}
+                            style={{
+                              fontFamily: 'var(--font-mono)',
+                              fontSize: 12,
+                              padding: '5px 12px',
+                              borderRadius: 6,
+                              border: `1px solid ${active ? '#10B98150' : '#10B98125'}`,
+                              background: active ? '#10B98115' : 'transparent',
+                              color: active ? '#10B981' : 'var(--text-body)',
+                              cursor: 'pointer',
+                              transition: 'all 0.15s',
+                            }}
+                          >
+                            {active && '✓ '}{toolName}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </>
+                )}
               </div>
             )}
             {autoInjectedTools.length > 0 && (

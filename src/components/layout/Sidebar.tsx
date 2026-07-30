@@ -71,6 +71,18 @@ const NAV_ITEMS = [
     ),
   },
   {
+    path: '/community',
+    label: 'Community',
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <circle cx="5" cy="5" r="2.5" stroke="currentColor" strokeWidth="1.5" />
+        <circle cx="11" cy="5" r="2.5" stroke="currentColor" strokeWidth="1.5" />
+        <path d="M1 13.5C1 11.567 2.79 10 5 10s4 1.567 4 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        <path d="M8 13.5C8 11.567 9.79 10 12 10s4 1.567 4 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      </svg>
+    ),
+  },
+  {
     path: '/settings',
     label: 'Settings',
     icon: (

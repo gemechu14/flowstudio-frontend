@@ -6,6 +6,8 @@ import {
   generateToolWithAi, AiChatMessage,
 } from '../api/tools'
 import ConfirmModal from '../components/ui/ConfirmModal'
+import { ToolEnvVarsEditor } from '../components/tools/ToolEnvVarsEditor'
+import { submitTool, CATEGORIES } from '../api/communityTools'
 
 const ANTHROPIC_MODELS = [
   { id: 'claude-sonnet-5', label: 'Claude Sonnet 5' },
@@ -993,7 +995,26 @@ function ToolRow({ tool, onApprove, onRejectClick, onDelete, onTest, onViewSourc
 }) {
   const [approving, setApproving] = useState(false)
   const [expanded, setExpanded] = useState(false)
+  const [showSubmit, setShowSubmit] = useState(false)
+  const [submitCategory, setSubmitCategory] = useState('utilities')
+  const [submitNote, setSubmitNote] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState('')
+  const [submitDone, setSubmitDone] = useState(false)
   const color = STATUS_COLOR[tool.status]
+
+  async function handleSubmitCommunity() {
+    setSubmitting(true); setSubmitError('')
+    try {
+      await submitTool(tool.tool_id, submitCategory, submitNote)
+      setSubmitDone(true)
+      setShowSubmit(false)
+    } catch (e: any) {
+      setSubmitError(e?.message || 'Failed to submit')
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
   const handleApprove = () => {
     setApproving(true)
@@ -1050,6 +1071,14 @@ function ToolRow({ tool, onApprove, onRejectClick, onDelete, onTest, onViewSourc
               </Btn>
             </>
           )}
+          {tool.status === 'approved' && !submitDone && (
+            <Btn onClick={e => { e.stopPropagation(); setShowSubmit(v => !v) }} color="#10B981">
+              ↑ Contribute
+            </Btn>
+          )}
+          {submitDone && (
+            <span style={{ ...MONO, fontSize: 10, color: '#10B981' }}>✓ Submitted</span>
+          )}
           <Btn onClick={e => { e.stopPropagation(); onTest() }} color="#1D5FFA">
             ▶ Test
           </Btn>
@@ -1067,6 +1096,63 @@ function ToolRow({ tool, onApprove, onRejectClick, onDelete, onTest, onViewSourc
           </span>
         </div>
       </div>
+
+      {/* Submit to community panel */}
+      {showSubmit && (
+        <div style={{
+          borderTop: '1px solid var(--border)', padding: '14px 18px',
+          background: '#10B98108',
+        }}>
+          <div style={{ ...MONO, fontSize: 10, color: '#10B981', marginBottom: 10, letterSpacing: '0.1em' }}>
+            CONTRIBUTE TO COMMUNITY
+          </div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+            <div>
+              <div style={{ ...MONO, fontSize: 10, color: 'var(--text-muted)', marginBottom: 4 }}>Category</div>
+              <select
+                value={submitCategory}
+                onChange={e => setSubmitCategory(e.target.value)}
+                style={{
+                  ...MONO, fontSize: 11,
+                  background: 'var(--bg-page)', color: 'var(--text-body)',
+                  border: '1px solid var(--border)', borderRadius: 6,
+                  padding: '6px 10px', cursor: 'pointer', outline: 'none',
+                }}
+              >
+                {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            <div style={{ flex: 1, minWidth: 160 }}>
+              <div style={{ ...MONO, fontSize: 10, color: 'var(--text-muted)', marginBottom: 4 }}>Note (optional)</div>
+              <input
+                value={submitNote}
+                onChange={e => setSubmitNote(e.target.value)}
+                placeholder="What does this tool do for others?"
+                style={{
+                  width: '100%', boxSizing: 'border-box',
+                  ...MONO, fontSize: 11, padding: '6px 10px',
+                  background: 'var(--bg-page)', color: 'var(--text-body)',
+                  border: '1px solid var(--border)', borderRadius: 6, outline: 'none',
+                }}
+              />
+            </div>
+            <button
+              onClick={handleSubmitCommunity}
+              disabled={submitting}
+              style={{
+                background: '#10B981', border: 'none', color: '#fff',
+                borderRadius: 6, padding: '7px 16px', cursor: 'pointer',
+                ...MONO, fontSize: 11, fontWeight: 700, flexShrink: 0,
+              }}
+            >
+              {submitting ? '...' : 'Submit'}
+            </button>
+          </div>
+          {submitError && (
+            <div style={{ ...MONO, fontSize: 11, color: '#EF4444', marginTop: 8 }}>{submitError}</div>
+          )}
+        </div>
+      )}
 
       {/* Expanded detail */}
       {expanded && (
@@ -1103,6 +1189,11 @@ function ToolRow({ tool, onApprove, onRejectClick, onDelete, onTest, onViewSourc
                 border: '1px solid #7C3AED30', borderRadius: 4,
               }}>{tool.requirements}</div>
             </div>
+          )}
+
+          {/* Env Variables — shown for pending and approved tools */}
+          {(tool.status === 'approved' || tool.status === 'pending') && (
+            <ToolEnvVarsEditor toolId={tool.tool_id} />
           )}
 
           {/* Parameters */}
@@ -1251,6 +1342,7 @@ export default function Tools() {
   const [testTool_, setTestTool] = useState<ToolRecord | null>(null)
   const [rejectTarget, setRejectTarget] = useState<ToolRecord | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<ToolRecord | null>(null)
+  const [deleteError, setDeleteError] = useState('')
   const [listCollapsed, setListCollapsed] = useState(false)
 
   const reload = useCallback(() => {
@@ -1284,9 +1376,15 @@ export default function Tools() {
 
   const confirmDelete = async () => {
     if (!deleteTarget) return
-    await deleteTool(deleteTarget.tool_id)
-    setDeleteTarget(null)
-    reload()
+    setDeleteError('')
+    try {
+      await deleteTool(deleteTarget.tool_id)
+      setDeleteTarget(null)
+      reload()
+    } catch (e: any) {
+      const detail = e?.detail || e?.message || 'Failed to delete tool.'
+      setDeleteError(typeof detail === 'string' ? detail : JSON.stringify(detail))
+    }
   }
 
   const counts: Record<string, number> = {
@@ -1520,8 +1618,9 @@ export default function Tools() {
         <ConfirmModal
           message={`Delete tool "${deleteTarget.name}"? This cannot be undone.`}
           confirmLabel="Delete Tool"
+          error={deleteError}
           onConfirm={confirmDelete}
-          onClose={() => setDeleteTarget(null)}
+          onClose={() => { setDeleteTarget(null); setDeleteError('') }}
         />
       )}
     </div>

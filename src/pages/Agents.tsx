@@ -6,6 +6,7 @@ import AgentPanel from '../components/agents/AgentPanel'
 import AgentChat from '../components/agents/AgentChat'
 import { AgentRecord, listAgents, deleteAgent } from '../api/agents'
 import { listTools } from '../api/tools'
+import { getCatalog } from '../api/communityTools'
 import { listWorkflows, WorkflowRecord } from '../api/workflows'
 
 const BUILTIN_TOOLS: string[] = []
@@ -44,6 +45,7 @@ export default function Agents() {
   const [agents, setAgents] = useState<AgentRecord[]>([])
   const [workflows, setWorkflows] = useState<WorkflowRecord[]>([])
   const [availableTools, setAvailableTools] = useState<string[]>(BUILTIN_TOOLS)
+  const [communityTools, setCommunityTools] = useState<string[]>([])
   const [panel, setPanel] = useState<PanelState>({ open: false })
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<AgentRecord | null>(null)
@@ -60,6 +62,11 @@ export default function Agents() {
       .then((apiTools) => {
         const customNames = apiTools.map((t) => t.name)
         setAvailableTools([...BUILTIN_TOOLS, ...customNames])
+      })
+      .catch(() => {})
+    getCatalog()
+      .then((tools) => {
+        setCommunityTools(tools.filter(t => t.is_enabled).map(t => t.name))
       })
       .catch(() => {})
   }, [])
@@ -381,6 +388,7 @@ export default function Agents() {
           mode={panel.mode}
           agent={panel.mode === 'edit' ? panel.agent : undefined}
           availableTools={availableTools}
+          communityTools={communityTools}
           onSave={handleSave}
           onClose={() => setPanel({ open: false })}
         />

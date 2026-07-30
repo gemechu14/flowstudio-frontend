@@ -4,6 +4,7 @@ interface ConfirmModalProps {
   message: string
   confirmLabel?: string
   confirmColor?: string
+  error?: string
   onConfirm: () => void
   onClose: () => void
 }
@@ -12,6 +13,7 @@ export default function ConfirmModal({
   message,
   confirmLabel = 'Delete',
   confirmColor = '#EF4444',
+  error,
   onConfirm,
   onClose,
 }: ConfirmModalProps) {
@@ -66,6 +68,17 @@ export default function ConfirmModal({
         }}>
           {message}
         </div>
+
+        {/* Error */}
+        {error && (
+          <div style={{
+            fontSize: 12, color: '#EF4444', marginBottom: 14,
+            padding: '8px 10px', background: '#EF444410',
+            border: '1px solid #EF444430', borderRadius: 6,
+          }}>
+            {error}
+          </div>
+        )}
 
         {/* Buttons */}
         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
