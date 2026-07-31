@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
+import { ThemeProvider } from './contexts/ThemeContext'
 import Sidebar from './components/layout/Sidebar'
 import TopBar from './components/layout/TopBar'
 import Dashboard from './pages/Dashboard'
@@ -57,7 +58,7 @@ function AppShell() {
       <Sidebar />
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <TopBar />
-        <main style={{ flex: 1, width: '100%', overflowY: 'auto', background: 'var(--bg-light)' }}>
+        <main style={{ flex: 1, width: '100%', overflowY: 'auto', background: 'var(--bg-page)', transition: 'background-color 0.25s ease' }}>
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/login" element={<Navigate to="/dashboard" replace />} />
@@ -80,8 +81,10 @@ function AppShell() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <AppShell />
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <AppShell />
+      </AuthProvider>
+    </ThemeProvider>
   )
 }

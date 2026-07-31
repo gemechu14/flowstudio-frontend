@@ -1,6 +1,7 @@
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
+import { useTheme } from '../../contexts/ThemeContext'
 import { logout } from '../../api/auth'
 import { BASE_URL } from '../../api/client'
 
@@ -100,6 +101,7 @@ export default function Sidebar() {
   const location = useLocation()
   const navigate = useNavigate()
   const { user } = useAuth()
+  const { collapsed, toggleCollapsed } = useTheme()
   const [orgOpen, setOrgOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
   const [tenants, setTenants] = useState<Tenant[]>([])
@@ -109,7 +111,6 @@ export default function Sidebar() {
 
   const isSuperAdmin = user?.role === 'super_admin'
 
-  // Load tenants for super_admin
   useEffect(() => {
     if (!isSuperAdmin) return
     const token = localStorage.getItem('cl_token')
@@ -125,7 +126,6 @@ export default function Sidebar() {
           if (found) {
             setActiveTenant(found)
           } else {
-            // Stored tenant no longer exists — clear it and fall back to own tenant
             localStorage.removeItem('cl_active_tenant')
             const own = list.find(t => t.tenant_id === user?.tenant_id)
             if (own) setActiveTenant(own)
@@ -138,7 +138,6 @@ export default function Sidebar() {
       .catch(() => {})
   }, [isSuperAdmin, user?.tenant_id])
 
-  // Close dropdowns on outside click
   useEffect(() => {
     function handle(e: MouseEvent) {
       if (orgRef.current && !orgRef.current.contains(e.target as Node)) setOrgOpen(false)
@@ -152,12 +151,9 @@ export default function Sidebar() {
     setActiveTenant(t)
     localStorage.setItem('cl_active_tenant', JSON.stringify(t))
     setOrgOpen(false)
-    // Reload current page to re-fetch data scoped to new tenant
     navigate(location.pathname, { replace: true })
     window.location.reload()
   }
-
-  const visibleNavItems = NAV_ITEMS
 
   const initials = user
     ? (user.first_name && user.last_name
@@ -192,103 +188,220 @@ export default function Sidebar() {
 
   return (
     <aside
-      className="sidebar-dark"
+      className={`sidebar-dark app-sidebar${collapsed ? ' is-collapsed' : ''}`}
       style={{
         width: 'var(--sidebar-width)',
         minWidth: 'var(--sidebar-width)',
         height: '100vh',
-        background: 'var(--bg-dark)',
+        background: 'var(--sidebar-bg)',
         display: 'flex',
         flexDirection: 'column',
-        borderRight: '1px solid var(--border-dark)',
-        overflowY: 'auto',
+        borderRight: '1px solid var(--sidebar-border)',
+        overflow: 'hidden',
         position: 'relative',
+        flexShrink: 0,
       }}
     >
-      {/* Logo */}
-      <div style={{ padding: '24px 20px 20px', borderBottom: '1px solid var(--border-dark)' }}>
-        <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: 13, letterSpacing: '0.12em', color: 'var(--text-light)', display: 'flex', alignItems: 'center' }}>
-          <span>FLOWSTUDIO</span>
-          <span style={{ display: 'inline-block', width: 8, height: 14, background: 'var(--blue)', marginLeft: 3, borderRadius: 1, animation: 'blink 1.2s step-end infinite' }} />
+      {/* Logo — FLOWSTUDIO branding */}
+      <div style={{
+        padding: collapsed ? '22px 0 18px' : '24px 20px 20px',
+        borderBottom: '1px solid var(--sidebar-border)',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: collapsed ? 'center' : 'flex-start',
+        minHeight: 76,
+      }}>
+        <div style={{
+          fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: 13,
+          letterSpacing: '0.12em', color: 'var(--sidebar-text)',
+          display: 'flex', alignItems: 'center',
+        }}>
+          {collapsed ? (
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              width: 28, height: 28, borderRadius: 6, background: 'var(--sidebar-icon-bg)',
+              color: 'var(--sidebar-avatar-text)', fontSize: 12, fontWeight: 800,
+            }}>
+              F
+            </span>
+          ) : (
+            <>
+              <span className="sidebar-brand-text">FLOWSTUDIO</span>
+              <span style={{
+                display: 'inline-block', width: 8, height: 14, background: 'var(--sidebar-brand-accent)',
+                marginLeft: 3, borderRadius: 1, animation: 'blink 1.2s step-end infinite',
+              }} />
+            </>
+          )}
         </div>
-        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-light-subtle)', letterSpacing: '0.10em', marginTop: 4, textTransform: 'uppercase' }}>
-          Powered by Crestward Labs
-        </div>
+        {!collapsed && (
+          <div
+            className="sidebar-brand-text"
+            style={{
+              fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--sidebar-text-subtle)',
+              letterSpacing: '0.10em', marginTop: 4, textTransform: 'uppercase',
+            }}
+          >
+            Powered by Crestward Labs
+          </div>
+        )}
       </div>
 
       {/* Navigation */}
-      <nav style={{ flex: 1, padding: '12px 0' }}>
-        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-light-subtle)', letterSpacing: '0.14em', textTransform: 'uppercase', padding: '8px 20px 4px' }}>
-          Navigation
-        </div>
-        {visibleNavItems.map((item) => {
+      <nav style={{ flex: 1, padding: '12px 0', overflowY: 'auto', overflowX: 'hidden' }}>
+        {!collapsed && (
+          <div
+            className="sidebar-section-label"
+            style={{
+              fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--sidebar-text-subtle)',
+              letterSpacing: '0.14em', textTransform: 'uppercase', padding: '8px 20px 4px',
+            }}
+          >
+            Navigation
+          </div>
+        )}
+        {NAV_ITEMS.map((item) => {
           const isActive = location.pathname === item.path || location.pathname.startsWith(item.path + '/')
           return (
             <NavLink
               key={item.path}
               to={item.path}
+              title={collapsed ? item.label : undefined}
               style={{
-                display: 'flex', alignItems: 'center', gap: 10, padding: '9px 20px',
+                display: 'flex', alignItems: 'center',
+                gap: collapsed ? 0 : 10,
+                justifyContent: collapsed ? 'center' : 'flex-start',
+                padding: collapsed ? '11px 0' : '9px 14px 9px 12px',
+                margin: collapsed ? '2px 10px' : '2px 10px',
+                borderRadius: 10,
                 textDecoration: 'none',
-                color: isActive ? 'var(--blue-secondary)' : 'var(--text-light-muted)',
-                background: isActive ? 'rgba(29,95,250,0.08)' : 'transparent',
-                borderLeft: isActive ? '2px solid var(--blue)' : '2px solid transparent',
+                color: isActive ? 'var(--sidebar-active-text)' : 'var(--sidebar-text-muted)',
+                background: isActive ? 'var(--sidebar-active-bg)' : 'transparent',
+                borderLeft: isActive ? '3px solid var(--sidebar-active-indicator)' : '3px solid transparent',
                 fontFamily: 'var(--font-sans)', fontSize: 13.5, fontWeight: isActive ? 500 : 400,
                 transition: 'all 0.15s ease',
+                position: 'relative',
+                overflow: 'hidden',
               }}
-              onMouseEnter={e => { if (!isActive) { (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.75)'; (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.04)' } }}
-              onMouseLeave={e => { if (!isActive) { (e.currentTarget as HTMLElement).style.color = 'var(--text-light-muted)'; (e.currentTarget as HTMLElement).style.background = 'transparent' } }}
+              onMouseEnter={e => {
+                if (!isActive) {
+                  (e.currentTarget as HTMLElement).style.color = 'var(--sidebar-text)'
+                  ;(e.currentTarget as HTMLElement).style.background = 'var(--sidebar-hover-bg)'
+                }
+              }}
+              onMouseLeave={e => {
+                if (!isActive) {
+                  (e.currentTarget as HTMLElement).style.color = 'var(--sidebar-text-muted)'
+                  ;(e.currentTarget as HTMLElement).style.background = 'transparent'
+                }
+              }}
             >
-              <span style={{ opacity: isActive ? 1 : 0.65 }}>{item.icon}</span>
-              {item.label}
+              <span style={{ opacity: isActive ? 1 : 0.75, display: 'flex', flexShrink: 0, color: 'inherit' }}>{item.icon}</span>
+              {!collapsed && <span className="sidebar-label">{item.label}</span>}
+              {isActive && !collapsed && (
+                <span style={{
+                  marginLeft: 'auto', width: 6, height: 6, borderRadius: '50%',
+                  background: 'var(--sidebar-active-indicator)', flexShrink: 0,
+                }} />
+              )}
             </NavLink>
           )
         })}
       </nav>
 
-      {/* Footer */}
-      <div style={{ borderTop: '1px solid var(--border-dark)' }}>
+      {/* Collapse control */}
+      <div style={{ padding: collapsed ? '8px 10px' : '8px 14px', borderTop: '1px solid var(--sidebar-border)' }}>
+        <button
+          onClick={toggleCollapsed}
+          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          style={{
+            width: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: collapsed ? 'center' : 'flex-start',
+            gap: 10,
+            padding: collapsed ? '10px 0' : '10px 12px',
+            borderRadius: 10,
+            border: '1px solid var(--sidebar-border)',
+            background: 'var(--sidebar-control-bg)',
+            color: 'var(--sidebar-text-muted)',
+            cursor: 'pointer',
+            fontFamily: 'var(--font-sans)',
+            fontSize: 12,
+            fontWeight: 500,
+            transition: 'background 0.15s, color 0.15s',
+          }}
+          onMouseEnter={e => {
+            e.currentTarget.style.background = 'var(--sidebar-control-hover)'
+            e.currentTarget.style.color = 'var(--sidebar-text)'
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.background = 'var(--sidebar-control-bg)'
+            e.currentTarget.style.color = 'var(--sidebar-text-muted)'
+          }}
+        >
+          <svg
+            width="16" height="16" viewBox="0 0 16 16" fill="none"
+            style={{
+              transform: collapsed ? 'rotate(180deg)' : 'none',
+              transition: 'transform 0.28s cubic-bezier(0.4, 0, 0.2, 1)',
+              flexShrink: 0,
+            }}
+          >
+            <rect x="1.5" y="2" width="13" height="12" rx="2" stroke="currentColor" strokeWidth="1.4" />
+            <path d="M6 2v12" stroke="currentColor" strokeWidth="1.4" />
+            <path d="M9.5 6L7.5 8l2 2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          {!collapsed && <span className="sidebar-label">Collapse</span>}
+        </button>
+      </div>
 
-        {/* Org switcher — super_admin only */}
+      {/* Footer */}
+      <div style={{ borderTop: '1px solid var(--sidebar-border)' }}>
         {isSuperAdmin && (
-          <div ref={orgRef} style={{ position: 'relative', borderBottom: '1px solid var(--border-dark)' }}>
+          <div ref={orgRef} style={{ position: 'relative', borderBottom: '1px solid var(--sidebar-border)' }}>
             <button
               onClick={() => setOrgOpen(o => !o)}
+              title={collapsed ? currentOrgName : undefined}
               style={{
                 display: 'flex', alignItems: 'center', gap: 10,
-                width: '100%', padding: '13px 16px', background: 'none', border: 'none',
-                cursor: 'pointer', color: 'var(--text-light)',
+                width: '100%', padding: collapsed ? '13px 0' : '13px 16px',
+                justifyContent: collapsed ? 'center' : 'flex-start',
+                background: 'none', border: 'none',
+                cursor: 'pointer', color: 'var(--sidebar-text)',
               }}
             >
-              {/* Org icon */}
               <div style={{
-                width: 26, height: 26, borderRadius: 6, background: 'rgba(29,95,250,0.15)',
-                border: '1px solid rgba(29,95,250,0.25)', display: 'flex', alignItems: 'center',
-                justifyContent: 'center', flexShrink: 0,
+                width: 26, height: 26, borderRadius: 6, background: 'var(--sidebar-icon-bg)',
+                border: '1px solid var(--sidebar-border)', display: 'flex', alignItems: 'center',
+                justifyContent: 'center', flexShrink: 0, color: 'var(--sidebar-active-text)',
               }}>
                 <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
-                  <rect x="1" y="5" width="14" height="10" rx="1.5" stroke="rgba(29,95,250,0.9)" strokeWidth="1.5" />
-                  <path d="M5 5V3.5A2.5 2.5 0 0 1 11 3.5V5" stroke="rgba(29,95,250,0.9)" strokeWidth="1.5" />
+                  <rect x="1" y="5" width="14" height="10" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
+                  <path d="M5 5V3.5A2.5 2.5 0 0 1 11 3.5V5" stroke="currentColor" strokeWidth="1.5" />
                 </svg>
               </div>
-              <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
-                <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-light)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {currentOrgName}
-                </div>
-                <div style={{ fontSize: 10, color: 'var(--text-light-subtle)', fontFamily: 'var(--font-mono)' }}>
-                  super admin
-                </div>
-              </div>
-              {/* Chevron */}
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ flexShrink: 0, opacity: 0.4, transform: orgOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }}>
-                <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-              </svg>
+              {!collapsed && (
+                <>
+                  <div className="sidebar-user-meta" style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
+                    <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--sidebar-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {currentOrgName}
+                    </div>
+                    <div style={{ fontSize: 10, color: 'var(--sidebar-text-subtle)', fontFamily: 'var(--font-mono)' }}>
+                      super admin
+                    </div>
+                  </div>
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ flexShrink: 0, opacity: 0.4, transform: orgOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }}>
+                    <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  </svg>
+                </>
+              )}
             </button>
 
-            {/* Dropdown */}
             {orgOpen && (
               <div style={{
-                position: 'absolute', bottom: '100%', left: 0, right: 0,
+                position: 'absolute', bottom: '100%', left: collapsed ? 8 : 0, right: collapsed ? 'auto' : 0,
+                width: collapsed ? 220 : 'auto',
                 background: '#1a1d23', border: '1px solid rgba(255,255,255,0.1)',
                 borderRadius: 8, padding: '6px 0', boxShadow: '0 -8px 24px rgba(0,0,0,0.4)',
                 maxHeight: 280, overflowY: 'auto', zIndex: 100,
@@ -331,44 +444,50 @@ export default function Sidebar() {
           </div>
         )}
 
-        {/* User profile */}
         <div ref={profileRef} style={{ position: 'relative' }}>
           <button
             onClick={() => setProfileOpen(o => !o)}
+            title={collapsed ? displayName : undefined}
             style={{
               display: 'flex', alignItems: 'center', gap: 10,
-              width: '100%', padding: '13px 16px', background: 'none', border: 'none',
-              cursor: 'pointer',
+              width: '100%', padding: collapsed ? '13px 0' : '13px 16px',
+              justifyContent: collapsed ? 'center' : 'flex-start',
+              background: 'none', border: 'none', cursor: 'pointer',
             }}
-            onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.03)')}
+            onMouseEnter={e => (e.currentTarget.style.background = 'var(--sidebar-hover-bg)')}
             onMouseLeave={e => (e.currentTarget.style.background = 'none')}
           >
             <div style={{
               width: 30, height: 30, borderRadius: '50%',
-              background: 'var(--blue-dim)', border: '1px solid var(--blue-border)',
+              background: 'var(--sidebar-icon-bg)', border: '1px solid var(--sidebar-border)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--blue-secondary)',
+              fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--sidebar-avatar-text)',
               fontWeight: 700, flexShrink: 0,
             }}>
               {initials}
             </div>
-            <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
-              <div style={{ fontSize: 12, color: 'var(--text-light)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {displayName}
-              </div>
-              <div style={{ fontSize: 11, color: 'var(--text-light-subtle)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {user?.email}
-              </div>
-            </div>
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ flexShrink: 0, opacity: 0.35, transform: profileOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }}>
-              <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-            </svg>
+            {!collapsed && (
+              <>
+                <div className="sidebar-user-meta" style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
+                  <div style={{ fontSize: 12, color: 'var(--sidebar-text)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {displayName}
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--sidebar-text-subtle)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {user?.email}
+                  </div>
+                </div>
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ flexShrink: 0, opacity: 0.35, transform: profileOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s', color: 'var(--sidebar-text)' }}>
+                  <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
+              </>
+            )}
           </button>
 
-          {/* Profile popup */}
           {profileOpen && (
             <div style={{
-              position: 'absolute', bottom: '100%', left: 8, right: 8,
+              position: 'absolute', bottom: '100%',
+              left: collapsed ? 8 : 8, right: collapsed ? 'auto' : 8,
+              width: collapsed ? 200 : 'auto',
               background: '#1a1d23', border: '1px solid rgba(255,255,255,0.1)',
               borderRadius: 8, padding: '6px', boxShadow: '0 -8px 24px rgba(0,0,0,0.4)',
               zIndex: 100,
@@ -390,10 +509,6 @@ export default function Sidebar() {
           )}
         </div>
       </div>
-
-      <style>{`
-        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
-      `}</style>
     </aside>
   )
 }

@@ -1,8 +1,9 @@
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
+import { useTheme } from '../../contexts/ThemeContext'
 
 const PAGE_TITLES: Record<string, { title: string; subtitle: string }> = {
-  '/dashboard': { title: 'Dashboard', subtitle: 'Platform overview and activity' },
+  '/dashboard': { title: 'Dashboard', subtitle: 'Platform overview and activity.' },
   '/tools': { title: 'Tool Library', subtitle: 'Manage built-in and custom tools available to your agents' },
   '/agents': { title: 'Agents', subtitle: 'Configure and monitor AI agents' },
   '/workflows': { title: 'Workflows', subtitle: 'Build and run agentic workflow pipelines' },
@@ -17,6 +18,7 @@ export default function TopBar() {
   const location = useLocation()
   const navigate = useNavigate()
   const { user } = useAuth()
+  const { theme, toggleTheme } = useTheme()
   const info = PAGE_TITLES[location.pathname] ?? { title: 'Platform', subtitle: '' }
 
   const initials = user
@@ -25,27 +27,46 @@ export default function TopBar() {
       : user.email?.[0] ?? '?').toUpperCase()
     : '?'
 
+  const iconBtn: React.CSSProperties = {
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    border: '1px solid var(--border)',
+    background: 'transparent',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    color: 'var(--text-secondary)',
+    transition: 'background 0.15s, color 0.15s, border-color 0.15s',
+    flexShrink: 0,
+  }
+
   return (
     <header
       style={{
-        height: 'var(--topbar-height)',
-        background: '#ffffff',
-        borderBottom: '1px solid var(--border-light)',
+        minHeight: 72,
+        background: 'var(--topbar-bg)',
+        borderBottom: '1px solid var(--topbar-border)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: '0 28px',
+        padding: '18px 28px 16px',
         flexShrink: 0,
+        gap: 24,
+        transition: 'background-color 0.25s ease, border-color 0.25s ease',
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0, justifyContent: 'center' }}>
         <h1
           style={{
-            fontFamily: 'var(--font-mono)',
-            fontSize: 14,
-            fontWeight: 700,
-            color: 'var(--text-dark)',
-            letterSpacing: '0.02em',
+            fontFamily: 'var(--font-sans)',
+            fontSize: 20,
+            fontWeight: 650,
+            color: 'var(--text-primary)',
+            letterSpacing: '-0.02em',
+            lineHeight: 1.15,
+            margin: 0,
           }}
         >
           {info.title}
@@ -53,9 +74,10 @@ export default function TopBar() {
         {info.subtitle && (
           <span
             style={{
-              fontSize: 12,
-              color: 'var(--text-body)',
+              fontSize: 12.5,
+              color: 'var(--text-secondary)',
               fontFamily: 'var(--font-sans)',
+              lineHeight: 1.3,
             }}
           >
             {info.subtitle}
@@ -63,17 +85,16 @@ export default function TopBar() {
         )}
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        {/* Status indicator */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, alignSelf: 'center' }}>
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: 6,
-            padding: '4px 10px',
-            borderRadius: 'var(--radius-md)',
-            background: 'rgba(34,197,94,0.08)',
-            border: '1px solid rgba(34,197,94,0.20)',
+            gap: 7,
+            padding: '5px 12px',
+            borderRadius: 999,
+            background: 'var(--verified-dim)',
+            border: '1px solid transparent',
           }}
         >
           <span
@@ -87,53 +108,77 @@ export default function TopBar() {
           />
           <span
             style={{
-              fontFamily: 'var(--font-mono)',
-              fontSize: 10,
+              fontFamily: 'var(--font-sans)',
+              fontSize: 11,
               fontWeight: 600,
               color: 'var(--verified)',
-              letterSpacing: '0.08em',
+              letterSpacing: '0.04em',
             }}
           >
             SYSTEM ONLINE
           </span>
         </div>
 
-        {/* Divider */}
-        <div style={{ width: 1, height: 20, background: 'var(--border-light)', margin: '0 4px' }} />
+        <div style={{ width: 1, height: 16, background: 'var(--border)', margin: '0 2px' }} />
 
-        {/* Notification bell */}
         <button
-          style={{
-            width: 32, height: 32,
-            borderRadius: 'var(--radius-md)',
-            border: '1px solid var(--border-light)',
-            background: 'transparent', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: 'var(--text-body)',
+          onClick={toggleTheme}
+          title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          style={iconBtn}
+          onMouseEnter={e => {
+            e.currentTarget.style.background = 'var(--bg-hover)'
+            e.currentTarget.style.color = 'var(--text-primary)'
           }}
-          title="Notifications"
+          onMouseLeave={e => {
+            e.currentTarget.style.background = 'transparent'
+            e.currentTarget.style.color = 'var(--text-secondary)'
+          }}
         >
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+          {theme === 'dark' ? (
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="4" />
+              <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
+            </svg>
+          ) : (
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 14.5A8.5 8.5 0 1 1 9.5 3a7 7 0 0 0 11.5 11.5Z" />
+            </svg>
+          )}
+        </button>
+
+        <button
+          style={iconBtn}
+          title="Notifications"
+          onMouseEnter={e => {
+            e.currentTarget.style.background = 'var(--bg-hover)'
+            e.currentTarget.style.color = 'var(--text-primary)'
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.background = 'transparent'
+            e.currentTarget.style.color = 'var(--text-secondary)'
+          }}
+        >
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
             <path d="M8 1C5.79086 1 4 2.79086 4 5V9L2 11H14L12 9V5C12 2.79086 10.2091 1 8 1Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
             <path d="M6.5 13C6.5 13.8284 7.17157 14.5 8 14.5C8.82843 14.5 9.5 13.8284 9.5 13" stroke="currentColor" strokeWidth="1.5" />
           </svg>
         </button>
 
-        {/* Avatar — navigates to /profile */}
         <button
           onClick={() => navigate('/profile')}
           title="Go to profile"
           style={{
-            width: 32, height: 32,
+            width: 30, height: 30,
             borderRadius: '50%',
-            background: 'var(--blue-dim)',
-            border: '1.5px solid var(--blue-border)',
+            background: 'var(--accent-soft)',
+            border: '1px solid var(--blue-border)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontFamily: 'var(--font-mono)',
-            fontSize: 11, fontWeight: 700,
-            color: 'var(--blue)',
+            fontSize: 10, fontWeight: 700,
+            color: 'var(--accent-text)',
             cursor: 'pointer',
             padding: 0,
+            flexShrink: 0,
           }}
         >
           {initials}
