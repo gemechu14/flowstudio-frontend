@@ -275,9 +275,9 @@ export default function Sidebar() {
                 margin: collapsed ? '2px 10px' : '2px 10px',
                 borderRadius: 10,
                 textDecoration: 'none',
-                color: isActive ? 'var(--sidebar-active-text)' : 'var(--sidebar-text-muted)',
-                background: isActive ? 'var(--sidebar-active-bg)' : 'transparent',
-                borderLeft: isActive ? '3px solid var(--sidebar-active-indicator)' : '3px solid transparent',
+                color: isActive ? 'var(--accent)' : 'var(--sidebar-text-muted)',
+                background: isActive ? 'var(--accent-soft)' : 'transparent',
+                borderLeft: isActive ? '3px solid var(--accent)' : '3px solid transparent',
                 fontFamily: 'var(--font-sans)', fontSize: 13.5, fontWeight: isActive ? 500 : 400,
                 transition: 'all 0.15s ease',
                 position: 'relative',
@@ -301,7 +301,7 @@ export default function Sidebar() {
               {isActive && !collapsed && (
                 <span style={{
                   marginLeft: 'auto', width: 6, height: 6, borderRadius: '50%',
-                  background: 'var(--sidebar-active-indicator)', flexShrink: 0,
+                  background: 'var(--accent)', flexShrink: 0,
                 }} />
               )}
             </NavLink>

@@ -342,137 +342,149 @@ export default function Dashboard() {
     <div style={{
       height: '100%', width: '100%',
       display: 'flex', flexDirection: 'column',
-      padding: '20px 24px', gap: 14,
       boxSizing: 'border-box', overflow: 'hidden',
-      background: 'var(--bg-page)',
+      background: 'var(--topbar-bg)',
       transition: 'background-color 0.25s ease',
     }}>
 
-      {/* Stat cards — unified blue accent like dark reference */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, flexShrink: 0 }}>
-        <StatCard
-          label="Agents"
-          value={stats.agent_count}
-          subtitle={providerText}
-          onClick={() => navigate('/agents')}
-          icon={(
-            <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
-              <circle cx="8" cy="5" r="3" stroke="currentColor" strokeWidth="1.5"/>
-              <path d="M2 14c0-2.761 2.686-5 6-5s6 2.239 6 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-            </svg>
-          )}
-        />
-        <StatCard
-          label="Workflows"
-          value={stats.workflow_count}
-          subtitle={workflowModeText}
-          onClick={() => navigate('/workflows')}
-          icon={(
-            <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
-              <circle cx="3" cy="8" r="2" stroke="currentColor" strokeWidth="1.5"/>
-              <circle cx="13" cy="4" r="2" stroke="currentColor" strokeWidth="1.5"/>
-              <circle cx="13" cy="12" r="2" stroke="currentColor" strokeWidth="1.5"/>
-              <path d="M5 8H8.5M8.5 8L11 4M8.5 8L11 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-            </svg>
-          )}
-        />
-        <StatCard
-          label="Tools"
-          value={stats.tool_count}
-          subtitle={toolsText}
-          onClick={() => navigate('/tools')}
-          icon={(
-            <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
-              <path d="M10.5 1.5C10.5 1.5 13 2 13.5 4.5C14 7 12 8.5 12 8.5L4.5 15.5L0.5 11.5L7.5 4C7.5 4 8.5 1.5 10.5 1.5Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
-              <circle cx="10.5" cy="4.5" r="1" fill="currentColor"/>
-            </svg>
-          )}
-        />
-        <StatCard
-          label="Runs This Week"
-          value={stats.runs_this_week}
-          subtitle={`${stats.runs_today} today · ${successRate}% success`}
-          onClick={() => navigate('/workflows')}
-          icon={(
-            <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
-              <polyline points="1,11 5,6 9,8 15,2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M1 14h14" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
-            </svg>
-          )}
-        />
-      </div>
+      {/* Top: overview metrics */}
+      <div style={{
+        padding: '20px 24px 18px',
+        display: 'flex', flexDirection: 'column', gap: 14,
+        flexShrink: 0,
+        background: 'var(--topbar-bg)',
+      }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
+          <StatCard
+            label="Agents"
+            value={stats.agent_count}
+            subtitle={providerText}
+            onClick={() => navigate('/agents')}
+            icon={(
+              <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
+                <circle cx="8" cy="5" r="3" stroke="currentColor" strokeWidth="1.5"/>
+                <path d="M2 14c0-2.761 2.686-5 6-5s6 2.239 6 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
+            )}
+          />
+          <StatCard
+            label="Workflows"
+            value={stats.workflow_count}
+            subtitle={workflowModeText}
+            onClick={() => navigate('/workflows')}
+            icon={(
+              <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
+                <circle cx="3" cy="8" r="2" stroke="currentColor" strokeWidth="1.5"/>
+                <circle cx="13" cy="4" r="2" stroke="currentColor" strokeWidth="1.5"/>
+                <circle cx="13" cy="12" r="2" stroke="currentColor" strokeWidth="1.5"/>
+                <path d="M5 8H8.5M8.5 8L11 4M8.5 8L11 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
+            )}
+          />
+          <StatCard
+            label="Tools"
+            value={stats.tool_count}
+            subtitle={toolsText}
+            onClick={() => navigate('/tools')}
+            icon={(
+              <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
+                <path d="M10.5 1.5C10.5 1.5 13 2 13.5 4.5C14 7 12 8.5 12 8.5L4.5 15.5L0.5 11.5L7.5 4C7.5 4 8.5 1.5 10.5 1.5Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
+                <circle cx="10.5" cy="4.5" r="1" fill="currentColor"/>
+              </svg>
+            )}
+          />
+          <StatCard
+            label="Runs This Week"
+            value={stats.runs_this_week}
+            subtitle={`${stats.runs_today} today · ${successRate}% success`}
+            onClick={() => navigate('/workflows')}
+            icon={(
+              <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
+                <polyline points="1,11 5,6 9,8 15,2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M1 14h14" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+              </svg>
+            )}
+          />
+        </div>
 
-      {/* Activity + status / tokens */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: 14, flexShrink: 0, minHeight: 240 }}>
-        <Card style={{ padding: '18px 20px', height: 240, overflow: 'visible' }} data-activity-chart>
-          <ActivityChart data={stats.runs_by_day} />
-        </Card>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, minHeight: 0 }}>
-          <Card style={{ padding: '18px 20px', flex: 1 }}>
-            <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-              <span style={{ ...LABEL, marginBottom: 16 }}>By Status</span>
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 14 }}>
-                {Object.keys(stats.runs_by_status).length === 0 ? (
-                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-tertiary)' }}>No runs yet</span>
-                ) : (
-                  Object.entries(stats.runs_by_status).map(([s, c]) => {
-                    const color = STATUS_COLORS[s] ?? 'var(--accent)'
-                    const pct = totalByStatus > 0 ? Math.round((c / totalByStatus) * 100) : 0
-                    return (
-                      <div key={s}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
-                          <span style={{
-                            fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 600,
-                            color: 'var(--text-primary)', textTransform: 'capitalize',
-                          }}>
-                            {s}
-                          </span>
-                          <span style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: 'var(--text-secondary)' }}>
-                            {c} runs · {pct}%
-                          </span>
-                        </div>
-                        <div style={{ height: 8, background: 'var(--border)', borderRadius: 999, overflow: 'hidden' }}>
-                          <div style={{
-                            height: '100%', width: `${pct}%`,
-                            background: color,
-                            borderRadius: 999,
-                            transition: 'width 0.3s ease',
-                          }} />
-                        </div>
-                      </div>
-                    )
-                  })
-                )}
-              </div>
-            </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: 14, minHeight: 240 }}>
+          <Card style={{ padding: '18px 20px', height: 240, overflow: 'visible' }} data-activity-chart>
+            <ActivityChart data={stats.runs_by_day} />
           </Card>
 
-          <Card style={{ padding: '16px 20px' }}>
-            <span style={{ ...LABEL, display: 'block', marginBottom: 12 }}>Token Usage</span>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-              <div>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-tertiary)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>Today</div>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 26, fontWeight: 750, color: 'var(--accent-text)', letterSpacing: '-0.02em', lineHeight: 1 }}>
-                  {fmt(stats.total_tokens_today)}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14, minHeight: 0 }}>
+            <Card style={{ padding: '18px 20px', flex: 1 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                <span style={{ ...LABEL, marginBottom: 16 }}>By Status</span>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 14 }}>
+                  {Object.keys(stats.runs_by_status).length === 0 ? (
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-tertiary)' }}>No runs yet</span>
+                  ) : (
+                    Object.entries(stats.runs_by_status).map(([s, c]) => {
+                      const color = STATUS_COLORS[s] ?? 'var(--accent)'
+                      const pct = totalByStatus > 0 ? Math.round((c / totalByStatus) * 100) : 0
+                      return (
+                        <div key={s}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
+                            <span style={{
+                              fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 600,
+                              color: 'var(--text-primary)', textTransform: 'capitalize',
+                            }}>
+                              {s}
+                            </span>
+                            <span style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: 'var(--text-secondary)' }}>
+                              {c} runs · {pct}%
+                            </span>
+                          </div>
+                          <div style={{ height: 8, background: 'var(--border)', borderRadius: 999, overflow: 'hidden' }}>
+                            <div style={{
+                              height: '100%', width: `${pct}%`,
+                              background: color,
+                              borderRadius: 999,
+                              transition: 'width 0.3s ease',
+                            }} />
+                          </div>
+                        </div>
+                      )
+                    })
+                  )}
                 </div>
               </div>
-              <div>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-tertiary)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>This Week</div>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 26, fontWeight: 750, color: 'var(--accent-text)', letterSpacing: '-0.02em', lineHeight: 1 }}>
-                  {fmt(stats.total_tokens_week)}
+            </Card>
+
+            <Card style={{ padding: '16px 20px' }}>
+              <span style={{ ...LABEL, display: 'block', marginBottom: 12 }}>Token Usage</span>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+                <div>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-tertiary)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>Today</div>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: 26, fontWeight: 750, color: 'var(--accent-text)', letterSpacing: '-0.02em', lineHeight: 1 }}>
+                    {fmt(stats.total_tokens_today)}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-tertiary)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>This Week</div>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: 26, fontWeight: 750, color: 'var(--accent-text)', letterSpacing: '-0.02em', lineHeight: 1 }}>
+                    {fmt(stats.total_tokens_week)}
+                  </div>
                 </div>
               </div>
-            </div>
-          </Card>
+            </Card>
+          </div>
         </div>
       </div>
 
-      {/* Recent runs */}
-      <Card style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+      {/* Divider between top overview and recent runs */}
+      <div style={{ height: 1, background: 'var(--border)', flexShrink: 0, width: '100%' }} />
+
+      {/* Bottom: recent runs */}
+      <div style={{
+        flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column',
+        background: 'var(--topbar-bg)',
+        padding: '0 24px 16px',
+      }}>
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '12px 18px', borderBottom: '1px solid var(--card-border)', flexShrink: 0,
+          padding: '14px 0 10px', flexShrink: 0,
         }}>
           <span style={LABEL}>Recent Runs</span>
           <button
@@ -491,7 +503,12 @@ export default function Dashboard() {
             No runs yet — run a workflow to see activity here.
           </div>
         ) : (
-          <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+          <div style={{
+            flex: 1, minHeight: 0, overflowY: 'auto',
+            border: '1px solid var(--card-border)',
+            borderRadius: 12,
+            background: 'var(--card-bg)',
+          }}>
             <div style={{
               display: 'grid', gridTemplateColumns: '1fr 120px 120px 80px 80px', gap: 12,
               padding: '10px 18px', borderBottom: '1px solid var(--card-border)',
@@ -550,7 +567,7 @@ export default function Dashboard() {
             ))}
           </div>
         )}
-      </Card>
+      </div>
     </div>
   )
 }

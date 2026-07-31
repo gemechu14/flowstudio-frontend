@@ -70,7 +70,7 @@
   --sidebar-text-muted: #A1A1AA;
   --sidebar-text-subtle: #71717A;
   --sidebar-active-bg: rgba(59, 130, 246, 0.14);
-  --sidebar-active-text: #60A5FA;
+  --sidebar-active-text: #3B82F6;
   --sidebar-hover-bg: rgba(255, 255, 255, 0.04);
   --sidebar-icon-bg: rgba(59, 130, 246, 0.15);
   --sidebar-brand-accent: #3B82F6;
@@ -96,7 +96,7 @@
   --blue-secondary: #1D5FFA;
   --blue-muted: #6E8BD6;
 
-  --bg-light: #f4f6fb;
+  --bg-light: #ffffff;
   --bg-card: #ffffff;
   --text-dark: #0B1020;
   --text-body: #4A5163;
@@ -104,7 +104,7 @@
   --shadow-card: 0 1px 3px rgba(11, 16, 32, 0.06), 0 1px 2px rgba(11, 16, 32, 0.04);
   --shadow-card-hover: 0 4px 16px rgba(29, 95, 250, 0.10), 0 1px 3px rgba(11, 16, 32, 0.08);
 
-  --bg-page: #f4f6fb;
+  --bg-page: #ffffff;
   --bg-elevated: #ffffff;
   --bg-surface: #ffffff;
   --bg-hover: rgba(29, 95, 250, 0.04);
@@ -183,7 +183,7 @@
   --sidebar-text-muted: #A1A1AA;
   --sidebar-text-subtle: #71717A;
   --sidebar-active-bg: rgba(59, 130, 246, 0.14);
-  --sidebar-active-text: #60A5FA;
+  --sidebar-active-text: #3B82F6;
   --sidebar-hover-bg: rgba(255, 255, 255, 0.04);
   --sidebar-icon-bg: rgba(59, 130, 246, 0.15);
   --sidebar-brand-accent: #3B82F6;

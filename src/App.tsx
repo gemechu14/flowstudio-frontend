@@ -58,7 +58,7 @@ function AppShell() {
       <Sidebar />
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <TopBar />
-        <main style={{ flex: 1, width: '100%', overflowY: 'auto', background: 'var(--bg-page)', transition: 'background-color 0.25s ease' }}>
+        <main style={{ flex: 1, width: '100%', overflowY: 'auto', background: 'var(--topbar-bg)', transition: 'background-color 0.25s ease' }}>
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/login" element={<Navigate to="/dashboard" replace />} />
