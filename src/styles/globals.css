@@ -383,3 +383,49 @@ html[data-theme="light"] .sidebar-dark ::-webkit-scrollbar-thumb {
   0%, 100% { opacity: 1; }
   50% { opacity: 0; }
 }
+
+/* ─── Skeleton loading ──────────────────────────────────────── */
+@keyframes skeleton-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.skeleton-bone {
+  flex-shrink: 0;
+  border-radius: 6px;
+  background: linear-gradient(
+    105deg,
+    var(--skeleton-base) 0%,
+    var(--skeleton-base) 38%,
+    var(--skeleton-shine) 50%,
+    var(--skeleton-base) 62%,
+    var(--skeleton-base) 100%
+  );
+  background-size: 220% 100%;
+  animation: skeleton-shimmer 1.55s ease-in-out infinite;
+  animation-delay: var(--skel-delay, 0s);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-bone {
+    animation: none;
+    background: var(--skeleton-base);
+  }
+}
+
+:root,
+[data-theme="dark"] {
+  --skeleton-base: #222226;
+  --skeleton-shine: #34343a;
+  --skeleton-card: #111113;
+  --skeleton-border: #27272A;
+  --skeleton-accent: #2a2a2e;
+}
+
+[data-theme="light"] {
+  --skeleton-base: #e5e7eb;
+  --skeleton-shine: #f8f9fb;
+  --skeleton-card: #ffffff;
+  --skeleton-border: rgba(11, 16, 32, 0.08);
+  --skeleton-accent: #d4d7de;
+}
