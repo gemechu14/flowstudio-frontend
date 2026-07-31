@@ -202,44 +202,83 @@ export default function Sidebar() {
         flexShrink: 0,
       }}
     >
-      {/* Logo — FLOWSTUDIO branding */}
+      {/* Logo — FLOWSTUDIO branding + collapse */}
       <div style={{
-        padding: collapsed ? '22px 0 18px' : '24px 20px 20px',
-        // borderBottom: '1px solid var(--sidebar-border)',
+        padding: collapsed ? '16px 0 14px' : '18px 14px 16px 20px',
         display: 'flex',
         flexDirection: 'column',
-        alignItems: collapsed ? 'center' : 'flex-start',
-        minHeight: 76,
+        alignItems: collapsed ? 'center' : 'stretch',
+        minHeight: collapsed ? 56 : 76,
+        gap: collapsed ? 0 : 4,
       }}>
         <div style={{
-          fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: 13,
-          letterSpacing: '0.12em', color: 'var(--sidebar-text)',
-          display: 'flex', alignItems: 'center',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: collapsed ? 'center' : 'space-between',
+          width: '100%',
+          gap: 8,
         }}>
-          {collapsed ? (
-            <span style={{
-              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-              width: 28, height: 28, borderRadius: 6, background: 'var(--sidebar-icon-bg)',
-              color: 'var(--sidebar-avatar-text)', fontSize: 12, fontWeight: 800,
+          {!collapsed && (
+            <div style={{
+              fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: 13,
+              letterSpacing: '0.12em', color: 'var(--sidebar-text)',
+              display: 'flex', alignItems: 'center', minWidth: 0,
             }}>
-              F
-            </span>
-          ) : (
-            <>
               <span className="sidebar-brand-text">FLOWSTUDIO</span>
               <span style={{
                 display: 'inline-block', width: 8, height: 14, background: 'var(--sidebar-brand-accent)',
                 marginLeft: 3, borderRadius: 1, animation: 'blink 1.2s step-end infinite',
+                flexShrink: 0,
               }} />
-            </>
+            </div>
           )}
+          <button
+            onClick={toggleCollapsed}
+            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 32,
+              height: 32,
+              padding: 0,
+              borderRadius: 8,
+              border: 'none',
+              background: 'transparent',
+              color: 'var(--sidebar-text-muted)',
+              cursor: 'pointer',
+              flexShrink: 0,
+              transition: 'background 0.15s, color 0.15s',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = 'var(--sidebar-hover-bg)'
+              e.currentTarget.style.color = 'var(--sidebar-text)'
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = 'transparent'
+              e.currentTarget.style.color = 'var(--sidebar-text-muted)'
+            }}
+          >
+            <svg
+              width="16" height="16" viewBox="0 0 16 16" fill="none"
+              style={{
+                transform: collapsed ? 'rotate(180deg)' : 'none',
+                transition: 'transform 0.28s cubic-bezier(0.4, 0, 0.2, 1)',
+              }}
+            >
+              <rect x="1.5" y="2" width="13" height="12" rx="2" stroke="currentColor" strokeWidth="1.4" />
+              <path d="M6 2v12" stroke="currentColor" strokeWidth="1.4" />
+              <path d="M9.5 6L7.5 8l2 2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
         </div>
         {!collapsed && (
           <div
             className="sidebar-brand-text"
             style={{
               fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--sidebar-text-subtle)',
-              letterSpacing: '0.10em', marginTop: 4, textTransform: 'uppercase',
+              letterSpacing: '0.10em', textTransform: 'uppercase',
             }}
           >
             Powered by Crestward Labs
@@ -308,53 +347,6 @@ export default function Sidebar() {
           )
         })}
       </nav>
-
-      {/* Collapse control */}
-      <div style={{ padding: collapsed ? '8px 10px' : '8px 14px', borderTop: '1px solid var(--sidebar-border)' }}>
-        <button
-          onClick={toggleCollapsed}
-          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          style={{
-            width: '100%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: collapsed ? 'center' : 'flex-start',
-            gap: 10,
-            padding: collapsed ? '10px 0' : '10px 12px',
-            borderRadius: 10,
-            border: '1px solid var(--sidebar-border)',
-            background: 'var(--sidebar-control-bg)',
-            color: 'var(--sidebar-text-muted)',
-            cursor: 'pointer',
-            fontFamily: 'var(--font-sans)',
-            fontSize: 12,
-            fontWeight: 500,
-            transition: 'background 0.15s, color 0.15s',
-          }}
-          onMouseEnter={e => {
-            e.currentTarget.style.background = 'var(--sidebar-control-hover)'
-            e.currentTarget.style.color = 'var(--sidebar-text)'
-          }}
-          onMouseLeave={e => {
-            e.currentTarget.style.background = 'var(--sidebar-control-bg)'
-            e.currentTarget.style.color = 'var(--sidebar-text-muted)'
-          }}
-        >
-          <svg
-            width="16" height="16" viewBox="0 0 16 16" fill="none"
-            style={{
-              transform: collapsed ? 'rotate(180deg)' : 'none',
-              transition: 'transform 0.28s cubic-bezier(0.4, 0, 0.2, 1)',
-              flexShrink: 0,
-            }}
-          >
-            <rect x="1.5" y="2" width="13" height="12" rx="2" stroke="currentColor" strokeWidth="1.4" />
-            <path d="M6 2v12" stroke="currentColor" strokeWidth="1.4" />
-            <path d="M9.5 6L7.5 8l2 2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-          {!collapsed && <span className="sidebar-label">Collapse</span>}
-        </button>
-      </div>
 
       {/* Footer */}
       <div style={{ borderTop: '1px solid var(--sidebar-border)' }}>
