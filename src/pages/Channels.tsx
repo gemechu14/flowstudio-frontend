@@ -234,14 +234,14 @@ function ChannelRow({ config, onUpdated, onDeleted }: {
           <div style={{ opacity: config.enabled ? 1 : 0.35, flexShrink: 0, display: 'flex', alignItems: 'center' }}>
             {meta.icon(20)}
           </div>
-          <span style={{ ...MONO, fontSize: 13, fontWeight: 700, color: config.enabled ? meta.color : 'var(--text-secondary)' }}>
+          <span style={{ ...SANS, fontSize: 13, fontWeight: 700, color: config.enabled ? meta.color : 'var(--text-secondary)' }}>
             {meta.label}
           </span>
         </div>
 
         {/* Webhook URL */}
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ ...MONO, fontSize: 9, color: 'var(--text-tertiary)', marginBottom: 3, letterSpacing: '0.08em' }}>WEBHOOK URL</div>
+          <div style={{ ...SANS, fontSize: 10, color: 'var(--text-tertiary)', marginBottom: 3, letterSpacing: '0.06em', fontWeight: 600 }}>WEBHOOK URL</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <code style={{
               ...MONO, fontSize: 10, flex: 1,
@@ -253,16 +253,16 @@ function ChannelRow({ config, onUpdated, onDeleted }: {
             <button
               onClick={copy}
               style={{
-                ...MONO, fontSize: 9, padding: '3px 10px', flexShrink: 0,
-                background: copied ? '#10B98115' : 'transparent',
-                border: `1px solid ${copied ? '#10B98150' : 'var(--border)'}`,
-                color: copied ? '#10B981' : 'var(--text-tertiary)',
-                borderRadius: 4, cursor: 'pointer',
+                ...SANS, fontSize: 11, padding: '4px 10px', flexShrink: 0,
+                background: copied ? 'var(--verified-dim)' : 'transparent',
+                border: `1px solid ${copied ? 'rgba(34,197,94,0.35)' : 'var(--border)'}`,
+                color: copied ? 'var(--verified)' : 'var(--text-tertiary)',
+                borderRadius: 4, cursor: 'pointer', fontWeight: 500,
               }}
             >{copied ? 'Copied!' : 'Copy'}</button>
           </div>
           <div style={{ ...SANS, fontSize: 10, color: 'var(--text-tertiary)', marginTop: 2 }}>
-            Token: {config.bot_token}
+            Token: <span style={MONO}>{config.bot_token}</span>
           </div>
         </div>
 
@@ -272,8 +272,8 @@ function ChannelRow({ config, onUpdated, onDeleted }: {
           disabled={toggling}
           title={config.enabled ? 'Click to disable' : 'Click to enable'}
           style={{
-            ...MONO, fontSize: 10, fontWeight: 600, flexShrink: 0,
-            padding: '3px 10px', borderRadius: 12,
+            ...SANS, fontSize: 11, fontWeight: 600, flexShrink: 0,
+            padding: '4px 10px', borderRadius: 12,
             background: config.enabled ? 'var(--accent-soft)' : 'var(--bg-hover)',
             color: config.enabled ? 'var(--accent)' : 'var(--text-tertiary)',
             border: `1px solid ${config.enabled ? 'var(--blue-border)' : 'var(--border)'}`,
@@ -285,11 +285,11 @@ function ChannelRow({ config, onUpdated, onDeleted }: {
         <button
           onClick={() => { setShowSetup(v => !v); setShowEdit(false) }}
           style={{
-            ...MONO, fontSize: 10, padding: '3px 10px', flexShrink: 0,
+            ...SANS, fontSize: 11, padding: '4px 10px', flexShrink: 0,
             background: showSetup ? 'var(--accent-soft)' : 'transparent',
             border: '1px solid var(--border)',
             color: showSetup ? 'var(--accent)' : 'var(--text-tertiary)',
-            borderRadius: 5, cursor: 'pointer',
+            borderRadius: 5, cursor: 'pointer', fontWeight: 500,
           }}
         >{showSetup ? '▲ Setup' : '▼ Setup'}</button>
 
@@ -297,7 +297,7 @@ function ChannelRow({ config, onUpdated, onDeleted }: {
         <button
           onClick={() => { setShowEdit(v => !v); setShowSetup(false) }}
           style={{
-            ...MONO, fontSize: 10, padding: '3px 10px', flexShrink: 0,
+            ...SANS, fontSize: 11, padding: '4px 10px', flexShrink: 0,
             background: showEdit ? '#F59E0B15' : 'transparent',
             border: `1px solid ${showEdit ? '#F59E0B50' : 'var(--border)'}`,
             color: showEdit ? '#F59E0B' : 'var(--text-tertiary)',
@@ -309,9 +309,9 @@ function ChannelRow({ config, onUpdated, onDeleted }: {
         <button
           onClick={() => setShowDeleteConfirm(true)}
           style={{
-            ...MONO, fontSize: 11, padding: '4px 10px', flexShrink: 0,
-            background: '#EF444418', border: '1px solid #EF444440',
-            color: '#EF4444', borderRadius: 5, cursor: 'pointer',
+            ...SANS, fontSize: 11, padding: '4px 10px', flexShrink: 0, fontWeight: 500,
+            background: 'var(--invalid-dim)', border: '1px solid rgba(239,68,68,0.35)',
+            color: 'var(--invalid)', borderRadius: 5, cursor: 'pointer',
           }}
         >Remove</button>
       </div>
@@ -323,23 +323,23 @@ function ChannelRow({ config, onUpdated, onDeleted }: {
           padding: '14px 20px',
           background: 'var(--bg-surface)',
         }}>
-          <div style={{ ...MONO, fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', color: '#F59E0B', marginBottom: 12 }}>
-            EDIT SETTINGS
+          <div style={{ ...SANS, fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', color: 'var(--untested)', marginBottom: 12, textTransform: 'uppercase' }}>
+            Edit settings
           </div>
 
           {/* Bot token update */}
           <div style={{ marginBottom: 12 }}>
-            <div style={{ ...MONO, fontSize: 10, color: 'var(--text-tertiary)', marginBottom: 4 }}>NEW BOT TOKEN <span style={{ color: 'var(--text-tertiary)', fontWeight: 400 }}>(leave blank to keep current)</span></div>
+            <div style={{ ...SANS, fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 4, fontWeight: 600 }}>New bot token <span style={{ fontWeight: 400 }}>(leave blank to keep current)</span></div>
             <input
               type="password"
               value={editToken}
               onChange={e => setEditToken(e.target.value)}
               placeholder={CHANNEL_META[config.channel_type].placeholder}
               style={{
-                ...MONO, fontSize: 12, padding: '7px 10px', width: '100%',
+                ...SANS, fontSize: 13, padding: '9px 12px', width: '100%', minHeight: 40,
                 background: 'var(--bg-page)', color: 'var(--text-primary)',
-                border: '1px solid var(--border)', borderRadius: 6,
-                boxSizing: 'border-box', outline: 'none',
+                border: '1px solid var(--border)', borderRadius: 8,
+                boxSizing: 'border-box', outline: 'none', colorScheme: 'dark light',
               }}
             />
           </div>
@@ -347,16 +347,16 @@ function ChannelRow({ config, onUpdated, onDeleted }: {
           {/* WhatsApp WABA ID */}
           {config.channel_type === 'whatsapp' && (
             <div style={{ marginBottom: 12 }}>
-              <div style={{ ...MONO, fontSize: 10, color: 'var(--text-tertiary)', marginBottom: 4 }}>WHATSAPP BUSINESS ACCOUNT ID (WABA ID)</div>
+              <div style={{ ...SANS, fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 4, fontWeight: 600 }}>WhatsApp Business Account ID (WABA ID)</div>
               <input
                 value={editWabaId}
                 onChange={e => setEditWabaId(e.target.value)}
                 placeholder="e.g. 123456789012345 — from Meta dashboard"
                 style={{
-                  ...MONO, fontSize: 12, padding: '7px 10px', width: '100%',
+                  ...SANS, fontSize: 13, padding: '9px 12px', width: '100%', minHeight: 40,
                   background: 'var(--bg-page)', color: 'var(--text-primary)',
-                  border: '1px solid var(--border)', borderRadius: 6,
-                  boxSizing: 'border-box', outline: 'none',
+                  border: '1px solid var(--border)', borderRadius: 8,
+                  boxSizing: 'border-box', outline: 'none', colorScheme: 'dark light',
                 }}
               />
               <div style={{ ...SANS, fontSize: 10, color: 'var(--text-tertiary)', marginTop: 3 }}>
@@ -367,12 +367,12 @@ function ChannelRow({ config, onUpdated, onDeleted }: {
 
           {/* Model selector */}
           <div style={{ marginBottom: 12 }}>
-            <div style={{ ...MONO, fontSize: 10, color: 'var(--text-tertiary)', marginBottom: 4 }}>AI MODEL</div>
+            <div style={{ ...SANS, fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 4, fontWeight: 600 }}>AI model</div>
             <select
               value={editModelId}
               onChange={e => setEditModelId(e.target.value)}
               style={{
-                ...MONO, fontSize: 12, padding: '7px 10px', width: '100%',
+                ...SANS, fontSize: 14, padding: '9px 12px', width: '100%', minHeight: 40,
                 background: 'var(--bg-page)', color: 'var(--text-primary)',
                 border: '1px solid var(--border)', borderRadius: 6, outline: 'none',
               }}
@@ -389,14 +389,15 @@ function ChannelRow({ config, onUpdated, onDeleted }: {
 
           {/* Timezone */}
           <div style={{ marginBottom: 12 }}>
-            <div style={{ ...MONO, fontSize: 10, color: 'var(--text-tertiary)', marginBottom: 4 }}>SCHEDULE TIMEZONE</div>
+            <div style={{ ...SANS, fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 4, fontWeight: 600 }}>Schedule timezone</div>
             <select
               value={editTimezone}
               onChange={e => setEditTimezone(e.target.value)}
               style={{
-                ...MONO, fontSize: 12, padding: '7px 10px', width: '100%',
+                ...SANS, fontSize: 14, padding: '9px 12px', width: '100%', minHeight: 40,
                 background: 'var(--bg-page)', color: 'var(--text-primary)',
-                border: '1px solid var(--border)', borderRadius: 6, outline: 'none',
+                border: '1px solid var(--border)', borderRadius: 8, outline: 'none',
+                colorScheme: 'dark light',
               }}
             >
               {TIMEZONES.map(tz => (
@@ -434,8 +435,8 @@ function ChannelRow({ config, onUpdated, onDeleted }: {
               }} />
             </div>
             <div>
-              <div style={{ ...MONO, fontSize: 11, fontWeight: 600, color: editConversational ? 'var(--accent)' : 'var(--text-tertiary)' }}>
-                CONVERSATIONAL MODE
+              <div style={{ ...SANS, fontSize: 12, fontWeight: 600, color: editConversational ? 'var(--accent)' : 'var(--text-tertiary)' }}>
+                Conversational mode
               </div>
               <div style={{ ...SANS, fontSize: 11, color: 'var(--text-tertiary)', marginTop: 2, lineHeight: 1.4 }}>
                 {editConversational
@@ -450,18 +451,19 @@ function ChannelRow({ config, onUpdated, onDeleted }: {
               onClick={saveEdit}
               disabled={saving}
               style={{
-                ...MONO, fontSize: 12, padding: '6px 16px',
-                background: saving ? '#F59E0B88' : '#F59E0B',
-                color: '#fff', border: 'none', borderRadius: 6,
-                cursor: saving ? 'wait' : 'pointer', fontWeight: 700,
+                ...SANS, fontSize: 13, padding: '8px 16px',
+                background: 'var(--btn-upload-bg)',
+                color: 'var(--btn-upload-text)', border: 'none', borderRadius: 8,
+                cursor: saving ? 'wait' : 'pointer', fontWeight: 600,
+                opacity: saving ? 0.7 : 1,
               }}
             >{saving ? 'Saving…' : 'Save'}</button>
             <button
               onClick={() => setShowEdit(false)}
               style={{
-                ...MONO, fontSize: 12, padding: '6px 14px',
+                ...SANS, fontSize: 13, padding: '8px 14px',
                 background: 'transparent', border: '1px solid var(--border)',
-                color: 'var(--text-tertiary)', borderRadius: 6, cursor: 'pointer',
+                color: 'var(--text-tertiary)', borderRadius: 8, cursor: 'pointer',
               }}
             >Cancel</button>
           </div>
@@ -598,7 +600,8 @@ function AddChannelForm({ onCreated, onCancel, existingTypes }: {
   const meta = CHANNEL_META[channelType]
 
   const inputStyle: React.CSSProperties = {
-    ...MONO, fontSize: 12, padding: '8px 12px',
+    ...SANS, fontSize: 13, padding: '10px 12px',
+    minHeight: 40,
     backgroundColor: 'var(--bg-page)', color: 'var(--text-primary)',
     border: '1px solid var(--border)', borderRadius: 8,
     boxSizing: 'border-box', outline: 'none',
@@ -644,13 +647,13 @@ function AddChannelForm({ onCreated, onCancel, existingTypes }: {
         borderRadius: 10, padding: '16px 18px', marginBottom: 12,
       }}
     >
-      <div style={{ ...MONO, fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', color: 'var(--accent)', marginBottom: 12 }}>
-        ADD CHANNEL
+      <div style={{ ...SANS, fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', color: 'var(--accent)', marginBottom: 12, textTransform: 'uppercase' }}>
+        Add channel
       </div>
 
       <div style={{ display: 'flex', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
         <div style={{ flex: '0 0 160px' }}>
-          <div style={{ ...MONO, fontSize: 10, color: 'var(--text-tertiary)', marginBottom: 4 }}>PLATFORM</div>
+          <div style={{ ...SANS, fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 4, fontWeight: 600 }}>Platform</div>
           <select
             value={channelType}
             onChange={e => { setChannelType(e.target.value as ChannelType); setBotToken(''); setError('') }}
@@ -663,7 +666,7 @@ function AddChannelForm({ onCreated, onCancel, existingTypes }: {
         </div>
 
         <div style={{ flex: 1, minWidth: 200 }}>
-          <div style={{ ...MONO, fontSize: 10, color: 'var(--text-tertiary)', marginBottom: 4 }}>BOT TOKEN</div>
+          <div style={{ ...SANS, fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 4, fontWeight: 600 }}>Bot token</div>
           <input
             type="password"
             value={botToken}
@@ -678,7 +681,7 @@ function AddChannelForm({ onCreated, onCancel, existingTypes }: {
 
       {channelType === 'discord' && (
         <div style={{ marginBottom: 12 }}>
-          <div style={{ ...MONO, fontSize: 10, color: 'var(--text-tertiary)', marginBottom: 4 }}>PUBLIC KEY</div>
+          <div style={{ ...SANS, fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 4, fontWeight: 600 }}>Public key</div>
           <input
             value={discordPublicKey}
             onChange={e => setDiscordPublicKey(e.target.value)}
@@ -691,7 +694,7 @@ function AddChannelForm({ onCreated, onCancel, existingTypes }: {
 
       {channelType === 'whatsapp' && (
         <div style={{ marginBottom: 12 }}>
-          <div style={{ ...MONO, fontSize: 10, color: 'var(--text-tertiary)', marginBottom: 4 }}>WHATSAPP BUSINESS ACCOUNT ID (WABA ID)</div>
+          <div style={{ ...SANS, fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 4, fontWeight: 600 }}>WhatsApp Business Account ID (WABA ID)</div>
           <input
             value={whatsappWabaId}
             onChange={e => setWhatsappWabaId(e.target.value)}
@@ -706,7 +709,7 @@ function AddChannelForm({ onCreated, onCancel, existingTypes }: {
 
       {/* Model selector */}
       <div style={{ marginBottom: 12 }}>
-        <div style={{ ...MONO, fontSize: 10, color: 'var(--text-tertiary)', marginBottom: 4 }}>AI MODEL</div>
+        <div style={{ ...SANS, fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 4, fontWeight: 600 }}>AI model</div>
         <select
           value={modelId}
           onChange={e => setModelId(e.target.value)}
@@ -724,7 +727,7 @@ function AddChannelForm({ onCreated, onCancel, existingTypes }: {
 
       {/* Timezone */}
       <div style={{ marginBottom: 12 }}>
-        <div style={{ ...MONO, fontSize: 10, color: 'var(--text-tertiary)', marginBottom: 4 }}>SCHEDULE TIMEZONE</div>
+        <div style={{ ...SANS, fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 4, fontWeight: 600 }}>Schedule timezone</div>
         <select
           value={timezone}
           onChange={e => setTimezone(e.target.value)}
@@ -1055,14 +1058,75 @@ function SetupGuideSection() {
 
       {/* Success footer */}
       <div style={{
-        ...SANS, fontSize: 12, color: '#10B981',
+        ...SANS, fontSize: 12, color: 'var(--verified)',
         padding: '12px 20px',
-        background: 'rgba(16,185,129,0.07)',
-        borderTop: '1px solid rgba(16,185,129,0.18)',
+        background: 'var(--verified-dim)',
+        borderTop: '1px solid rgba(34,197,94,0.22)',
         fontWeight: 500,
       }}>
         Once connected, users can trigger and monitor workflows by sending natural language messages to the bot.
       </div>
+    </div>
+  )
+}
+
+// ─── skeleton ─────────────────────────────────────────────────────────────────
+
+function Bone({
+  h, w, r = 6, delay = 0, style,
+}: {
+  h: number | string
+  w: number | string
+  r?: number
+  delay?: number
+  style?: React.CSSProperties
+}) {
+  return (
+    <div
+      className="skeleton-bone"
+      style={{
+        height: h,
+        width: w,
+        borderRadius: r,
+        ['--skel-delay' as string]: `${delay}s`,
+        ...style,
+      }}
+    />
+  )
+}
+
+function ChannelsListSkeleton({ count = 3 }: { count?: number }) {
+  return (
+    <div aria-busy="true" aria-label="Loading channels">
+      {Array.from({ length: count }).map((_, i) => (
+        <div
+          key={i}
+          style={{
+            background: 'var(--skeleton-card)',
+            border: '1px solid var(--skeleton-border)',
+            borderRadius: 10,
+            marginBottom: 12,
+            padding: '16px 20px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 14,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: '0 0 130px' }}>
+            <Bone h={20} w={20} r={6} delay={i * 0.06} />
+            <Bone h={13} w={64} delay={i * 0.06 + 0.04} />
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <Bone h={9} w={72} delay={i * 0.06 + 0.06} style={{ marginBottom: 8 }} />
+            <Bone h={28} w="100%" r={5} delay={i * 0.06 + 0.1} style={{ maxWidth: 420 }} />
+            <Bone h={9} w={140} delay={i * 0.06 + 0.14} style={{ marginTop: 8 }} />
+          </div>
+          <Bone h={24} w={72} r={12} delay={i * 0.06 + 0.12} />
+          <Bone h={24} w={64} r={5} delay={i * 0.06 + 0.14} />
+          <Bone h={24} w={48} r={5} delay={i * 0.06 + 0.16} />
+          <Bone h={24} w={56} r={5} delay={i * 0.06 + 0.18} />
+        </div>
+      ))}
     </div>
   )
 }
@@ -1125,16 +1189,14 @@ export default function Channels() {
 
       {/* Channel list */}
       {loading ? (
-        <div style={{ ...MONO, fontSize: 12, color: 'var(--text-tertiary)', padding: '40px 0', textAlign: 'center' }}>
-          Loading…
-        </div>
+        <ChannelsListSkeleton />
       ) : channels.length === 0 && !showAddForm ? (
         <div style={{
           textAlign: 'center', padding: '60px 0',
-          background: 'var(--bg-page)', border: '1px solid var(--border)', borderRadius: 12,
+          background: 'var(--card-bg)', border: '1px solid var(--border)', borderRadius: 12,
         }}>
           <div style={{ fontSize: 36, marginBottom: 14 }}>💬</div>
-          <div style={{ ...MONO, fontSize: 14, color: 'var(--text-primary)', fontWeight: 600, marginBottom: 6 }}>
+          <div style={{ ...SANS, fontSize: 14, color: 'var(--text-primary)', fontWeight: 600, marginBottom: 6 }}>
             No channels connected
           </div>
           <div style={{ ...SANS, fontSize: 13, color: 'var(--text-tertiary)', maxWidth: 340, margin: '0 auto 20px' }}>

@@ -128,6 +128,70 @@ function StatusChip({ status }: { status: string }) {
   )
 }
 
+function StatusRow({
+  label, count, pct, color,
+}: {
+  label: string
+  count: number
+  pct: number
+  color: string
+}) {
+  const [hovered, setHovered] = useState(false)
+  return (
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{ position: 'relative' }}
+    >
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
+        <span style={{
+          fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 600,
+          color: 'var(--text-primary)', textTransform: 'capitalize',
+        }}>
+          {label}
+        </span>
+        <span style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: 'var(--text-secondary)' }}>
+          {count} runs · {pct}%
+        </span>
+      </div>
+      <div style={{ height: 8, background: 'var(--border)', borderRadius: 999, overflow: 'hidden' }}>
+        <div style={{
+          height: '100%', width: `${pct}%`,
+          background: color,
+          borderRadius: 999,
+          transition: 'width 0.3s ease',
+        }} />
+      </div>
+      {hovered && (
+        <div style={{
+          position: 'absolute',
+          left: '50%',
+          top: -8,
+          transform: 'translate(-50%, -100%)',
+          background: 'var(--card-bg)',
+          border: '1px solid var(--border)',
+          borderRadius: 8,
+          padding: '8px 12px',
+          boxShadow: '0 8px 20px rgba(0,0,0,0.18)',
+          whiteSpace: 'nowrap',
+          zIndex: 20,
+          pointerEvents: 'none',
+        }}>
+          <div style={{
+            fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 600,
+            color: 'var(--text-primary)', textTransform: 'capitalize', marginBottom: 2,
+          }}>
+            {label}
+          </div>
+          <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: 'var(--text-secondary)' }}>
+            {count} runs · {pct}%
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function parseLocalDate(iso: string): Date {
   return new Date(iso + 'T12:00:00')
 }
@@ -588,7 +652,7 @@ export default function Dashboard() {
           </Card>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14, minHeight: 0 }}>
-            <Card style={{ padding: '18px 20px', flex: 1 }}>
+            <Card style={{ padding: '18px 20px', flex: 1, overflow: 'visible' }}>
               <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                 <span style={{ ...LABEL, marginBottom: 16 }}>By Status</span>
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 14 }}>
@@ -599,27 +663,7 @@ export default function Dashboard() {
                       const color = STATUS_COLORS[s] ?? 'var(--accent)'
                       const pct = totalByStatus > 0 ? Math.round((c / totalByStatus) * 100) : 0
                       return (
-                        <div key={s}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
-                            <span style={{
-                              fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 600,
-                              color: 'var(--text-primary)', textTransform: 'capitalize',
-                            }}>
-                              {s}
-                            </span>
-                            <span style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: 'var(--text-secondary)' }}>
-                              {c} runs · {pct}%
-                            </span>
-                          </div>
-                          <div style={{ height: 8, background: 'var(--border)', borderRadius: 999, overflow: 'hidden' }}>
-                            <div style={{
-                              height: '100%', width: `${pct}%`,
-                              background: color,
-                              borderRadius: 999,
-                              transition: 'width 0.3s ease',
-                            }} />
-                          </div>
-                        </div>
+                        <StatusRow key={s} label={s} count={c} pct={pct} color={color} />
                       )
                     })
                   )}
