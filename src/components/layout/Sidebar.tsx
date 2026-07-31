@@ -205,7 +205,7 @@ export default function Sidebar() {
       {/* Logo — FLOWSTUDIO branding */}
       <div style={{
         padding: collapsed ? '22px 0 18px' : '24px 20px 20px',
-        borderBottom: '1px solid var(--sidebar-border)',
+        // borderBottom: '1px solid var(--sidebar-border)',
         display: 'flex',
         flexDirection: 'column',
         alignItems: collapsed ? 'center' : 'flex-start',
@@ -248,7 +248,7 @@ export default function Sidebar() {
       </div>
 
       {/* Navigation */}
-      <nav style={{ flex: 1, padding: '12px 0', overflowY: 'auto', overflowX: 'hidden' }}>
+      <nav style={{ flex: 1, padding: '1px 0', overflowY: 'auto', overflowX: 'hidden' }}>
         {!collapsed && (
           <div
             className="sidebar-section-label"
