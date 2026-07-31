@@ -23,17 +23,15 @@ const OPENAI_MODELS = [
   { id: 'gpt-4o-mini', label: 'GPT-4o mini' },
 ]
 
-// ─── design tokens (inline, no dep on component system) ──────────────────────
+// ─── design tokens (aligned with dashboard theme) ────────────────────────────
 
 const MONO = { fontFamily: 'var(--font-mono)' }
+const SANS = { fontFamily: 'var(--font-sans)' }
 
 const STATUS_COLOR: Record<ToolStatus, string> = {
-  pending: '#F59E0B',
-  approved: '#10B981',
-  rejected: '#EF4444',
-}
-const STATUS_ICON: Record<ToolStatus, string> = {
-  pending: '◌', approved: '✓', rejected: '✗',
+  pending:  'var(--text-tertiary)',
+  approved: 'var(--verified)',
+  rejected: 'var(--text-tertiary)',
 }
 
 const TAB_LABELS: { key: ToolStatus | 'all'; label: string }[] = [
@@ -50,12 +48,18 @@ const fmt = (iso: string) => {
   catch { return '—' }
 }
 
-function Chip({ label, color = '#1D5FFA' }: { label: string; color?: string }) {
+function Chip({ label, tone = 'neutral' }: { label: string; tone?: 'neutral' | 'accent' | 'success' | 'muted' }) {
+  const tones = {
+    neutral: { color: 'var(--text-secondary)', bg: 'var(--bg-hover)', border: 'var(--border)' },
+    accent:  { color: 'var(--accent)', bg: 'var(--accent-soft)', border: 'var(--blue-border)' },
+    success: { color: 'var(--verified)', bg: 'var(--verified-dim)', border: 'rgba(34,197,94,0.25)' },
+    muted:   { color: 'var(--text-tertiary)', bg: 'var(--bg-hover)', border: 'var(--border)' },
+  }[tone]
   return (
     <span style={{
-      ...MONO, fontSize: 10, padding: '2px 7px', borderRadius: 4,
-      background: `${color}22`, color, border: `1px solid ${color}44`,
-      fontWeight: 600, letterSpacing: '0.05em', whiteSpace: 'nowrap',
+      ...MONO, fontSize: 10, padding: '2px 8px', borderRadius: 4,
+      background: tones.bg, color: tones.color, border: `1px solid ${tones.border}`,
+      fontWeight: 600, letterSpacing: '0.04em', whiteSpace: 'nowrap', textTransform: 'uppercase',
     }}>{label}</span>
   )
 }
@@ -1002,6 +1006,7 @@ function ToolRow({ tool, onApprove, onRejectClick, onDelete, onTest, onViewSourc
   const [submitError, setSubmitError] = useState('')
   const [submitDone, setSubmitDone] = useState(false)
   const color = STATUS_COLOR[tool.status]
+  const statusTone = tool.status === 'approved' ? 'success' : tool.status === 'pending' ? 'neutral' : 'muted'
 
   async function handleSubmitCommunity() {
     setSubmitting(true); setSubmitError('')
@@ -1023,75 +1028,90 @@ function ToolRow({ tool, onApprove, onRejectClick, onDelete, onTest, onViewSourc
 
   return (
     <div style={{
-      background: 'var(--bg-card)', border: `1px solid var(--border)`,
-      borderLeft: `4px solid ${color}`,
-      borderRadius: 8, overflow: 'hidden',
+      background: 'var(--card-bg)', border: '1px solid var(--card-border)',
+      borderLeft: `3px solid ${color}`,
+      borderRadius: 10, overflow: 'hidden',
       marginBottom: 10,
     }}>
       {/* Main row */}
       <div style={{
-        padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 12,
+        padding: '14px 18px', display: 'flex', alignItems: 'flex-start', gap: 12,
         cursor: 'pointer',
       }} onClick={() => setExpanded(v => !v)}>
-        <span style={{ ...MONO, fontSize: 12, color, minWidth: 20 }}>
-          {STATUS_ICON[tool.status]}
-        </span>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-heading)' }}>
+            <span style={{
+              ...MONO, fontSize: 14, fontWeight: 700, color: 'var(--text-primary)',
+            }}>
               {tool.name}
             </span>
-            <Chip label={tool.status} color={color} />
+            <Chip label={tool.status} tone={statusTone} />
             {tool.display_name && tool.display_name !== tool.name && (
-              <Chip label={tool.display_name} color="#6B7280" />
+              <Chip label={tool.display_name} tone="muted" />
             )}
             {tool.risk_flags.length > 0 && (
-              <Chip label={`⚠ ${tool.risk_flags.length} flag${tool.risk_flags.length > 1 ? 's' : ''}`} color="#F59E0B" />
-            )}
-            {tool.requirements && (
-              <Chip label="has requirements" color="#7C3AED" />
+              <Chip label={`${tool.risk_flags.length} flag${tool.risk_flags.length > 1 ? 's' : ''}`} tone="neutral" />
             )}
           </div>
           <div style={{
-            fontSize: 12, color: 'var(--text-muted)', marginTop: 3,
+            ...MONO, fontSize: 11, color: 'var(--text-tertiary)', marginTop: 6,
+            display: 'inline-block', padding: '2px 8px',
+            background: 'var(--bg-hover)', borderRadius: 4, border: '1px solid var(--border)',
+          }}>
+            {tool.name}.py
+          </div>
+          <div style={{
+            ...SANS, fontSize: 13, color: 'var(--text-secondary)', marginTop: 8,
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            lineHeight: 1.45,
           }}>
             {tool.description || '—'}
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0 }}>
-          {/* Action buttons */}
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0, paddingTop: 2 }}>
           {tool.status === 'pending' && (
             <>
-              <Btn onClick={e => { e.stopPropagation(); handleApprove() }} color="#10B981" disabled={approving}>
-                {approving ? '…' : '✓ Approve'}
+              <Btn onClick={e => { e.stopPropagation(); handleApprove() }} variant="approve" disabled={approving}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                {approving ? '…' : 'Approve'}
               </Btn>
-              <Btn onClick={e => { e.stopPropagation(); onRejectClick() }} color="#EF4444">
-                ✗ Reject
+              <Btn onClick={e => { e.stopPropagation(); onRejectClick() }} variant="danger" iconOnly={false}>
+                Reject
               </Btn>
             </>
           )}
           {tool.status === 'approved' && !submitDone && (
-            <Btn onClick={e => { e.stopPropagation(); setShowSubmit(v => !v) }} color="#10B981">
-              ↑ Contribute
+            <Btn onClick={e => { e.stopPropagation(); setShowSubmit(v => !v) }} variant="success">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+                <path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/>
+              </svg>
+              Contribute
             </Btn>
           )}
           {submitDone && (
-            <span style={{ ...MONO, fontSize: 10, color: '#10B981' }}>✓ Submitted</span>
+            <span style={{ ...MONO, fontSize: 10, color: 'var(--text-secondary)' }}>Submitted</span>
           )}
-          <Btn onClick={e => { e.stopPropagation(); onTest() }} color="#1D5FFA">
-            ▶ Test
+          <Btn onClick={e => { e.stopPropagation(); onTest() }} variant="accent">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+            Test
           </Btn>
-          <Btn onClick={e => { e.stopPropagation(); onEdit() }} color="#F59E0B">
-            ✎ Edit
+          <Btn onClick={e => { e.stopPropagation(); onEdit() }} variant="accent">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>
+            </svg>
+            Edit
           </Btn>
-          <Btn onClick={e => { e.stopPropagation(); onViewSource() }} color="#6B7280">
+          <Btn onClick={e => { e.stopPropagation(); onViewSource() }} variant="neutral" iconOnly>
             {'</>'}
           </Btn>
-          <Btn onClick={e => { e.stopPropagation(); onDelete() }} color="#EF4444">
-            🗑
+          <Btn onClick={e => { e.stopPropagation(); onDelete() }} variant="danger" iconOnly>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>
+              <path d="M10 11v6M14 11v6"/>
+            </svg>
           </Btn>
-          <span style={{ ...MONO, fontSize: 11, color: 'var(--text-muted)' }}>
+          <span style={{ ...MONO, fontSize: 11, color: 'var(--text-tertiary)', marginLeft: 2 }}>
             {expanded ? '▲' : '▼'}
           </span>
         </div>
@@ -1101,20 +1121,20 @@ function ToolRow({ tool, onApprove, onRejectClick, onDelete, onTest, onViewSourc
       {showSubmit && (
         <div style={{
           borderTop: '1px solid var(--border)', padding: '14px 18px',
-          background: '#10B98108',
+          background: 'var(--verified-dim)',
         }}>
-          <div style={{ ...MONO, fontSize: 10, color: '#10B981', marginBottom: 10, letterSpacing: '0.1em' }}>
+          <div style={{ ...MONO, fontSize: 10, color: 'var(--verified)', marginBottom: 10, letterSpacing: '0.1em' }}>
             CONTRIBUTE TO COMMUNITY
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
             <div>
-              <div style={{ ...MONO, fontSize: 10, color: 'var(--text-muted)', marginBottom: 4 }}>Category</div>
+              <div style={{ ...MONO, fontSize: 10, color: 'var(--text-tertiary)', marginBottom: 4 }}>Category</div>
               <select
                 value={submitCategory}
                 onChange={e => setSubmitCategory(e.target.value)}
                 style={{
                   ...MONO, fontSize: 11,
-                  background: 'var(--bg-page)', color: 'var(--text-body)',
+                  background: 'var(--card-bg)', color: 'var(--text-primary)',
                   border: '1px solid var(--border)', borderRadius: 6,
                   padding: '6px 10px', cursor: 'pointer', outline: 'none',
                 }}
@@ -1123,15 +1143,15 @@ function ToolRow({ tool, onApprove, onRejectClick, onDelete, onTest, onViewSourc
               </select>
             </div>
             <div style={{ flex: 1, minWidth: 160 }}>
-              <div style={{ ...MONO, fontSize: 10, color: 'var(--text-muted)', marginBottom: 4 }}>Note (optional)</div>
+              <div style={{ ...MONO, fontSize: 10, color: 'var(--text-tertiary)', marginBottom: 4 }}>Note (optional)</div>
               <input
                 value={submitNote}
                 onChange={e => setSubmitNote(e.target.value)}
                 placeholder="What does this tool do for others?"
                 style={{
                   width: '100%', boxSizing: 'border-box',
-                  ...MONO, fontSize: 11, padding: '6px 10px',
-                  background: 'var(--bg-page)', color: 'var(--text-body)',
+                  ...SANS, fontSize: 12, padding: '6px 10px',
+                  background: 'var(--card-bg)', color: 'var(--text-primary)',
                   border: '1px solid var(--border)', borderRadius: 6, outline: 'none',
                 }}
               />
@@ -1140,16 +1160,16 @@ function ToolRow({ tool, onApprove, onRejectClick, onDelete, onTest, onViewSourc
               onClick={handleSubmitCommunity}
               disabled={submitting}
               style={{
-                background: '#10B981', border: 'none', color: '#fff',
+                background: 'var(--verified)', border: 'none', color: '#fff',
                 borderRadius: 6, padding: '7px 16px', cursor: 'pointer',
-                ...MONO, fontSize: 11, fontWeight: 700, flexShrink: 0,
+                ...SANS, fontSize: 12, fontWeight: 600, flexShrink: 0,
               }}
             >
               {submitting ? '...' : 'Submit'}
             </button>
           </div>
           {submitError && (
-            <div style={{ ...MONO, fontSize: 11, color: '#EF4444', marginTop: 8 }}>{submitError}</div>
+            <div style={{ ...SANS, fontSize: 12, color: 'var(--invalid)', marginTop: 8 }}>{submitError}</div>
           )}
         </div>
       )}
@@ -1157,79 +1177,73 @@ function ToolRow({ tool, onApprove, onRejectClick, onDelete, onTest, onViewSourc
       {/* Expanded detail */}
       {expanded && (
         <div style={{
-          borderTop: '1px solid var(--border)', padding: '14px 18px',
-          background: 'var(--bg-page)',
+          borderTop: '1px solid var(--border)', padding: '16px 18px',
+          background: 'var(--card-bg)',
         }}>
-          {/* Risk flags */}
           {tool.risk_flags.length > 0 && (
-            <div style={{ marginBottom: 12 }}>
-              <div style={{ ...MONO, fontSize: 10, color: '#F59E0B', marginBottom: 6, letterSpacing: '0.1em' }}>
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ ...MONO, fontSize: 10, color: 'var(--text-tertiary)', marginBottom: 6, letterSpacing: '0.1em' }}>
                 RISK FLAGS
               </div>
               {tool.risk_flags.map((f, i) => (
                 <div key={i} style={{
-                  ...MONO, fontSize: 11, color: '#F59E0B',
-                  padding: '4px 8px', background: '#F59E0B15',
-                  border: '1px solid #F59E0B30', borderRadius: 4,
+                  ...SANS, fontSize: 12, color: 'var(--text-secondary)',
+                  padding: '6px 10px', background: 'var(--bg-hover)',
+                  border: '1px solid var(--border)', borderRadius: 6,
                   marginBottom: 4,
-                }}>⚠ {f}</div>
+                }}>{f}</div>
               ))}
             </div>
           )}
 
-          {/* Requirements */}
           {tool.requirements && (
-            <div style={{ marginBottom: 12 }}>
-              <div style={{ ...MONO, fontSize: 10, color: '#7C3AED', marginBottom: 6, letterSpacing: '0.1em' }}>
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ ...MONO, fontSize: 10, color: 'var(--text-tertiary)', marginBottom: 6, letterSpacing: '0.1em' }}>
                 REQUIREMENTS
               </div>
               <div style={{
-                ...MONO, fontSize: 11, color: 'var(--text-body)',
-                padding: '6px 10px', background: '#7C3AED15',
-                border: '1px solid #7C3AED30', borderRadius: 4,
+                ...MONO, fontSize: 12, color: 'var(--text-secondary)',
+                padding: '8px 10px', background: 'var(--bg-hover)',
+                border: '1px solid var(--border)', borderRadius: 6,
               }}>{tool.requirements}</div>
             </div>
           )}
 
-          {/* Env Variables — shown for pending and approved tools */}
           {(tool.status === 'approved' || tool.status === 'pending') && (
             <ToolEnvVarsEditor toolId={tool.tool_id} />
           )}
 
-          {/* Parameters */}
           {tool.parameters.length > 0 && (
-            <div style={{ marginBottom: 12 }}>
-              <div style={{ ...MONO, fontSize: 10, color: 'var(--text-muted)', marginBottom: 6, letterSpacing: '0.1em' }}>
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ ...MONO, fontSize: 10, color: 'var(--text-tertiary)', marginBottom: 8, letterSpacing: '0.1em' }}>
                 PARAMETERS
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                 {tool.parameters.map(p => (
                   <span key={p.name} style={{
-                    ...MONO, fontSize: 11, padding: '3px 8px',
-                    background: '#1D5FFA15', color: '#1D5FFA',
-                    border: '1px solid #1D5FFA30', borderRadius: 4,
+                    ...MONO, fontSize: 11, padding: '4px 9px',
+                    background: 'var(--btn-accent-bg)', color: 'var(--btn-accent-text)',
+                    border: '1px solid var(--btn-accent-border)', borderRadius: 6,
                   }}>
-                    {p.name}: <span style={{ color: '#F59E0B' }}>{p.type}</span>
-                    {tool.required.includes(p.name) && <span style={{ color: '#EF4444' }}>*</span>}
+                    {p.name}: <span style={{ color: 'var(--text-secondary)' }}>{p.type}</span>
+                    {tool.required.includes(p.name) && <span style={{ color: 'var(--btn-accent-text)' }}> *</span>}
                   </span>
                 ))}
               </div>
             </div>
           )}
 
-          {/* Rejection reason */}
           {tool.status === 'rejected' && tool.rejection_reason && (
             <div style={{
-              ...MONO, fontSize: 11, color: '#EF4444',
-              padding: '8px 10px', background: '#EF444415',
-              border: '1px solid #EF444430', borderRadius: 4,
+              ...SANS, fontSize: 12, color: 'var(--text-secondary)',
+              padding: '8px 10px', background: 'var(--bg-hover)',
+              border: '1px solid var(--border)', borderRadius: 6,
             }}>
               Rejected: {tool.rejection_reason}
             </div>
           )}
 
-          {/* Timestamps */}
-          <div style={{ ...MONO, fontSize: 10, color: 'var(--text-muted)', marginTop: 8 }}>
+          <div style={{ ...SANS, fontSize: 11, color: 'var(--text-tertiary)', marginTop: 10 }}>
             Uploaded {fmt(tool.created_at)}
             {tool.updated_at !== tool.created_at && ` · Updated ${fmt(tool.updated_at)}`}
           </div>
@@ -1239,23 +1253,43 @@ function ToolRow({ tool, onApprove, onRejectClick, onDelete, onTest, onViewSourc
   )
 }
 
-function Btn({ children, onClick, color, disabled }: {
+function Btn({ children, onClick, variant = 'neutral', disabled, iconOnly }: {
   children: React.ReactNode
   onClick: React.MouseEventHandler
-  color: string
+  variant?: 'neutral' | 'accent' | 'success' | 'danger' | 'approve'
   disabled?: boolean
+  iconOnly?: boolean
 }) {
+  const styles = {
+    neutral: { bg: 'var(--btn-neutral-bg)', border: 'var(--btn-neutral-border)', color: 'var(--btn-neutral-text)' },
+    accent:  { bg: 'var(--btn-accent-bg)', border: 'var(--btn-accent-border)', color: 'var(--btn-accent-text)' },
+    success: { bg: 'var(--btn-success-bg)', border: 'var(--btn-success-border)', color: 'var(--btn-success-text)' },
+    danger:  { bg: 'var(--btn-danger-bg)', border: 'var(--btn-danger-border)', color: 'var(--btn-danger-text)' },
+    approve: { bg: '#26C281', border: 'transparent', color: '#0B1220' },
+  }[variant]
+
   return (
     <button
       onClick={onClick}
       disabled={disabled}
       style={{
-        ...MONO, fontSize: 11, padding: '4px 10px',
-        background: disabled ? 'var(--bg-page)' : `${color}20`,
-        border: `1px solid ${color}44`,
-        color: disabled ? 'var(--text-muted)' : color,
-        borderRadius: 5, cursor: disabled ? 'not-allowed' : 'pointer',
-        fontWeight: 600,
+        ...SANS, fontSize: 12,
+        padding: iconOnly ? '6px 8px' : '6px 12px',
+        minWidth: iconOnly ? 32 : undefined,
+        minHeight: 32,
+        background: disabled ? 'var(--bg-hover)' : styles.bg,
+        border: `1px solid ${disabled ? 'var(--border)' : (styles.border === 'transparent' ? 'transparent' : styles.border)}`,
+        color: disabled ? 'var(--text-tertiary)' : styles.color,
+        borderRadius: 999,
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        fontWeight: variant === 'approve' ? 600 : 500,
+        boxShadow: variant === 'approve' ? 'none' : '0 1px 2px rgba(0,0,0,0.06)',
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 6,
+        lineHeight: 1,
+        opacity: disabled ? 0.55 : 1,
       }}
     >{children}</button>
   )
@@ -1268,60 +1302,76 @@ function RightEmptyState({ onEditor, onUpload }: { onEditor: () => void; onUploa
     <div style={{
       height: '100%', display: 'flex', flexDirection: 'column',
       alignItems: 'center', justifyContent: 'flex-start', gap: 20, padding: '28px 32px',
+      background: 'var(--topbar-bg)',
     }}>
       <div style={{ textAlign: 'center' }}>
         <div style={{
-          width: 56, height: 56, borderRadius: 14, background: '#1D5FFA12',
-          border: '1px solid #1D5FFA28', display: 'flex', alignItems: 'center',
+          width: 56, height: 56, borderRadius: 14, background: 'var(--accent-soft)',
+          border: '1px solid var(--blue-border)', display: 'flex', alignItems: 'center',
           justifyContent: 'center', margin: '0 auto 16px',
         }}>
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#1D5FFA" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="16 18 22 12 16 6"/>
             <polyline points="8 6 2 12 8 18"/>
           </svg>
         </div>
-        <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-heading)', marginBottom: 6 }}>
+        <div style={{ ...SANS, fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 6 }}>
           Add a Custom Tool
         </div>
-        <div style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.6, maxWidth: 280 }}>
-          Write Python code directly in the editor, or upload an existing <span style={{ ...MONO, color: '#1D5FFA' }}>.py</span> file. Tools go through a review process before agents can use them.
+        <div style={{ ...SANS, fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, maxWidth: 300 }}>
+          Write Python directly in the editor, or upload an existing <span style={{ ...MONO, color: 'var(--accent)' }}>.py</span> file. Tools go through review before agents can use them.
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: 10, flexDirection: 'column', width: '100%', maxWidth: 260 }}>
-        <button onClick={onEditor} style={{
-          ...MONO, fontSize: 12, padding: '10px 0', width: '100%',
-          background: '#7C3AED', color: '#fff', border: 'none',
-          borderRadius: 8, cursor: 'pointer', fontWeight: 700,
-        }}>✎ Write Code</button>
+      <div style={{ display: 'flex', gap: 10, flexDirection: 'column', width: '100%', maxWidth: 280 }}>
         <button onClick={onUpload} style={{
-          ...MONO, fontSize: 12, padding: '10px 0', width: '100%',
-          background: 'var(--bg-card)', color: '#1D5FFA',
-          border: '1px solid #1D5FFA44', borderRadius: 8, cursor: 'pointer', fontWeight: 700,
-        }}>↑ Upload .py File</button>
+          ...SANS, fontSize: 13, padding: '11px 16px', width: '100%',
+          background: 'var(--btn-write-primary-bg)', color: 'var(--btn-write-primary-text)',
+          border: 'none',
+          borderRadius: 999, cursor: 'pointer', fontWeight: 600,
+          display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+          boxShadow: '0 4px 14px rgba(59, 130, 246, 0.28)',
+        }}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+          Upload .py File
+        </button>
+        <button onClick={onEditor} style={{
+          ...SANS, fontSize: 13, padding: '11px 16px', width: '100%',
+          background: 'var(--btn-upload-secondary-bg)', color: 'var(--btn-upload-secondary-text)',
+          border: '1px solid var(--btn-upload-secondary-border)',
+          borderRadius: 999, cursor: 'pointer', fontWeight: 600,
+          display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+        }}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>
+          </svg>
+          Write Code
+        </button>
       </div>
 
       <div style={{
-        width: '100%', maxWidth: 320, background: 'var(--bg-card)',
-        border: '1px solid var(--border)', borderRadius: 10, padding: '16px 20px',
+        width: '100%', maxWidth: 320, background: 'var(--card-bg)',
+        border: '1px solid var(--card-border)', borderRadius: 10, padding: '16px 20px',
       }}>
-        <div style={{ ...MONO, fontSize: 9, color: 'var(--text-muted)', letterSpacing: '0.12em', marginBottom: 10 }}>
+        <div style={{ ...MONO, fontSize: 9, color: 'var(--text-tertiary)', letterSpacing: '0.12em', marginBottom: 10 }}>
           TOOL LIFECYCLE
         </div>
         {[
-          { step: '1', label: 'Upload or write a .py tool', color: '#1D5FFA' },
-          { step: '2', label: 'Review risk flags & approve', color: '#F59E0B' },
-          { step: '3', label: 'Test before deploying', color: '#7C3AED' },
-          { step: '4', label: 'Agents can now use it', color: '#10B981' },
-        ].map(({ step, label, color }) => (
+          { step: '1', label: 'Upload or write a .py tool' },
+          { step: '2', label: 'Review risk flags & approve' },
+          { step: '3', label: 'Test before deploying' },
+          { step: '4', label: 'Agents can now use it' },
+        ].map(({ step, label }) => (
           <div key={step} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
             <span style={{
-              width: 20, height: 20, borderRadius: '50%', background: `${color}18`,
-              border: `1px solid ${color}40`, display: 'flex', alignItems: 'center',
+              width: 20, height: 20, borderRadius: '50%', background: 'var(--accent-soft)',
+              border: '1px solid var(--blue-border)', display: 'flex', alignItems: 'center',
               justifyContent: 'center', flexShrink: 0,
-              ...MONO, fontSize: 9, fontWeight: 700, color,
+              ...MONO, fontSize: 9, fontWeight: 700, color: 'var(--accent)',
             }}>{step}</span>
-            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{label}</span>
+            <span style={{ ...SANS, fontSize: 12, color: 'var(--text-secondary)' }}>{label}</span>
           </div>
         ))}
       </div>
@@ -1409,13 +1459,13 @@ export default function Tools() {
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '16px 24px', borderBottom: '1px solid var(--border)',
-        flexShrink: 0, background: 'var(--bg-card)',
+        flexShrink: 0, background: 'var(--topbar-bg)',
       }}>
         <div>
-          <div style={{ ...MONO, fontSize: 9, fontWeight: 700, letterSpacing: '0.14em', color: '#1D5FFA', marginBottom: 4 }}>
+          <div style={{ ...MONO, fontSize: 9, fontWeight: 700, letterSpacing: '0.14em', color: 'var(--accent)', marginBottom: 4 }}>
             CONFIGURATION
           </div>
-          <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-heading)', margin: 0 }}>
+          <h2 style={{ ...SANS, fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
             Tool Management
           </h2>
         </div>
@@ -1423,23 +1473,42 @@ export default function Tools() {
           <button
             onClick={() => { setEditTarget(null); setShowAdd(showAdd === 'editor' ? false : 'editor') }}
             style={{
-              ...MONO, fontSize: 12, padding: '7px 14px',
-              background: showAdd === 'editor' ? '#7C3AED22' : '#7C3AED',
-              color: showAdd === 'editor' ? '#7C3AED' : '#fff',
-              border: showAdd === 'editor' ? '1px solid #7C3AED44' : 'none',
-              borderRadius: 7, cursor: 'pointer', fontWeight: 700,
+              ...SANS, fontSize: 12, padding: '8px 14px',
+              background: showAdd === 'editor' ? 'var(--btn-upload-secondary-bg)' : 'var(--btn-write-bg)',
+              color: showAdd === 'editor' ? 'var(--btn-upload-secondary-text)' : 'var(--btn-write-text)',
+              border: `1px solid ${showAdd === 'editor' ? 'var(--btn-upload-secondary-border)' : 'var(--btn-write-border)'}`,
+              borderRadius: 10, cursor: 'pointer', fontWeight: 600,
+              display: 'inline-flex', alignItems: 'center', gap: 7,
             }}
-          >{showAdd === 'editor' ? '✕ Cancel' : '✎ Write Code'}</button>
+          >
+            {showAdd === 'editor' ? '✕ Cancel' : (
+              <>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11 }}>{'</>'}</span>
+                Write Code
+              </>
+            )}
+          </button>
           <button
             onClick={() => { setEditTarget(null); setShowAdd(showAdd === 'upload' ? false : 'upload') }}
             style={{
-              ...MONO, fontSize: 12, padding: '7px 14px',
-              background: showAdd === 'upload' ? '#1D5FFA22' : '#1D5FFA',
-              color: showAdd === 'upload' ? '#1D5FFA' : '#fff',
-              border: showAdd === 'upload' ? '1px solid #1D5FFA44' : 'none',
-              borderRadius: 7, cursor: 'pointer', fontWeight: 700,
+              ...SANS, fontSize: 12, padding: '8px 14px',
+              background: showAdd === 'upload' ? 'var(--btn-write-bg)' : 'var(--btn-upload-bg)',
+              color: showAdd === 'upload' ? 'var(--btn-write-text)' : 'var(--btn-upload-text)',
+              border: `1px solid ${showAdd === 'upload' ? 'var(--btn-write-border)' : 'var(--btn-upload-border)'}`,
+              borderRadius: 10, cursor: 'pointer', fontWeight: 600,
+              display: 'inline-flex', alignItems: 'center', gap: 7,
+              boxShadow: showAdd === 'upload' ? 'none' : '0 4px 14px rgba(59, 130, 246, 0.28)',
             }}
-          >{showAdd === 'upload' ? '✕ Cancel' : '↑ Upload File'}</button>
+          >
+            {showAdd === 'upload' ? '✕ Cancel' : (
+              <>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+                Upload File
+              </>
+            )}
+          </button>
         </div>
       </div>
 
@@ -1451,39 +1520,38 @@ export default function Tools() {
           flex: listCollapsed ? '0 0 0' : '0 0 54%',
           display: 'flex', flexDirection: 'column',
           borderRight: '1px solid var(--border)', overflow: 'hidden',
-          background: 'var(--bg-page)',
+          background: 'var(--topbar-bg)',
           transition: 'flex 0.2s ease',
         }}>
           {/* Tabs */}
           <div style={{
             display: 'flex', gap: 0, paddingLeft: 20,
             borderBottom: '1px solid var(--border)', flexShrink: 0,
-            background: 'var(--bg-card)',
+            background: 'var(--topbar-bg)',
           }}>
             {TAB_LABELS.map(tab => {
               const active = activeTab === tab.key
               const cnt = counts[tab.key] ?? 0
-              const isAlert = tab.key === 'pending' && cnt > 0
               return (
                 <button
                   key={tab.key}
                   onClick={() => setActiveTab(tab.key)}
                   style={{
-                    ...MONO, fontSize: 11, padding: '10px 14px',
+                    ...SANS, fontSize: 12, padding: '11px 14px',
                     background: 'none', border: 'none',
-                    borderBottom: `2px solid ${active ? '#1D5FFA' : 'transparent'}`,
-                    color: active ? '#1D5FFA' : isAlert ? '#F59E0B' : 'var(--text-muted)',
-                    cursor: 'pointer', fontWeight: active ? 700 : 500,
+                    borderBottom: `2px solid ${active ? 'var(--accent)' : 'transparent'}`,
+                    color: active ? 'var(--accent)' : 'var(--text-secondary)',
+                    cursor: 'pointer', fontWeight: active ? 600 : 500,
                     marginBottom: -1, whiteSpace: 'nowrap',
                   }}
                 >
                   {tab.label}
                   {cnt > 0 && (
                     <span style={{
-                      marginLeft: 5, fontSize: 9, padding: '1px 5px',
-                      background: isAlert ? '#F59E0B22' : '#1D5FFA18',
-                      color: isAlert ? '#F59E0B' : '#1D5FFA',
-                      borderRadius: 10, fontWeight: 700,
+                      marginLeft: 6, fontSize: 10, padding: '1px 6px',
+                      background: active ? 'var(--accent-soft)' : 'var(--bg-hover)',
+                      color: active ? 'var(--accent)' : 'var(--text-tertiary)',
+                      borderRadius: 8, fontWeight: 600,
                     }}>{cnt}</span>
                   )}
                 </button>
@@ -1492,7 +1560,7 @@ export default function Tools() {
           </div>
 
           {/* Search */}
-          <div style={{ padding: '10px 20px', borderBottom: '1px solid var(--border)', flexShrink: 0, background: 'var(--bg-card)' }}>
+          <div style={{ padding: '10px 20px', borderBottom: '1px solid var(--border)', flexShrink: 0, background: 'var(--topbar-bg)' }}>
             <div style={{ position: 'relative' }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
                 style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }}>
@@ -1503,10 +1571,10 @@ export default function Tools() {
                 onChange={e => setSearch(e.target.value)}
                 placeholder="Search tools by name or description…"
                 style={{
-                  width: '100%', fontSize: 12, padding: '7px 10px 7px 32px',
-                  background: 'var(--bg-page)', color: 'var(--text-body)',
-                  border: '1px solid var(--border)', borderRadius: 6,
-                  boxSizing: 'border-box', outline: 'none', ...MONO,
+                  width: '100%', fontSize: 13, padding: '8px 10px 8px 32px',
+                  background: 'var(--card-bg)', color: 'var(--text-primary)',
+                  border: '1px solid var(--border)', borderRadius: 8,
+                  boxSizing: 'border-box', outline: 'none', fontFamily: 'var(--font-sans)',
                 }}
               />
               {search && (
@@ -1551,7 +1619,7 @@ export default function Tools() {
         </div>
 
         {/* Right: editor / upload / empty state — flex column so children can fill height */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#fafafb', position: 'relative' }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'var(--topbar-bg)', position: 'relative' }}>
           {/* Collapse/expand toggle */}
           <button
             onClick={() => setListCollapsed(c => !c)}

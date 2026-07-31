@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { listEnvVars, saveEnvVar, deleteEnvVar } from '../../api/toolEnvVars'
 
-const MONO = { fontFamily: 'monospace' }
+const MONO = { fontFamily: 'var(--font-mono)' }
+const SANS = { fontFamily: 'var(--font-sans)' }
 
 function SavedKeyRow({ keyName, toolId, onDelete }: {
   keyName: string
@@ -30,22 +31,23 @@ function SavedKeyRow({ keyName, toolId, onDelete }: {
   return (
     <div style={{
       ...MONO, fontSize: 11,
-      background: '#10B98115', border: '1px solid #10B98130', borderRadius: 4,
+      background: 'var(--bg-hover)', border: '1px solid var(--border)', borderRadius: 6,
     }}>
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '4px 8px',
+        padding: '6px 10px',
       }}>
-        <span style={{ color: '#10B981' }}>{keyName}</span>
+        <span style={{ color: 'var(--text-primary)' }}>{keyName}</span>
         <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {!editing && (
-            <span style={{ color: 'var(--text-muted)', fontSize: 10 }}>••••••••</span>
+            <span style={{ color: 'var(--text-tertiary)', fontSize: 10 }}>••••••••</span>
           )}
           <button
             onClick={() => { setEditing(v => !v); setNewValue(''); setError('') }}
             style={{
-              background: 'none', border: 'none', color: editing ? 'var(--text-muted)' : '#10B981',
-              cursor: 'pointer', fontSize: 10, padding: '0 2px', ...MONO,
+              background: 'none', border: 'none',
+              color: editing ? 'var(--text-tertiary)' : 'var(--accent)',
+              cursor: 'pointer', fontSize: 11, padding: '0 2px', ...SANS,
             }}
           >
             {editing ? 'cancel' : 'edit'}
@@ -53,7 +55,7 @@ function SavedKeyRow({ keyName, toolId, onDelete }: {
           <button
             onClick={onDelete}
             style={{
-              background: 'none', border: 'none', color: '#EF4444',
+              background: 'none', border: 'none', color: 'var(--invalid)',
               cursor: 'pointer', fontSize: 12, padding: '0 2px',
             }}
           >✕</button>
@@ -70,18 +72,18 @@ function SavedKeyRow({ keyName, toolId, onDelete }: {
             onKeyDown={e => e.key === 'Enter' && handleUpdate()}
             placeholder="new value"
             style={{
-              flex: 1, ...MONO, fontSize: 11, padding: '4px 8px',
-              background: 'var(--bg-page)', color: 'var(--text-body)',
-              border: '1px solid #10B98150', borderRadius: 4, outline: 'none',
+              flex: 1, ...MONO, fontSize: 11, padding: '5px 8px',
+              background: 'var(--card-bg)', color: 'var(--text-primary)',
+              border: '1px solid var(--border)', borderRadius: 6, outline: 'none',
             }}
           />
           <button
             onClick={handleUpdate}
             disabled={saving || !newValue.trim()}
             style={{
-              background: '#10B981', border: 'none', color: '#fff',
-              borderRadius: 4, padding: '4px 10px', cursor: saving ? 'wait' : 'pointer',
-              ...MONO, fontSize: 11, fontWeight: 600,
+              background: 'var(--accent)', border: 'none', color: '#fff',
+              borderRadius: 6, padding: '5px 12px', cursor: saving ? 'wait' : 'pointer',
+              ...SANS, fontSize: 12, fontWeight: 600,
               opacity: !newValue.trim() ? 0.4 : 1,
             }}
           >
@@ -91,7 +93,7 @@ function SavedKeyRow({ keyName, toolId, onDelete }: {
       )}
 
       {error && (
-        <div style={{ ...MONO, fontSize: 10, color: '#EF4444', padding: '0 8px 6px' }}>{error}</div>
+        <div style={{ ...SANS, fontSize: 11, color: 'var(--invalid)', padding: '0 8px 6px' }}>{error}</div>
       )}
     </div>
   )
@@ -133,8 +135,8 @@ export function ToolEnvVarsEditor({ toolId }: { toolId: string }) {
   }
 
   return (
-    <div style={{ marginBottom: 12 }}>
-      <div style={{ ...MONO, fontSize: 10, color: '#10B981', marginBottom: 6, letterSpacing: '0.1em' }}>
+    <div style={{ marginBottom: 14 }}>
+      <div style={{ ...MONO, fontSize: 10, color: 'var(--text-tertiary)', marginBottom: 8, letterSpacing: '0.1em' }}>
         ENV VARIABLES
       </div>
 
@@ -158,9 +160,9 @@ export function ToolEnvVarsEditor({ toolId }: { toolId: string }) {
           placeholder="KEY_NAME"
           style={{
             ...MONO, fontSize: 11, flex: 1,
-            background: 'var(--bg-page)', color: 'var(--text-body)',
-            border: '1px solid var(--border)', borderRadius: 4,
-            padding: '4px 8px', outline: 'none',
+            background: 'var(--card-bg)', color: 'var(--text-primary)',
+            border: '1px solid var(--border)', borderRadius: 6,
+            padding: '6px 8px', outline: 'none',
           }}
         />
         <input
@@ -170,18 +172,19 @@ export function ToolEnvVarsEditor({ toolId }: { toolId: string }) {
           type="password"
           style={{
             ...MONO, fontSize: 11, flex: 2,
-            background: 'var(--bg-page)', color: 'var(--text-body)',
-            border: '1px solid var(--border)', borderRadius: 4,
-            padding: '4px 8px', outline: 'none',
+            background: 'var(--card-bg)', color: 'var(--text-primary)',
+            border: '1px solid var(--border)', borderRadius: 6,
+            padding: '6px 8px', outline: 'none',
           }}
         />
         <button
           onClick={handleSave}
           disabled={saving || !newKey.trim() || !newValue.trim()}
           style={{
-            background: '#10B981', border: 'none', color: '#fff',
-            borderRadius: 4, padding: '4px 12px', cursor: saving ? 'wait' : 'pointer',
-            ...MONO, fontSize: 11, fontWeight: 600,
+            background: 'var(--btn-accent-bg)', border: '1px solid var(--btn-accent-border)',
+            color: 'var(--btn-accent-text)',
+            borderRadius: 6, padding: '6px 12px', cursor: saving ? 'wait' : 'pointer',
+            ...SANS, fontSize: 12, fontWeight: 600,
             opacity: !newKey.trim() || !newValue.trim() ? 0.4 : 1,
           }}
         >
@@ -190,7 +193,7 @@ export function ToolEnvVarsEditor({ toolId }: { toolId: string }) {
       </div>
 
       {error && (
-        <div style={{ ...MONO, fontSize: 10, color: '#EF4444', marginTop: 4 }}>{error}</div>
+        <div style={{ ...SANS, fontSize: 11, color: 'var(--invalid)', marginTop: 4 }}>{error}</div>
       )}
     </div>
   )
