@@ -1121,7 +1121,8 @@ curl -X POST "${fireUrl}?mode=sync&timeout=120" \\
 
   const CODE: React.CSSProperties = {
     ...MONO, fontSize: 10, whiteSpace: 'pre', overflowX: 'auto',
-    background: '#0f1117', color: '#e2e8f0',
+    background: 'var(--bg-hover)', color: 'var(--text-primary)',
+    border: '1px solid var(--border)',
     padding: '10px 12px', borderRadius: 6, lineHeight: 1.55,
     display: 'block',
   }
@@ -1174,20 +1175,21 @@ curl -X POST "${fireUrl}?mode=sync&timeout=120" \\
       {secret && (
         <div style={{
           margin: '8px 0',
-          background: '#451a0320',
-          border: '1px solid #f59e0b66',
+          background: 'var(--untested-dim)',
+          border: '1px solid rgba(245, 158, 11, 0.35)',
           borderRadius: 7, padding: '10px 12px',
         }}>
           <div style={{
-            ...MONO, fontSize: 10, color: '#f59e0b', fontWeight: 700,
+            ...MONO, fontSize: 10, color: 'var(--untested)', fontWeight: 700,
             marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6,
           }}>
             ⚠ Save your secret — shown only once
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
             <code style={{
-              ...MONO, fontSize: 11, flex: 1, background: '#0f1117',
-              color: '#fbbf24', padding: '5px 8px', borderRadius: 5,
+              ...MONO, fontSize: 11, flex: 1, background: 'var(--bg-hover)',
+              color: 'var(--untested)', padding: '5px 8px', borderRadius: 5,
+              border: '1px solid var(--border)',
               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             }}>{secret}</code>
             {agentCopyBtn(secret, 'secret')}
@@ -1196,7 +1198,7 @@ curl -X POST "${fireUrl}?mode=sync&timeout=120" \\
             onClick={onDismissSecret}
             style={{
               ...MONO, fontSize: 10, padding: '4px 12px',
-              background: 'var(--accent)', color: '#fff', border: 'none',
+              background: 'var(--accent)', color: 'var(--btn-upload-text)', border: 'none',
               borderRadius: 5, cursor: 'pointer', width: '100%',
             }}
           >I've saved it — dismiss</button>
@@ -1221,7 +1223,7 @@ curl -X POST "${fireUrl}?mode=sync&timeout=120" \\
               style={{
                 ...TAB,
                 background: lang === 'curl' ? 'var(--accent)' : 'transparent',
-                color: lang === 'curl' ? '#fff' : 'var(--text-tertiary)',
+                color: lang === 'curl' ? 'var(--btn-upload-text)' : 'var(--text-tertiary)',
                 borderColor: lang === 'curl' ? 'var(--accent)' : 'var(--border)',
               }}
             >curl</button>
@@ -1230,7 +1232,7 @@ curl -X POST "${fireUrl}?mode=sync&timeout=120" \\
               style={{
                 ...TAB,
                 background: lang === 'json' ? 'var(--accent)' : 'transparent',
-                color: lang === 'json' ? '#fff' : 'var(--text-tertiary)',
+                color: lang === 'json' ? 'var(--btn-upload-text)' : 'var(--text-tertiary)',
                 borderColor: lang === 'json' ? 'var(--accent)' : 'var(--border)',
               }}
             >JSON</button>
@@ -1274,7 +1276,7 @@ curl -X POST "${fireUrl}?mode=sync&timeout=120" \\
 
           {/* ── Sync mode ── */}
           <div>
-            {sectionLabel('Sync — wait for result inline', '#059669')}
+            {sectionLabel('Sync — wait for result inline', 'var(--accent)')}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
               <span style={{ ...SANS, fontSize: 11, color: 'var(--text-tertiary)' }}>Single request, result in response</span>
               {copyBtn(syncCurl, syncJson, 'sync')}
@@ -1337,7 +1339,7 @@ curl -X POST "${fireUrl}?mode=sync&timeout=120" \\
                   {info.tables.length > 0 && (
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
                       {info.tables.map(t => (
-                        <span key={t} style={{ ...MONO, fontSize: 9, padding: '1px 6px', borderRadius: 3, background: '#05966920', color: '#059669', border: '1px solid #05966930' }}>{t}</span>
+                        <span key={t} style={{ ...MONO, fontSize: 9, padding: '1px 6px', borderRadius: 3, background: 'var(--accent-soft)', color: 'var(--accent)', border: '1px solid var(--blue-border)' }}>{t}</span>
                       ))}
                     </div>
                   )}
@@ -1693,7 +1695,7 @@ function TriggersSection() {
                     disabled={savingSchedule || !newCronExpr.trim()}
                     style={{
                       ...MONO, fontSize: 11, padding: '6px 16px',
-                      background: 'var(--accent)', color: '#fff', border: 'none',
+                      background: 'var(--accent)', color: 'var(--btn-upload-text)', border: 'none',
                       borderRadius: 6, cursor: 'pointer', opacity: savingSchedule ? 0.6 : 1,
                     }}
                   >{savingSchedule ? 'Saving…' : 'Add schedule'}</button>

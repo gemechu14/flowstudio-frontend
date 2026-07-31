@@ -20,34 +20,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const token = getToken()
-    if (token) {
-      const stored = localStorage.getItem('cl_user')
-      if (stored) {
-        try {
-          setUser(JSON.parse(stored))
-        } catch {}
-      }
-      // Verify token against /auth/me
-      fetch(`${BASE_URL}/auth/me`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-        .then(r => r.ok ? r.json() : null)
-        .then(data => {
-          if (data) {
-            const u = { ...data, access_token: token }
-            setUser(u)
-            localStorage.setItem('cl_user', JSON.stringify(u))
-          } else {
-            setUser(null)
-            localStorage.removeItem('cl_user')
-            localStorage.removeItem('cl_token')
-          }
-        })
-        .catch(() => {})
-        .finally(() => setIsLoading(false))
-    } else {
+    if (!token) {
       setIsLoading(false)
+      return
     }
+
+    // Hydrate immediately so the real sidebar/shell can render while /auth/me verifies.
+    const stored = localStorage.getItem('cl_user')
+    if (stored) {
+      try {
+        setUser(JSON.parse(stored))
+        setIsLoading(false)
+      } catch {}
+    }
+
+    fetch(`${BASE_URL}/auth/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(r => (r.ok ? r.json() : null))
+      .then(data => {
+        if (data) {
+          const u = { ...data, access_token: token }
+          setUser(u)
+          localStorage.setItem('cl_user', JSON.stringify(u))
+        } else {
+          setUser(null)
+          localStorage.removeItem('cl_user')
+          localStorage.removeItem('cl_token')
+        }
+      })
+      .catch(() => {})
+      .finally(() => setIsLoading(false))
   }, [])
 
   const handleSetUser = (u: AuthUser | null) => {

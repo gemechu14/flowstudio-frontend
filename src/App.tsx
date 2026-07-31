@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { ThemeProvider } from './contexts/ThemeContext'
 import Sidebar from './components/layout/Sidebar'
 import TopBar from './components/layout/TopBar'
+import AppShellSkeleton from './components/layout/AppShellSkeleton'
 import Dashboard from './pages/Dashboard'
 import Tools from './pages/Tools'
 import Agents from './pages/Agents'
@@ -36,12 +37,9 @@ function AppShell() {
     return <BackendErrorScreen onRetry={handleRetry} />
   }
 
-  if (isLoading) {
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: 'var(--bg-dark)' }}>
-        <div style={{ color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)', fontSize: 13 }}>Loading...</div>
-      </div>
-    )
+  // Token present but no cached user yet — show real chrome skeleton, not a blank screen.
+  if (isLoading && !user) {
+    return <AppShellSkeleton />
   }
 
   if (!user) {

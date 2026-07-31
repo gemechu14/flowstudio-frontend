@@ -174,11 +174,11 @@ export default function Sidebar() {
       style={{
         display: 'flex', alignItems: 'center', gap: 10, width: '100%',
         padding: '9px 14px', background: 'none', border: 'none', cursor: 'pointer',
-        color: danger ? '#f87171' : 'rgba(255,255,255,0.75)',
+        color: danger ? 'var(--invalid)' : 'var(--text-primary)',
         fontSize: 13, fontFamily: 'var(--font-sans)', textAlign: 'left',
         borderRadius: 6, transition: 'background 0.1s',
       }}
-      onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.06)')}
+      onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
       onMouseLeave={e => (e.currentTarget.style.background = 'none')}
     >
       {icon}
@@ -476,12 +476,27 @@ export default function Sidebar() {
           </button>
 
           {profileOpen && (
-            <div style={{
-              position: 'absolute', bottom: '100%',
-              left: collapsed ? 8 : 8, right: collapsed ? 'auto' : 8,
-              width: collapsed ? 200 : 'auto',
-              background: '#1a1d23', border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: 8, padding: '6px', boxShadow: '0 -8px 24px rgba(0,0,0,0.4)',
+            <div style={collapsed ? {
+              position: 'fixed',
+              bottom: 16,
+              left: 'calc(var(--sidebar-width) + 8px)',
+              width: 200,
+              background: 'var(--card-bg)',
+              border: '1px solid var(--border)',
+              borderRadius: 8,
+              padding: 6,
+              boxShadow: '0 8px 24px rgba(0,0,0,0.35)',
+              zIndex: 200,
+            } : {
+              position: 'absolute',
+              bottom: '100%',
+              left: 8,
+              right: 8,
+              background: 'var(--card-bg)',
+              border: '1px solid var(--border)',
+              borderRadius: 8,
+              padding: 6,
+              boxShadow: '0 -8px 24px rgba(0,0,0,0.35)',
               zIndex: 100,
             }}>
               {menuItem('Profile', (
@@ -490,7 +505,7 @@ export default function Sidebar() {
                   <path d="M2 14c0-2.761 2.686-5 6-5s6 2.239 6 5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
                 </svg>
               ), () => { setProfileOpen(false); navigate('/profile') })}
-              <div style={{ height: 1, background: 'rgba(255,255,255,0.08)', margin: '4px 0' }} />
+              <div style={{ height: 1, background: 'var(--border)', margin: '4px 0' }} />
               {menuItem('Log out', (
                 <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
                   <path d="M6 2H3a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />

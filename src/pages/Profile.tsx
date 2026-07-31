@@ -9,7 +9,10 @@ const MONO = { fontFamily: 'var(--font-mono)' }
 
 function Label({ children }: { children: string }) {
   return (
-    <div style={{ ...SANS, fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6, letterSpacing: '0.02em' }}>
+    <div style={{
+      ...SANS, fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)',
+      marginBottom: 6, letterSpacing: '0.02em',
+    }}>
       {children}
     </div>
   )
@@ -40,15 +43,25 @@ function Field({
           style={{
             ...SANS, fontSize: 14, width: '100%', boxSizing: 'border-box',
             padding: isPassword ? '10px 40px 10px 14px' : '10px 14px',
+            minHeight: 40,
             borderRadius: 8,
-            border: readOnly ? '1px solid var(--border-light)' : '1px solid var(--border-light)',
-            background: readOnly ? 'var(--bg-light)' : '#fff',
-            color: readOnly ? 'var(--text-secondary)' : 'var(--text-dark)',
+            border: '1px solid var(--border)',
+            background: readOnly ? 'var(--bg-hover)' : 'var(--bg-page)',
+            color: readOnly ? 'var(--text-secondary)' : 'var(--text-primary)',
             outline: 'none',
             cursor: readOnly ? 'default' : 'text',
+            colorScheme: 'dark light',
           }}
-          onFocus={e => { if (!readOnly) e.currentTarget.style.borderColor = '#3B82F6' }}
-          onBlur={e => { e.currentTarget.style.borderColor = 'var(--border-light)' }}
+          onFocus={e => {
+            if (!readOnly) {
+              e.currentTarget.style.borderColor = 'var(--accent)'
+              e.currentTarget.style.boxShadow = '0 0 0 3px var(--accent-soft)'
+            }
+          }}
+          onBlur={e => {
+            e.currentTarget.style.borderColor = 'var(--border)'
+            e.currentTarget.style.boxShadow = 'none'
+          }}
         />
         {isPassword && (
           <button
@@ -57,8 +70,10 @@ function Field({
             onClick={() => setShow(s => !s)}
             style={{
               position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
-              background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: '#9CA3AF',
-            }}>
+              background: 'none', border: 'none', cursor: 'pointer', padding: 2,
+              color: 'var(--text-tertiary)',
+            }}
+          >
             {show ? (
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
@@ -81,12 +96,16 @@ function Field({
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div style={{
-      background: '#fff', border: '1px solid var(--border-light)',
-      borderRadius: 12, overflow: 'hidden', marginBottom: 24,
+      background: 'var(--card-bg)',
+      border: '1px solid var(--border)',
+      borderRadius: 12,
+      overflow: 'hidden',
+      marginBottom: 24,
     }}>
       <div style={{
-        padding: '16px 24px', borderBottom: '1px solid var(--border-light)',
-        ...SANS, fontSize: 14, fontWeight: 600, color: 'var(--text-dark)',
+        padding: '16px 24px',
+        borderBottom: '1px solid var(--border)',
+        ...SANS, fontSize: 14, fontWeight: 600, color: 'var(--text-primary)',
       }}>
         {title}
       </div>
@@ -105,10 +124,13 @@ function SaveButton({ saving, label = 'Save changes' }: { saving: boolean; label
       style={{
         ...SANS, fontSize: 13, fontWeight: 600,
         padding: '9px 20px', borderRadius: 8,
-        border: 'none', background: '#1D5FFA', color: '#fff',
+        border: 'none',
+        background: 'var(--btn-upload-bg)',
+        color: 'var(--btn-upload-text)',
         cursor: saving ? 'not-allowed' : 'pointer',
         opacity: saving ? 0.7 : 1,
-      }}>
+      }}
+    >
       {saving ? 'Saving…' : label}
     </button>
   )
@@ -119,13 +141,11 @@ function SaveButton({ saving, label = 'Save changes' }: { saving: boolean; label
 export default function Profile() {
   const { user, setUser } = useAuth()
 
-  // Info form
   const [firstName, setFirstName] = useState(user?.first_name ?? '')
   const [lastName, setLastName] = useState(user?.last_name ?? '')
   const [infoSaving, setInfoSaving] = useState(false)
   const [infoMsg, setInfoMsg] = useState<{ ok: boolean; text: string } | null>(null)
 
-  // Password form
   const [currentPw, setCurrentPw] = useState('')
   const [newPw, setNewPw] = useState('')
   const [confirmPw, setConfirmPw] = useState('')
@@ -174,19 +194,24 @@ export default function Profile() {
     : user?.email ?? ''
 
   return (
-    <div style={{ padding: '32px 36px' }}>
-      {/* Header */}
+    <div style={{
+      padding: '32px 36px',
+      background: 'var(--bg-page)',
+      minHeight: '100%',
+      boxSizing: 'border-box',
+      ...SANS,
+    }}>
       <div style={{ marginBottom: 32, display: 'flex', alignItems: 'center', gap: 20 }}>
         <div style={{
           width: 64, height: 64, borderRadius: '50%',
-          background: 'rgba(29,95,250,0.12)', border: '2px solid rgba(29,95,250,0.2)',
+          background: 'var(--accent-soft)', border: '2px solid var(--blue-border)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          ...MONO, fontSize: 22, fontWeight: 700, color: '#1D5FFA', flexShrink: 0,
+          ...MONO, fontSize: 22, fontWeight: 700, color: 'var(--accent)', flexShrink: 0,
         }}>
           {initials}
         </div>
         <div>
-          <div style={{ ...SANS, fontSize: 22, fontWeight: 700, color: 'var(--text-dark)' }}>
+          <div style={{ ...SANS, fontSize: 22, fontWeight: 700, color: 'var(--text-primary)' }}>
             {displayName}
           </div>
           <div style={{ ...SANS, fontSize: 13, color: 'var(--text-secondary)', marginTop: 2 }}>
@@ -195,7 +220,6 @@ export default function Profile() {
         </div>
       </div>
 
-      {/* Personal info */}
       <Card title="Personal information">
         <form onSubmit={handleInfoSave} style={{ maxWidth: 680 }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 24px' }}>
@@ -203,13 +227,16 @@ export default function Profile() {
             <Field label="Last name" value={lastName} onChange={setLastName} placeholder="Last name" />
           </div>
           <Field label="Email address" value={user?.email ?? ''} readOnly />
-          <div style={{ ...SANS, fontSize: 12, color: '#9CA3AF', marginTop: -10, marginBottom: 20 }}>
+          <div style={{ ...SANS, fontSize: 12, color: 'var(--text-tertiary)', marginTop: -10, marginBottom: 20 }}>
             Email cannot be changed. Contact your administrator if needed.
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
             <SaveButton saving={infoSaving} />
             {infoMsg && (
-              <span style={{ ...SANS, fontSize: 13, color: infoMsg.ok ? '#10B981' : '#EF4444' }}>
+              <span style={{
+                ...SANS, fontSize: 13,
+                color: infoMsg.ok ? 'var(--verified)' : 'var(--invalid)',
+              }}>
                 {infoMsg.ok ? '✓ ' : '✗ '}{infoMsg.text}
               </span>
             )}
@@ -217,7 +244,6 @@ export default function Profile() {
         </form>
       </Card>
 
-      {/* Change password */}
       <Card title="Change password">
         <form onSubmit={handlePwSave} style={{ maxWidth: 480 }}>
           <Field label="Current password" value={currentPw} onChange={setCurrentPw} type="password" placeholder="Enter current password" />
@@ -226,7 +252,10 @@ export default function Profile() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
             <SaveButton saving={pwSaving} label="Change password" />
             {pwMsg && (
-              <span style={{ ...SANS, fontSize: 13, color: pwMsg.ok ? '#10B981' : '#EF4444' }}>
+              <span style={{
+                ...SANS, fontSize: 13,
+                color: pwMsg.ok ? 'var(--verified)' : 'var(--invalid)',
+              }}>
                 {pwMsg.ok ? '✓ ' : '✗ '}{pwMsg.text}
               </span>
             )}
