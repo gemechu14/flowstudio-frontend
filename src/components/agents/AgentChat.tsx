@@ -129,7 +129,7 @@ function ToolStepCard({ step }: { step: ToolStep }) {
           <div style={{ marginTop: 4 }}>
             <button onClick={() => setExpanded(v => !v)} style={{
               background: 'none', border: 'none', cursor: 'pointer',
-              fontSize: 11, color: 'var(--text-body)', padding: 0, ...MONO,
+              fontSize: 11, color: 'var(--text-secondary)', padding: 0, ...MONO,
               display: 'flex', alignItems: 'center', gap: 4,
             }}>
               {expanded ? '▾' : '▸'} {expanded ? 'Hide result' : 'Show result'}
@@ -137,8 +137,8 @@ function ToolStepCard({ step }: { step: ToolStep }) {
             {expanded && (
               <pre style={{
                 marginTop: 6, padding: '8px 10px', borderRadius: 6,
-                background: '#f4f6fb', border: '1px solid var(--border-light)',
-                fontSize: 11, ...MONO, color: 'var(--text-dark)',
+                background: 'var(--bg-hover)', border: '1px solid var(--border)',
+                fontSize: 11, ...MONO, color: 'var(--text-primary)',
                 whiteSpace: 'pre-wrap', wordBreak: 'break-all', maxHeight: 200, overflowY: 'auto',
               }}>
                 {step.result_preview}
@@ -179,9 +179,9 @@ function AssistantBubble({ msg }: { msg: ChatMessage }) {
       {(msg.content || msg.streaming) && (
         <div style={{
           padding: '10px 14px', borderRadius: '2px 14px 14px 14px',
-          background: '#fff', border: '1px solid var(--border-light)',
-          fontSize: 14, lineHeight: 1.7, color: 'var(--text-dark)',
-          boxShadow: '0 1px 4px rgba(11,16,32,0.06)',
+          background: 'var(--bg-surface)', border: '1px solid var(--border)',
+          fontSize: 14, lineHeight: 1.7, color: 'var(--text-primary)',
+          boxShadow: 'var(--shadow-card)',
           whiteSpace: 'pre-wrap', wordBreak: 'break-word',
         }}>
           {msg.content || ''}
@@ -194,8 +194,8 @@ function AssistantBubble({ msg }: { msg: ChatMessage }) {
           )}
           {!msg.streaming && msg.input_tokens !== undefined && (
             <div style={{
-              marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--border-light)',
-              fontSize: 10.5, ...MONO, color: 'var(--text-body)',
+              marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--border)',
+              fontSize: 10.5, ...MONO, color: 'var(--text-secondary)',
               display: 'flex', gap: 10,
             }}>
               <span>{msg.input_tokens} in</span>
@@ -218,15 +218,15 @@ function SourceChip({
     <button onClick={onToggle} style={{
       display: 'inline-flex', alignItems: 'center', gap: 6,
       padding: '4px 10px', borderRadius: 20, cursor: 'pointer',
-      border: `1px solid ${active ? color : 'var(--border-light)'}`,
+      border: `1px solid ${active ? color : 'var(--border)'}`,
       background: active ? `${color}14` : 'transparent',
-      color: active ? color : 'var(--text-body)',
+      color: active ? color : 'var(--text-secondary)',
       fontSize: 12, fontWeight: active ? 600 : 400,
       transition: 'all 0.13s',
     }}>
       <span style={{
         width: 7, height: 7, borderRadius: '50%', flexShrink: 0,
-        background: active ? color : '#d0d5e0',
+        background: active ? color : 'var(--text-tertiary)',
       }} />
       {source.name}
     </button>
@@ -386,49 +386,49 @@ export default function AgentChat({ agent, onClose }: AgentChatProps) {
       <div style={{
         position: 'fixed', top: 0, right: 0, bottom: 0,
         width: 680, maxWidth: '92vw',
-        background: 'var(--bg-light)', zIndex: 201,
+        background: 'var(--bg-page)', zIndex: 201,
         display: 'flex', flexDirection: 'column',
-        boxShadow: '-8px 0 40px rgba(8,12,24,0.18)',
+        boxShadow: 'var(--shadow-panel)',
         transform: visible ? 'translateX(0)' : 'translateX(100%)',
         transition: 'transform 0.22s cubic-bezier(0.4,0,0.2,1)',
       }}>
 
         {/* Header */}
         <div style={{
-          background: 'var(--bg-dark)', padding: '16px 20px',
+          background: 'var(--bg-surface)', padding: '16px 20px',
           display: 'flex', alignItems: 'center', gap: 12,
-          borderBottom: '1px solid rgba(255,255,255,0.08)', flexShrink: 0,
+          borderBottom: '1px solid var(--border)', flexShrink: 0,
         }}>
           <div style={{
             width: 36, height: 36, borderRadius: 9, flexShrink: 0,
-            background: 'rgba(29,95,250,0.15)', border: '1px solid rgba(29,95,250,0.3)',
+            background: 'var(--accent-soft)', border: '1px solid var(--blue-border)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <circle cx="8" cy="5" r="3" stroke="rgba(255,255,255,0.7)" strokeWidth="1.4"/>
-              <path d="M2 14c0-2.76 2.69-5 6-5s6 2.24 6 5" stroke="rgba(255,255,255,0.7)" strokeWidth="1.4" strokeLinecap="round"/>
+              <circle cx="8" cy="5" r="3" stroke="var(--accent)" strokeWidth="1.4"/>
+              <path d="M2 14c0-2.76 2.69-5 6-5s6 2.24 6 5" stroke="var(--accent)" strokeWidth="1.4" strokeLinecap="round"/>
             </svg>
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 9, ...MONO, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)', marginBottom: 2 }}>
+            <div style={{ fontSize: 9, ...MONO, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-tertiary)', marginBottom: 2 }}>
               Test Agent
             </div>
-            <div style={{ fontSize: 15, fontWeight: 700, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {agent.name}
             </div>
           </div>
           <span style={{
             padding: '2px 9px', borderRadius: 5, fontSize: 11, ...MONO, fontWeight: 600,
-            background: isAnthropic ? 'rgba(29,95,250,0.2)' : 'rgba(255,255,255,0.08)',
-            border: isAnthropic ? '1px solid rgba(29,95,250,0.4)' : '1px solid rgba(255,255,255,0.12)',
-            color: isAnthropic ? '#93b4fd' : 'rgba(255,255,255,0.6)',
+            background: isAnthropic ? 'var(--accent-soft)' : 'var(--bg-hover)',
+            border: isAnthropic ? '1px solid var(--blue-border)' : '1px solid var(--border)',
+            color: isAnthropic ? 'var(--accent)' : 'var(--text-secondary)',
             flexShrink: 0,
           }}>
             {modelLabel}
           </span>
           <button onClick={handleClose} style={{
-            background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)',
-            borderRadius: 7, color: 'rgba(255,255,255,0.55)', cursor: 'pointer',
+            background: 'var(--bg-hover)', border: '1px solid var(--border)',
+            borderRadius: 7, color: 'var(--text-secondary)', cursor: 'pointer',
             padding: '5px 10px', fontSize: 12, flexShrink: 0,
           }}>✕ Close</button>
         </div>
@@ -436,18 +436,18 @@ export default function AgentChat({ agent, onClose }: AgentChatProps) {
         {/* Source toggles */}
         {allSources.length > 0 && (
           <div style={{
-            padding: '10px 16px', background: '#fff',
-            borderBottom: '1px solid var(--border-light)',
+            padding: '10px 16px', background: 'var(--bg-surface)',
+            borderBottom: '1px solid var(--border)',
             display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', flexShrink: 0,
           }}>
-            <span style={{ fontSize: 10, ...MONO, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-body)', flexShrink: 0 }}>
+            <span style={{ fontSize: 10, ...MONO, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-tertiary)', flexShrink: 0 }}>
               Sources
             </span>
             {allSources.map(s => (
               <SourceChip key={s.source_id} source={s} active={activeSources.has(s.source_id)} onToggle={() => toggleSource(s.source_id)} />
             ))}
             {activeSources.size === 0 && (
-              <span style={{ fontSize: 11.5, color: 'var(--text-body)', fontStyle: 'italic' }}>No sources active</span>
+              <span style={{ fontSize: 11.5, color: 'var(--text-secondary)', fontStyle: 'italic' }}>No sources active</span>
             )}
           </div>
         )}
@@ -456,6 +456,7 @@ export default function AgentChat({ agent, onClose }: AgentChatProps) {
         <div style={{
           flex: 1, overflowY: 'auto', padding: '24px 20px',
           display: 'flex', flexDirection: 'column', gap: 18,
+          background: 'var(--bg-page)',
         }}>
           {messages.length === 0 && (
             <div style={{
@@ -464,7 +465,7 @@ export default function AgentChat({ agent, onClose }: AgentChatProps) {
             }}>
               <div style={{
                 width: 56, height: 56, borderRadius: 14,
-                background: 'rgba(29,95,250,0.08)', border: '1px solid rgba(29,95,250,0.15)',
+                background: 'var(--accent-soft)', border: '1px solid var(--blue-border)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -472,8 +473,8 @@ export default function AgentChat({ agent, onClose }: AgentChatProps) {
                 </svg>
               </div>
               <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-dark)', marginBottom: 5 }}>Start a conversation</div>
-                <div style={{ fontSize: 13, color: 'var(--text-body)', maxWidth: 300, lineHeight: 1.6 }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 5 }}>Start a conversation</div>
+                <div style={{ fontSize: 13, color: 'var(--text-secondary)', maxWidth: 300, lineHeight: 1.6 }}>
                   {agent.system_prompt
                     ? `System: "${agent.system_prompt.slice(0, 80)}${agent.system_prompt.length > 80 ? '…' : ''}"`
                     : 'Send a message to test this agent.'}
@@ -502,14 +503,14 @@ export default function AgentChat({ agent, onClose }: AgentChatProps) {
 
         {/* Input bar */}
         <div style={{
-          padding: '12px 16px', background: '#fff',
-          borderTop: '1px solid var(--border-light)', flexShrink: 0,
+          padding: '12px 16px', background: 'var(--bg-surface)',
+          borderTop: '1px solid var(--border)', flexShrink: 0,
         }}>
           <div style={{
             display: 'flex', gap: 10, alignItems: 'flex-end',
-            background: '#fff', border: '1px solid var(--border-light)',
+            background: 'var(--card-bg)', border: '1px solid var(--border)',
             borderRadius: 10, padding: '8px 12px',
-            boxShadow: '0 1px 4px rgba(11,16,32,0.06)',
+            boxShadow: 'var(--shadow-card)',
             transition: 'border-color 0.15s, box-shadow 0.15s',
           }}
             onFocus={(e) => {
@@ -519,8 +520,8 @@ export default function AgentChat({ agent, onClose }: AgentChatProps) {
             }}
             onBlur={(e) => {
               const el = e.currentTarget as HTMLElement
-              el.style.borderColor = 'var(--border-light)'
-              el.style.boxShadow = '0 1px 4px rgba(11,16,32,0.06)'
+              el.style.borderColor = 'var(--border)'
+              el.style.boxShadow = 'var(--shadow-card)'
             }}
           >
             <textarea
@@ -532,8 +533,9 @@ export default function AgentChat({ agent, onClose }: AgentChatProps) {
               rows={1}
               style={{
                 flex: 1, border: 'none', outline: 'none', resize: 'none',
-                fontFamily: 'var(--font-sans)', fontSize: 14, color: 'var(--text-dark)',
+                fontFamily: 'var(--font-sans)', fontSize: 14, color: 'var(--text-primary)',
                 background: 'transparent', lineHeight: 1.5, maxHeight: 160, overflowY: 'auto',
+                colorScheme: 'dark light',
               }}
               onInput={e => {
                 const el = e.target as HTMLTextAreaElement
@@ -545,8 +547,8 @@ export default function AgentChat({ agent, onClose }: AgentChatProps) {
             {running ? (
               <button onClick={stopStream} style={{
                 flexShrink: 0, padding: '6px 14px', borderRadius: 7,
-                background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)',
-                color: '#ef4444', cursor: 'pointer', fontSize: 12, fontWeight: 600,
+                background: 'var(--invalid-dim)', border: '1px solid rgba(239,68,68,0.25)',
+                color: 'var(--invalid)', cursor: 'pointer', fontSize: 12, fontWeight: 600,
               }}>
                 ◼ Stop
               </button>
@@ -556,8 +558,8 @@ export default function AgentChat({ agent, onClose }: AgentChatProps) {
                 disabled={!input.trim()}
                 style={{
                   flexShrink: 0, padding: '6px 14px', borderRadius: 7, border: 'none',
-                  background: input.trim() ? 'var(--blue)' : 'var(--border-light)',
-                  color: input.trim() ? '#fff' : 'var(--text-body)',
+                  background: input.trim() ? 'var(--blue)' : 'var(--bg-hover)',
+                  color: input.trim() ? '#fff' : 'var(--text-tertiary)',
                   cursor: input.trim() ? 'pointer' : 'default',
                   fontSize: 13, fontWeight: 600, transition: 'all 0.13s',
                 }}>
@@ -565,7 +567,7 @@ export default function AgentChat({ agent, onClose }: AgentChatProps) {
               </button>
             )}
           </div>
-          <div style={{ marginTop: 6, fontSize: 10.5, color: 'var(--text-body)', textAlign: 'center', ...MONO }}>
+          <div style={{ marginTop: 6, fontSize: 10.5, color: 'var(--text-tertiary)', textAlign: 'center', ...MONO }}>
             {activeSources.size > 0
               ? `${activeSources.size} source${activeSources.size > 1 ? 's' : ''} active · `
               : ''

@@ -406,6 +406,13 @@ html[data-theme="light"] .sidebar-dark ::-webkit-scrollbar-thumb {
   animation-delay: var(--skel-delay, 0s);
 }
 
+select,
+select option,
+optgroup {
+  font-family: var(--font-sans);
+  font-size: 14px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .skeleton-bone {
     animation: none;

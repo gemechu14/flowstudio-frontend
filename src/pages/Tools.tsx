@@ -30,7 +30,7 @@ const SANS = { fontFamily: 'var(--font-sans)' }
 
 const STATUS_COLOR: Record<ToolStatus, string> = {
   pending:  'var(--text-tertiary)',
-  approved: 'var(--verified)',
+  approved: 'var(--accent)',
   rejected: 'var(--text-tertiary)',
 }
 
@@ -1099,7 +1099,7 @@ function ToolRow({ tool, onApprove, onRejectClick, onDelete, onTest, onViewSourc
   const [submitError, setSubmitError] = useState('')
   const [submitDone, setSubmitDone] = useState(false)
   const color = STATUS_COLOR[tool.status]
-  const statusTone = tool.status === 'approved' ? 'success' : tool.status === 'pending' ? 'neutral' : 'muted'
+  const statusTone = tool.status === 'approved' ? 'accent' : tool.status === 'pending' ? 'neutral' : 'muted'
 
   async function handleSubmitCommunity() {
     setSubmitting(true); setSubmitError('')
@@ -1358,7 +1358,7 @@ function Btn({ children, onClick, variant = 'neutral', disabled, iconOnly }: {
     accent:  { bg: 'var(--btn-accent-bg)', border: 'var(--btn-accent-border)', color: 'var(--btn-accent-text)' },
     success: { bg: 'var(--btn-success-bg)', border: 'var(--btn-success-border)', color: 'var(--btn-success-text)' },
     danger:  { bg: 'var(--btn-danger-bg)', border: 'var(--btn-danger-border)', color: 'var(--btn-danger-text)' },
-    approve: { bg: '#26C281', border: 'transparent', color: '#0B1220' },
+    approve: { bg: 'var(--btn-upload-bg)', border: 'transparent', color: 'var(--btn-upload-text)' },
   }[variant]
 
   return (

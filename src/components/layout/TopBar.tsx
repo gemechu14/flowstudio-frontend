@@ -86,7 +86,7 @@ export default function TopBar() {
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, alignSelf: 'center' }}>
-        <div
+        {/* <div
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -115,11 +115,11 @@ export default function TopBar() {
               letterSpacing: '0.04em',
             }}
           >
-            SYSTEM ONLINE
+            SYSTEM ONLINEss
           </span>
-        </div>
+        </div> */}
 
-        <div style={{ width: 1, height: 16, background: 'var(--border)', margin: '0 2px' }} />
+        {/* <div style={{ width: 1, height: 16, background: 'var(--border)', margin: '0 2px' }} /> */}
 
         <button
           onClick={toggleTheme}

@@ -46,14 +46,14 @@ function SectionHeading({ label, title, subtitle }: {
     <div style={{ marginBottom: 20 }}>
       <div style={{
         ...MONO, fontSize: 10, fontWeight: 600, letterSpacing: '0.14em',
-        color: '#1D5FFA', marginBottom: 6,
+        color: 'var(--accent)', marginBottom: 6,
       }}>
         {label}
       </div>
-      <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-dark)', margin: 0 }}>
+      <h2 style={{ ...SANS, fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
         {title}
       </h2>
-      <p style={{ ...SANS, fontSize: 13, color: 'var(--text-body)', marginTop: 4, marginBottom: 0 }}>
+      <p style={{ ...SANS, fontSize: 13, color: 'var(--text-secondary)', marginTop: 4, marginBottom: 0 }}>
         {subtitle}
       </p>
     </div>
@@ -127,21 +127,22 @@ function AuthPicker({
   }
 
   const SEL: React.CSSProperties = {
-    ...MONO, fontSize: 12, padding: '6px 10px',
-    background: 'var(--bg-light)', color: 'var(--text-body)',
-    border: '1px solid var(--border-light)', borderRadius: 6,
+    ...SANS, fontSize: 14, padding: '8px 12px',
+    backgroundColor: 'var(--bg-page)', color: 'var(--text-primary)',
+    border: '1px solid var(--border)', borderRadius: 8,
     cursor: 'pointer', outline: 'none',
+    colorScheme: 'dark light',
   }
 
   const FIELD_LABEL: React.CSSProperties = {
-    ...MONO, fontSize: 10, color: '#6B7280', marginBottom: 4,
+    ...MONO, fontSize: 10, color: 'var(--text-tertiary)', marginBottom: 4,
   }
 
   return (
     <div>
       {/* Row 1: dropdown */}
       <div style={{ marginBottom: authType === 'none' ? 0 : 10 }}>
-        <div style={{ ...MONO, fontSize: 10, color: '#6B7280', marginBottom: 4 }}>AUTH TYPE</div>
+        <div style={{ ...MONO, fontSize: 10, color: 'var(--text-tertiary)', marginBottom: 4 }}>AUTH TYPE</div>
         <select
           value={authType}
           onChange={e => update(e.target.value as AuthType, {})}
@@ -150,7 +151,7 @@ function AuthPicker({
           {AUTH_TYPES.map(a => <option key={a.value} value={a.value}>{a.label}</option>)}
         </select>
         {authType === 'none' && (
-          <span style={{ ...MONO, fontSize: 11, color: '#9CA3AF', marginLeft: 10 }}>
+          <span style={{ ...MONO, fontSize: 11, color: 'var(--text-tertiary)', marginLeft: 10 }}>
             No authentication header will be sent.
           </span>
         )}
@@ -171,7 +172,7 @@ function AuthPicker({
               style={{ ...inputStyle, width: '100%', boxSizing: 'border-box' }}
             />
             {fields.token && (
-              <div style={{ ...MONO, fontSize: 10, color: '#9CA3AF', marginTop: 4 }}>
+              <div style={{ ...MONO, fontSize: 10, color: 'var(--text-tertiary)', marginTop: 4 }}>
                 Sends: Authorization: Bearer ••••••
               </div>
             )}
@@ -247,13 +248,14 @@ function AddServerForm({ onCreated, onCancel }: {
   const inputStyle: React.CSSProperties = {
     ...MONO,
     fontSize: 12,
-    padding: '7px 10px',
-    background: 'var(--bg-light)',
-    color: 'var(--text-dark)',
-    border: '1px solid var(--border-light)',
-    borderRadius: 6,
+    padding: '8px 12px',
+    backgroundColor: 'var(--bg-page)',
+    color: 'var(--text-primary)',
+    border: '1px solid var(--border)',
+    borderRadius: 8,
     boxSizing: 'border-box',
     outline: 'none',
+    colorScheme: 'dark light',
   }
 
   const submit = async (e: React.FormEvent) => {
@@ -276,22 +278,23 @@ function AddServerForm({ onCreated, onCancel }: {
     <form
       onSubmit={submit}
       style={{
-        background: '#F0F5FF',
-        border: '1px solid #C7D9FF',
-        borderRadius: 8,
+        background: 'var(--card-bg)',
+        border: '1px solid var(--border)',
+        borderLeft: '3px solid var(--accent)',
+        borderRadius: 10,
         padding: '16px 18px',
         marginBottom: 12,
       }}
     >
       <div style={{
         ...MONO, fontSize: 10, fontWeight: 600,
-        letterSpacing: '0.1em', color: '#1D5FFA', marginBottom: 12,
+        letterSpacing: '0.1em', color: 'var(--accent)', marginBottom: 12,
       }}>
         NEW MCP SERVER
       </div>
       <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
         <div style={{ flex: '0 0 200px' }}>
-          <div style={{ ...MONO, fontSize: 10, color: '#6B7280', marginBottom: 4 }}>NAME</div>
+          <div style={{ ...MONO, fontSize: 10, color: 'var(--text-tertiary)', marginBottom: 4 }}>NAME</div>
           <input
             value={name}
             onChange={e => setName(e.target.value)}
@@ -301,7 +304,7 @@ function AddServerForm({ onCreated, onCancel }: {
           />
         </div>
         <div style={{ flex: 1 }}>
-          <div style={{ ...MONO, fontSize: 10, color: '#6B7280', marginBottom: 4 }}>URL</div>
+          <div style={{ ...MONO, fontSize: 10, color: 'var(--text-tertiary)', marginBottom: 4 }}>URL</div>
           <input
             value={url}
             onChange={e => setUrl(e.target.value)}
@@ -318,9 +321,9 @@ function AddServerForm({ onCreated, onCancel }: {
 
       {error && (
         <div style={{
-          ...MONO, fontSize: 11, color: '#EF4444', marginBottom: 10,
-          padding: '7px 10px', background: '#EF444418',
-          border: '1px solid #EF444440', borderRadius: 6,
+          ...MONO, fontSize: 11, color: 'var(--invalid)', marginBottom: 10,
+          padding: '7px 10px', background: 'var(--invalid-dim)',
+          border: '1px solid rgba(239,68,68,0.28)', borderRadius: 6,
         }}>{error}</div>
       )}
 
@@ -329,10 +332,11 @@ function AddServerForm({ onCreated, onCancel }: {
           type="submit"
           disabled={saving}
           style={{
-            ...MONO, fontSize: 12, padding: '7px 16px',
-            background: saving ? '#1D5FFA88' : '#1D5FFA',
-            color: '#fff', border: 'none', borderRadius: 6,
-            cursor: saving ? 'wait' : 'pointer', fontWeight: 700,
+            ...SANS, fontSize: 13, padding: '8px 16px',
+            background: 'var(--btn-upload-bg)',
+            color: 'var(--btn-upload-text)', border: 'none', borderRadius: 999,
+            cursor: saving ? 'wait' : 'pointer', fontWeight: 600,
+            opacity: saving ? 0.7 : 1,
           }}
         >
           {saving ? 'Adding…' : 'Add Server'}
@@ -341,10 +345,10 @@ function AddServerForm({ onCreated, onCancel }: {
           type="button"
           onClick={onCancel}
           style={{
-            ...MONO, fontSize: 12, padding: '7px 14px',
+            ...SANS, fontSize: 13, padding: '8px 14px',
             background: 'transparent',
-            border: '1px solid var(--border-light)',
-            color: '#6B7280', borderRadius: 6, cursor: 'pointer',
+            border: '1px solid var(--border)',
+            color: 'var(--text-secondary)', borderRadius: 999, cursor: 'pointer',
           }}
         >
           Cancel
@@ -369,32 +373,32 @@ function ToolsList({ serverId }: { serverId: string }) {
   }, [serverId])
 
   if (loading) return (
-    <div style={{ ...MONO, fontSize: 11, color: '#6B7280', padding: '10px 18px' }}>
+    <div style={{ ...MONO, fontSize: 11, color: 'var(--text-tertiary)', padding: '10px 18px' }}>
       Loading tools…
     </div>
   )
 
   if (error) return (
-    <div style={{ ...MONO, fontSize: 11, color: '#EF4444', padding: '10px 18px' }}>
+    <div style={{ ...MONO, fontSize: 11, color: 'var(--invalid)', padding: '10px 18px' }}>
       {error}
     </div>
   )
 
   if (tools.length === 0) return (
-    <div style={{ ...MONO, fontSize: 11, color: '#6B7280', padding: '10px 18px' }}>
+    <div style={{ ...MONO, fontSize: 11, color: 'var(--text-tertiary)', padding: '10px 18px' }}>
       No tools reported by this server.
     </div>
   )
 
   return (
     <div style={{
-      borderTop: '1px solid var(--border-light)',
+      borderTop: '1px solid var(--border)',
       padding: '12px 18px',
-      background: 'var(--bg-light)',
+      background: 'var(--bg-surface)',
     }}>
       <div style={{
         ...MONO, fontSize: 10, fontWeight: 600,
-        letterSpacing: '0.1em', color: '#6B7280', marginBottom: 10,
+        letterSpacing: '0.1em', color: 'var(--text-tertiary)', marginBottom: 10,
       }}>
         AVAILABLE TOOLS ({tools.length})
       </div>
@@ -402,15 +406,15 @@ function ToolsList({ serverId }: { serverId: string }) {
         {tools.map(tool => (
           <div key={tool.name} style={{
             padding: '8px 12px',
-            background: '#fff',
-            border: '1px solid var(--border-light)',
+            background: 'var(--bg-page)',
+            border: '1px solid var(--border)',
             borderRadius: 6,
           }}>
-            <div style={{ ...MONO, fontSize: 12, color: '#1D5FFA', fontWeight: 600 }}>
+            <div style={{ ...MONO, fontSize: 12, color: 'var(--accent)', fontWeight: 600 }}>
               {tool.name}
             </div>
             {tool.description && (
-              <div style={{ ...SANS, fontSize: 11, color: '#6B7280', marginTop: 2 }}>
+              <div style={{ ...SANS, fontSize: 11, color: 'var(--text-tertiary)', marginTop: 2 }}>
                 {tool.description}
               </div>
             )}
@@ -469,13 +473,14 @@ function ServerRow({ server, onDeleted, onSynced }: {
   const inputStyle: React.CSSProperties = {
     ...MONO,
     fontSize: 12,
-    padding: '6px 10px',
-    background: 'var(--bg-light)',
-    color: 'var(--text-dark)',
-    border: '1px solid var(--border-light)',
-    borderRadius: 6,
+    padding: '8px 12px',
+    backgroundColor: 'var(--bg-page)',
+    color: 'var(--text-primary)',
+    border: '1px solid var(--border)',
+    borderRadius: 8,
     boxSizing: 'border-box',
     outline: 'none',
+    colorScheme: 'dark light',
   }
 
   const handleSync = async (e: React.MouseEvent) => {
@@ -511,8 +516,8 @@ function ServerRow({ server, onDeleted, onSynced }: {
 
   return (
     <div style={{
-      background: '#fff',
-      border: '1px solid var(--border-light)',
+      background: 'var(--card-bg)',
+      border: '1px solid var(--border)',
       borderRadius: 8,
       overflow: 'hidden',
       marginBottom: 10,
@@ -531,19 +536,19 @@ function ServerRow({ server, onDeleted, onSynced }: {
         {/* Status dot */}
         <div style={{
           width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
-          background: server.enabled ? '#10B981' : '#D1D5DB',
+          background: server.enabled ? 'var(--accent)' : 'var(--text-tertiary)',
         }} />
 
         {/* Name + URL */}
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{
             ...MONO, fontSize: 13, fontWeight: 700,
-            color: 'var(--text-dark)', marginBottom: 2,
+            color: 'var(--text-primary)', marginBottom: 2,
           }}>
             {server.name}
           </div>
           <div style={{
-            ...MONO, fontSize: 11, color: '#6B7280',
+            ...MONO, fontSize: 11, color: 'var(--text-tertiary)',
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           }}>
             {server.url}
@@ -552,11 +557,11 @@ function ServerRow({ server, onDeleted, onSynced }: {
 
         {/* Last synced */}
         <div style={{
-          ...MONO, fontSize: 10, color: '#9CA3AF',
+          ...MONO, fontSize: 10, color: 'var(--text-tertiary)',
           flexShrink: 0, textAlign: 'right', minWidth: 120,
         }}>
           <div style={{ marginBottom: 1, letterSpacing: '0.05em' }}>LAST SYNCED</div>
-          <div style={{ color: '#6B7280' }}>{fmtDate(server.last_synced_at)}</div>
+          <div style={{ color: 'var(--text-tertiary)' }}>{fmtDate(server.last_synced_at)}</div>
         </div>
 
         {/* Enabled toggle */}
@@ -573,9 +578,9 @@ function ServerRow({ server, onDeleted, onSynced }: {
             ...MONO, fontSize: 10, fontWeight: 600,
             padding: '2px 8px',
             borderRadius: 12,
-            background: server.enabled ? '#10B98118' : '#F3F4F6',
-            color: server.enabled ? '#10B981' : '#9CA3AF',
-            border: `1px solid ${server.enabled ? '#10B98140' : '#E5E7EB'}`,
+            background: server.enabled ? 'var(--accent-soft)' : 'var(--bg-hover)',
+            color: server.enabled ? 'var(--accent)' : 'var(--text-tertiary)',
+            border: `1px solid ${server.enabled ? 'var(--blue-border)' : 'var(--border)'}`,
             flexShrink: 0,
             cursor: 'pointer',
           }}
@@ -589,9 +594,9 @@ function ServerRow({ server, onDeleted, onSynced }: {
           disabled={syncing}
           style={{
             ...MONO, fontSize: 11, padding: '5px 12px',
-            background: syncing ? '#1D5FFA18' : '#1D5FFA18',
-            border: '1px solid #1D5FFA44',
-            color: syncing ? '#9CA3AF' : '#1D5FFA',
+            background: syncing ? 'var(--accent-soft)' : 'var(--accent-soft)',
+            border: '1px solid var(--blue-border)',
+            color: syncing ? 'var(--text-tertiary)' : 'var(--accent)',
             borderRadius: 5, cursor: syncing ? 'wait' : 'pointer',
             fontWeight: 600, flexShrink: 0,
           }}
@@ -603,12 +608,12 @@ function ServerRow({ server, onDeleted, onSynced }: {
         <button
           onClick={openEdit}
           style={{
-            ...MONO, fontSize: 11, padding: '5px 10px',
-            background: '#F59E0B18',
-            border: '1px solid #F59E0B44',
-            color: '#D97706',
-            borderRadius: 5, cursor: 'pointer',
-            fontWeight: 600, flexShrink: 0,
+            ...SANS, fontSize: 12, padding: '5px 12px',
+            background: 'var(--btn-accent-bg)',
+            border: '1px solid var(--btn-accent-border)',
+            color: 'var(--btn-accent-text)',
+            borderRadius: 999, cursor: 'pointer',
+            fontWeight: 500, flexShrink: 0,
           }}
         >
           Edit
@@ -618,19 +623,19 @@ function ServerRow({ server, onDeleted, onSynced }: {
         <button
           onClick={handleDelete}
           style={{
-            ...MONO, fontSize: 11, padding: '5px 10px',
-            background: '#EF444418',
-            border: '1px solid #EF444440',
-            color: '#EF4444',
-            borderRadius: 5, cursor: 'pointer',
-            fontWeight: 600, flexShrink: 0,
+            ...SANS, fontSize: 12, padding: '5px 12px',
+            background: 'var(--btn-danger-bg)',
+            border: '1px solid var(--btn-danger-border)',
+            color: 'var(--btn-danger-text)',
+            borderRadius: 999, cursor: 'pointer',
+            fontWeight: 500, flexShrink: 0,
           }}
         >
           Delete
         </button>
 
         {/* Expand chevron */}
-        <span style={{ ...MONO, fontSize: 11, color: '#9CA3AF', flexShrink: 0 }}>
+        <span style={{ ...MONO, fontSize: 11, color: 'var(--text-tertiary)', flexShrink: 0 }}>
           {showTools ? '▲' : '▼'}
         </span>
       </div>
@@ -638,10 +643,10 @@ function ServerRow({ server, onDeleted, onSynced }: {
       {/* Sync error */}
       {syncError && (
         <div style={{
-          ...MONO, fontSize: 11, color: '#EF4444',
+          ...MONO, fontSize: 11, color: 'var(--invalid)',
           padding: '6px 18px',
-          background: '#EF444408',
-          borderTop: '1px solid #EF444425',
+          background: 'var(--invalid-dim)',
+          borderTop: '1px solid var(--invalid)25',
         }}>
           Sync error: {syncError}
         </div>
@@ -651,19 +656,19 @@ function ServerRow({ server, onDeleted, onSynced }: {
       {editing && (
         <div
           style={{
-            borderTop: '1px solid #F59E0B44',
-            background: '#FFFBEB',
+            borderTop: '1px solid var(--border)',
+            background: 'var(--bg-surface)',
             padding: '14px 18px',
           }}
           onClick={e => e.stopPropagation()}
         >
-          <div style={{ ...MONO, fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', color: '#D97706', marginBottom: 12 }}>
+          <div style={{ ...MONO, fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', color: 'var(--accent)', marginBottom: 12 }}>
             EDIT SERVER
           </div>
 
           {/* URL */}
           <div style={{ marginBottom: 10 }}>
-            <div style={{ ...MONO, fontSize: 10, color: '#6B7280', marginBottom: 4 }}>URL</div>
+            <div style={{ ...MONO, fontSize: 10, color: 'var(--text-tertiary)', marginBottom: 4 }}>URL</div>
             <input
               value={editUrl}
               onChange={e => setEditUrl(e.target.value)}
@@ -681,7 +686,7 @@ function ServerRow({ server, onDeleted, onSynced }: {
           </div>
 
           {saveError && (
-            <div style={{ ...MONO, fontSize: 11, color: '#EF4444', marginBottom: 8, padding: '6px 10px', background: '#EF444415', border: '1px solid #EF444440', borderRadius: 6 }}>
+            <div style={{ ...MONO, fontSize: 11, color: 'var(--invalid)', marginBottom: 8, padding: '6px 10px', background: 'var(--invalid-dim)', border: '1px solid rgba(239,68,68,0.28)', borderRadius: 6 }}>
               {saveError}
             </div>
           )}
@@ -690,11 +695,17 @@ function ServerRow({ server, onDeleted, onSynced }: {
             <button
               onClick={handleSaveEdit}
               disabled={saving}
-              style={{ ...MONO, fontSize: 12, padding: '6px 16px', background: saving ? '#D9770688' : '#D97706', color: '#fff', border: 'none', borderRadius: 6, cursor: saving ? 'wait' : 'pointer', fontWeight: 700 }}
+              style={{
+                ...SANS, fontSize: 13, padding: '8px 16px',
+                background: 'var(--btn-upload-bg)', color: 'var(--btn-upload-text)',
+                border: 'none', borderRadius: 999,
+                cursor: saving ? 'wait' : 'pointer', fontWeight: 600,
+                opacity: saving ? 0.7 : 1,
+              }}
             >{saving ? 'Saving…' : 'Save Changes'}</button>
             <button
               onClick={e => { e.stopPropagation(); setEditing(false); setSaveError('') }}
-              style={{ ...MONO, fontSize: 12, padding: '6px 14px', background: 'transparent', border: '1px solid var(--border-light)', color: '#6B7280', borderRadius: 6, cursor: 'pointer' }}
+              style={{ ...MONO, fontSize: 12, padding: '6px 14px', background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-tertiary)', borderRadius: 6, cursor: 'pointer' }}
             >Cancel</button>
           </div>
         </div>
@@ -718,8 +729,8 @@ function ServerRow({ server, onDeleted, onSynced }: {
 // ─── Section 2: API Keys ──────────────────────────────────────────────────────
 
 const PROVIDER_META: Record<string, { label: string; color: string; envVar: string }> = {
-  openai:    { label: 'OpenAI API Key',    color: '#10A37F', envVar: 'OPENAI_API_KEY' },
-  anthropic: { label: 'Anthropic API Key', color: '#D97706', envVar: 'ANTHROPIC_API_KEY' },
+  openai:    { label: 'OpenAI API Key',    color: 'var(--accent)', envVar: 'OPENAI_API_KEY' },
+  anthropic: { label: 'Anthropic API Key', color: 'var(--accent)', envVar: 'ANTHROPIC_API_KEY' },
 }
 
 function ApiKeyRow({
@@ -731,7 +742,7 @@ function ApiKeyRow({
   onSaved: () => void
   onDeleted: () => void
 }) {
-  const meta = PROVIDER_META[status.provider] ?? { label: status.provider, color: '#6B7280', envVar: '' }
+  const meta = PROVIDER_META[status.provider] ?? { label: status.provider, color: 'var(--text-tertiary)', envVar: '' }
   const [editing, setEditing] = useState(false)
   const [value, setValue] = useState('')
   const [showValue, setShowValue] = useState(false)
@@ -766,14 +777,14 @@ function ApiKeyRow({
   }
 
   return (
-    <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-light)' }}>
+    <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
         <div>
-          <div style={{ ...MONO, fontSize: 13, fontWeight: 600, color: 'var(--text-dark)', marginBottom: 3 }}>
+          <div style={{ ...MONO, fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 3 }}>
             {meta.label}
           </div>
           {meta.envVar && (
-            <div style={{ ...MONO, fontSize: 10, color: '#9CA3AF', letterSpacing: '0.06em' }}>
+            <div style={{ ...MONO, fontSize: 10, color: 'var(--text-tertiary)', letterSpacing: '0.06em' }}>
               {meta.envVar}
             </div>
           )}
@@ -785,15 +796,15 @@ function ApiKeyRow({
               <span style={{
                 ...MONO, fontSize: 11, fontWeight: 600,
                 padding: '3px 10px', borderRadius: 12,
-                background: `${meta.color}18`, color: meta.color,
-                border: `1px solid ${meta.color}40`,
+                background: 'var(--accent-soft)', color: 'var(--accent)',
+                border: '1px solid var(--blue-border)',
               }}>CONFIGURED</span>
               <button
                 onClick={() => setEditing(true)}
                 style={{
-                  ...SANS, fontSize: 12, padding: '4px 12px', borderRadius: 6,
-                  border: '1px solid var(--border-light)', background: 'var(--bg-light)',
-                  color: 'var(--text-secondary)', cursor: 'pointer',
+                  ...SANS, fontSize: 12, padding: '5px 12px', borderRadius: 999,
+                  border: '1px solid var(--border)', background: 'var(--btn-neutral-bg)',
+                  color: 'var(--btn-neutral-text)', cursor: 'pointer',
                 }}>
                 Update
               </button>
@@ -801,9 +812,9 @@ function ApiKeyRow({
                 onClick={handleDelete}
                 disabled={deleting}
                 style={{
-                  ...SANS, fontSize: 12, padding: '4px 10px', borderRadius: 6,
-                  border: '1px solid #FCA5A5', background: '#FEF2F2',
-                  color: '#DC2626', cursor: 'pointer', opacity: deleting ? 0.6 : 1,
+                  ...SANS, fontSize: 12, padding: '5px 12px', borderRadius: 999,
+                  border: '1px solid var(--btn-danger-border)', background: 'var(--btn-danger-bg)',
+                  color: 'var(--btn-danger-text)', cursor: 'pointer', opacity: deleting ? 0.6 : 1,
                 }}>
                 {deleting ? '…' : 'Remove'}
               </button>
@@ -813,15 +824,15 @@ function ApiKeyRow({
               <span style={{
                 ...MONO, fontSize: 11, fontWeight: 600,
                 padding: '3px 10px', borderRadius: 12,
-                background: '#F3F4F6', color: '#9CA3AF',
-                border: '1px solid #E5E7EB',
+                background: 'var(--bg-hover)', color: 'var(--text-tertiary)',
+                border: '1px solid var(--border)',
               }}>NOT SET</span>
               <button
                 onClick={() => setEditing(true)}
                 style={{
-                  ...SANS, fontSize: 12, padding: '4px 12px', borderRadius: 6,
-                  border: `1px solid ${meta.color}60`, background: `${meta.color}10`,
-                  color: meta.color, cursor: 'pointer', fontWeight: 600,
+                  ...SANS, fontSize: 12, padding: '5px 12px', borderRadius: 999,
+                  border: '1px solid var(--blue-border)', background: 'var(--accent-soft)',
+                  color: 'var(--accent)', cursor: 'pointer', fontWeight: 600,
                 }}>
                 Set Key
               </button>
@@ -844,8 +855,8 @@ function ApiKeyRow({
                 style={{
                   ...MONO, fontSize: 13, width: '100%', boxSizing: 'border-box',
                   padding: '8px 36px 8px 12px', borderRadius: 7,
-                  border: error ? '1px solid #EF4444' : '1px solid var(--border-light)',
-                  outline: 'none', background: 'var(--bg-page)', color: 'var(--text-dark)',
+                  border: error ? '1px solid var(--invalid)' : '1px solid var(--border)',
+                  outline: 'none', background: 'var(--bg-page)', color: 'var(--text-primary)',
                 }}
               />
               <button
@@ -854,7 +865,7 @@ function ApiKeyRow({
                 style={{
                   position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
                   background: 'none', border: 'none', cursor: 'pointer', padding: 2,
-                  color: '#9CA3AF',
+                  color: 'var(--text-tertiary)',
                 }}>
                 {showValue ? (
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -885,14 +896,14 @@ function ApiKeyRow({
               onClick={() => { setEditing(false); setValue(''); setError('') }}
               style={{
                 ...SANS, fontSize: 13, padding: '8px 12px', borderRadius: 7,
-                border: '1px solid var(--border-light)', background: 'var(--bg-light)',
+                border: '1px solid var(--border)', background: 'var(--bg-surface)',
                 color: 'var(--text-secondary)', cursor: 'pointer',
               }}>
               Cancel
             </button>
           </div>
           {error && (
-            <div style={{ ...SANS, fontSize: 12, color: '#EF4444', marginTop: 6 }}>{error}</div>
+            <div style={{ ...SANS, fontSize: 12, color: 'var(--invalid)', marginTop: 6 }}>{error}</div>
           )}
         </div>
       )}
@@ -931,18 +942,18 @@ function ApiKeysSection() {
       />
 
       <div style={{
-        background: '#fff',
-        border: '1px solid var(--border-light)',
+        background: 'var(--card-bg)',
+        border: '1px solid var(--border)',
         borderRadius: 10,
         overflow: 'hidden',
         marginBottom: 16,
       }}>
         {loading ? (
-          <div style={{ ...SANS, fontSize: 13, color: '#9CA3AF', padding: '20px 24px' }}>
+          <div style={{ ...SANS, fontSize: 13, color: 'var(--text-tertiary)', padding: '20px 24px' }}>
             Loading…
           </div>
         ) : statuses.length === 0 ? (
-          <div style={{ ...SANS, fontSize: 13, color: '#9CA3AF', padding: '20px 24px' }}>
+          <div style={{ ...SANS, fontSize: 13, color: 'var(--text-tertiary)', padding: '20px 24px' }}>
             No providers available.
           </div>
         ) : (
@@ -955,10 +966,10 @@ function ApiKeysSection() {
       </div>
 
       <div style={{
-        ...SANS, fontSize: 12, color: '#9CA3AF',
+        ...SANS, fontSize: 12, color: 'var(--text-tertiary)',
         padding: '10px 14px',
-        background: 'var(--bg-light)',
-        border: '1px solid var(--border-light)',
+        background: 'var(--bg-surface)',
+        border: '1px solid var(--border)',
         borderRadius: 7,
         lineHeight: 1.5,
       }}>
@@ -1120,9 +1131,9 @@ curl -X POST "${fireUrl}?mode=sync&timeout=120" \\
       onClick={() => copy(lang === 'curl' ? curlText : jsonText, key)}
       style={{
         ...MONO, fontSize: 9, padding: '2px 7px', flexShrink: 0,
-        background: copied === key ? '#10B98122' : 'transparent',
-        border: `1px solid ${copied === key ? '#10B98144' : '#334155'}`,
-        color: copied === key ? '#10B981' : '#94a3b8',
+        background: copied === key ? 'var(--accent-soft)' : 'transparent',
+        border: `1px solid ${copied === key ? 'var(--blue-border)' : 'var(--border)'}`,
+        color: copied === key ? 'var(--accent)' : 'var(--text-tertiary)',
         borderRadius: 4, cursor: 'pointer',
       }}
     >{copied === key ? 'Copied!' : 'Copy'}</button>
@@ -1133,9 +1144,9 @@ curl -X POST "${fireUrl}?mode=sync&timeout=120" \\
       onClick={() => copy(text, key)}
       style={{
         ...MONO, fontSize: 9, padding: '2px 7px', flexShrink: 0,
-        background: copied === key ? '#10B98122' : 'transparent',
-        border: `1px solid ${copied === key ? '#10B98144' : '#334155'}`,
-        color: copied === key ? '#10B981' : '#94a3b8',
+        background: copied === key ? 'var(--accent-soft)' : 'transparent',
+        border: `1px solid ${copied === key ? 'var(--blue-border)' : 'var(--border)'}`,
+        color: copied === key ? 'var(--accent)' : 'var(--text-tertiary)',
         borderRadius: 4, cursor: 'pointer',
       }}
     >{copied === key ? 'Copied!' : 'Copy'}</button>
@@ -1185,7 +1196,7 @@ curl -X POST "${fireUrl}?mode=sync&timeout=120" \\
             onClick={onDismissSecret}
             style={{
               ...MONO, fontSize: 10, padding: '4px 12px',
-              background: '#10B981', color: '#fff', border: 'none',
+              background: 'var(--accent)', color: '#fff', border: 'none',
               borderRadius: 5, cursor: 'pointer', width: '100%',
             }}
           >I've saved it — dismiss</button>
@@ -1199,7 +1210,7 @@ curl -X POST "${fireUrl}?mode=sync&timeout=120" \\
           style={{
             ...MONO, fontSize: 10, padding: '3px 8px',
             background: 'none', border: '1px solid var(--border)',
-            color: 'var(--text-muted)', borderRadius: 4, cursor: 'pointer',
+            color: 'var(--text-tertiary)', borderRadius: 4, cursor: 'pointer',
           }}
         >{docsOpen ? '▾ Hide API docs' : '▸ View API docs'}</button>
 
@@ -1209,18 +1220,18 @@ curl -X POST "${fireUrl}?mode=sync&timeout=120" \\
               onClick={() => setLang('curl')}
               style={{
                 ...TAB,
-                background: lang === 'curl' ? '#1D5FFA' : 'transparent',
-                color: lang === 'curl' ? '#fff' : 'var(--text-muted)',
-                borderColor: lang === 'curl' ? '#1D5FFA' : 'var(--border)',
+                background: lang === 'curl' ? 'var(--accent)' : 'transparent',
+                color: lang === 'curl' ? '#fff' : 'var(--text-tertiary)',
+                borderColor: lang === 'curl' ? 'var(--accent)' : 'var(--border)',
               }}
             >curl</button>
             <button
               onClick={() => setLang('json')}
               style={{
                 ...TAB,
-                background: lang === 'json' ? '#1D5FFA' : 'transparent',
-                color: lang === 'json' ? '#fff' : 'var(--text-muted)',
-                borderColor: lang === 'json' ? '#1D5FFA' : 'var(--border)',
+                background: lang === 'json' ? 'var(--accent)' : 'transparent',
+                color: lang === 'json' ? '#fff' : 'var(--text-tertiary)',
+                borderColor: lang === 'json' ? 'var(--accent)' : 'var(--border)',
               }}
             >JSON</button>
           </div>
@@ -1232,9 +1243,9 @@ curl -X POST "${fireUrl}?mode=sync&timeout=120" \\
 
           {/* ── Async flow ── */}
           <div>
-            {sectionLabel('Async — fire and poll (recommended)', '#7C3AED')}
+            {sectionLabel('Async — fire and poll (recommended)', 'var(--accent)')}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-              <span style={{ ...SANS, fontSize: 11, color: 'var(--text-muted)' }}>Step 1: fire the trigger</span>
+              <span style={{ ...SANS, fontSize: 11, color: 'var(--text-tertiary)' }}>Step 1: fire the trigger</span>
               {copyBtn(asyncCurl, asyncJson, 'async')}
             </div>
             <code style={CODE}>{lang === 'curl' ? asyncCurl : asyncJson}</code>
@@ -1243,7 +1254,7 @@ curl -X POST "${fireUrl}?mode=sync&timeout=120" \\
           {/* ── Poll + checkpoint ── */}
           <div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-              <span style={{ ...SANS, fontSize: 11, color: 'var(--text-muted)' }}>Step 2: poll for result (or checkpoint)</span>
+              <span style={{ ...SANS, fontSize: 11, color: 'var(--text-tertiary)' }}>Step 2: poll for result (or checkpoint)</span>
               {copyBtn(pollCurl, pollJson, 'poll')}
             </div>
             <code style={CODE}>{lang === 'curl' ? pollCurl : pollJson}</code>
@@ -1252,11 +1263,11 @@ curl -X POST "${fireUrl}?mode=sync&timeout=120" \\
           {/* ── Resume checkpoint ── */}
           <div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-              <span style={{ ...SANS, fontSize: 11, color: 'var(--text-muted)' }}>Step 3 (optional): answer a human checkpoint</span>
+              <span style={{ ...SANS, fontSize: 11, color: 'var(--text-tertiary)' }}>Step 3 (optional): answer a human checkpoint</span>
               {copyBtn(resumeCurl, resumeJson, 'resume')}
             </div>
             <code style={CODE}>{lang === 'curl' ? resumeCurl : resumeJson}</code>
-            <div style={{ ...SANS, fontSize: 10, color: 'var(--text-muted)', marginTop: 4, lineHeight: 1.5 }}>
+            <div style={{ ...SANS, fontSize: 10, color: 'var(--text-tertiary)', marginTop: 4, lineHeight: 1.5 }}>
               Human checkpoint nodes are optional — only workflows that include them will ever return <code style={{ ...MONO, fontSize: 10 }}>awaiting_checkpoint</code>. After you answer, poll again until <code style={{ ...MONO, fontSize: 10 }}>status</code> is <code style={{ ...MONO, fontSize: 10 }}>completed</code> or <code style={{ ...MONO, fontSize: 10 }}>failed</code>.
             </div>
           </div>
@@ -1265,7 +1276,7 @@ curl -X POST "${fireUrl}?mode=sync&timeout=120" \\
           <div>
             {sectionLabel('Sync — wait for result inline', '#059669')}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-              <span style={{ ...SANS, fontSize: 11, color: 'var(--text-muted)' }}>Single request, result in response</span>
+              <span style={{ ...SANS, fontSize: 11, color: 'var(--text-tertiary)' }}>Single request, result in response</span>
               {copyBtn(syncCurl, syncJson, 'sync')}
             </div>
             <code style={CODE}>{lang === 'curl' ? syncCurl : syncJson}</code>
@@ -1274,10 +1285,10 @@ curl -X POST "${fireUrl}?mode=sync&timeout=120" \\
           {/* ── agent_filters (only when DB datasources exist) ── */}
           {hasDb && infoBox(
             <>
-              <div style={{ ...MONO, fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              <div style={{ ...MONO, fontSize: 10, fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                 agent_filters — row-level security
               </div>
-              <div style={{ ...SANS, fontSize: 11, color: 'var(--text-body)', lineHeight: 1.6, marginBottom: 8 }}>
+              <div style={{ ...SANS, fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 8 }}>
                 Pass per-agent filters so each agent only sees rows matching your criteria.
                 Two formats — flat (applies to all allowed tables) or per-table (explicit scoping):
               </div>
@@ -1301,26 +1312,26 @@ curl -X POST "${fireUrl}?mode=sync&timeout=120" \\
 "${agentDbInfo[0].agent_id}": {
   ":uid": {"op": "=", "value": "u_123"}   // maps :uid → user_id in your WHERE clause
 }`}</code>
-              <div style={{ ...MONO, fontSize: 10, color: 'var(--text-muted)', marginBottom: 6 }}>
+              <div style={{ ...MONO, fontSize: 10, color: 'var(--text-tertiary)', marginBottom: 6 }}>
                 Supported operators:
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 10 }}>
                 {['=', '!=', '>', '<', '>=', '<=', 'LIKE', 'NOT LIKE', 'ILIKE', 'NOT ILIKE', 'IN', 'NOT IN'].map(op => (
                   <span key={op} style={{
                     ...MONO, fontSize: 9, padding: '1px 6px', borderRadius: 3,
-                    background: '#1D5FFA15', color: '#1D5FFA',
-                    border: '1px solid #1D5FFA30',
+                    background: 'var(--accent-soft)', color: 'var(--accent)',
+                    border: '1px solid var(--blue-border)',
                   }}>{op}</span>
                 ))}
               </div>
-              <div style={{ ...MONO, fontSize: 10, color: 'var(--text-muted)', marginBottom: 6 }}>
+              <div style={{ ...MONO, fontSize: 10, color: 'var(--text-tertiary)', marginBottom: 6 }}>
                 Agents with database access in this workflow:
               </div>
               {agentDbInfo.map(info => (
                 <div key={info.agent_id} style={{ marginBottom: 8, paddingBottom: 8, borderBottom: '1px solid var(--border)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                    <span style={{ ...MONO, fontSize: 10, color: 'var(--text-body)', fontWeight: 600 }}>{info.agent_name}</span>
-                    <span style={{ ...MONO, fontSize: 9, color: 'var(--text-muted)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{info.agent_id}</span>
+                    <span style={{ ...MONO, fontSize: 10, color: 'var(--text-secondary)', fontWeight: 600 }}>{info.agent_name}</span>
+                    <span style={{ ...MONO, fontSize: 9, color: 'var(--text-tertiary)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{info.agent_id}</span>
                     {agentCopyBtn(info.agent_id, `agent-${info.agent_id}`)}
                   </div>
                   {info.tables.length > 0 && (
@@ -1331,7 +1342,7 @@ curl -X POST "${fireUrl}?mode=sync&timeout=120" \\
                     </div>
                   )}
                   {info.row_filter_keys.length > 0 && (
-                    <div style={{ ...SANS, fontSize: 10, color: 'var(--text-muted)', marginTop: 4 }}>
+                    <div style={{ ...SANS, fontSize: 10, color: 'var(--text-tertiary)', marginTop: 4 }}>
                       Configured filter columns: <span style={{ ...MONO }}>{info.row_filter_keys.join(', ')}</span>
                     </div>
                   )}
@@ -1399,22 +1410,22 @@ function CronBuilder({
   }
 
   const SEL: React.CSSProperties = {
-    ...MONO, fontSize: 12, padding: '5px 8px',
-    background: '#fff', color: 'var(--text-body)',
-    border: '1px solid var(--border-light)', borderRadius: 6,
-    cursor: 'pointer',
+    ...SANS, fontSize: 14, padding: '6px 10px',
+    backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)',
+    border: '1px solid var(--border)', borderRadius: 8,
+    cursor: 'pointer', colorScheme: 'dark light',
   }
 
   const tzLabel = TIMEZONES.find(t => t.value === timezone)?.label ?? timezone
   const label = humanLabel(freq, minute, hour, dow, dom)
 
   return (
-    <div style={{ background: 'var(--bg-page)', border: '1px solid var(--border-light)', borderRadius: 8, padding: '12px 14px', marginBottom: 10 }}>
+    <div style={{ background: 'var(--bg-page)', border: '1px solid var(--border)', borderRadius: 8, padding: '12px 14px', marginBottom: 10 }}>
 
       {/* Row 1 — frequency + time */}
       <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginBottom: 10 }}>
 
-        <span style={{ ...MONO, fontSize: 12, color: 'var(--text-muted)' }}>Run every</span>
+        <span style={{ ...MONO, fontSize: 12, color: 'var(--text-tertiary)' }}>Run every</span>
 
         <select style={SEL} value={freq} onChange={e => set(setFreq, e.target.value as CronFreq, { f: e.target.value as CronFreq })}>
           <option value="hour">hour</option>
@@ -1425,7 +1436,7 @@ function CronBuilder({
 
         {freq === 'week' && (
           <>
-            <span style={{ ...MONO, fontSize: 12, color: 'var(--text-muted)' }}>on</span>
+            <span style={{ ...MONO, fontSize: 12, color: 'var(--text-tertiary)' }}>on</span>
             <select style={SEL} value={dow} onChange={e => set(setDow, e.target.value, { d: e.target.value })}>
               {DAYS_OF_WEEK.map((d, i) => <option key={i} value={String(i)}>{d}</option>)}
             </select>
@@ -1434,7 +1445,7 @@ function CronBuilder({
 
         {freq === 'month' && (
           <>
-            <span style={{ ...MONO, fontSize: 12, color: 'var(--text-muted)' }}>on day</span>
+            <span style={{ ...MONO, fontSize: 12, color: 'var(--text-tertiary)' }}>on day</span>
             <select style={SEL} value={dom} onChange={e => set(setDom, e.target.value, { dm: e.target.value })}>
               {MONTH_DAYS.map(d => <option key={d} value={d}>{d}</option>)}
             </select>
@@ -1443,13 +1454,13 @@ function CronBuilder({
 
         {freq !== 'hour' ? (
           <>
-            <span style={{ ...MONO, fontSize: 12, color: 'var(--text-muted)' }}>at</span>
+            <span style={{ ...MONO, fontSize: 12, color: 'var(--text-tertiary)' }}>at</span>
             <select style={SEL} value={hour} onChange={e => set(setHour, e.target.value, { h: e.target.value })}>
               {HOURS.map(h => <option key={h} value={h}>{h}:00</option>)}
             </select>
           </>
         ) : (
-          <span style={{ ...MONO, fontSize: 12, color: 'var(--text-muted)' }}>at minute</span>
+          <span style={{ ...MONO, fontSize: 12, color: 'var(--text-tertiary)' }}>at minute</span>
         )}
 
         <select style={SEL} value={minute} onChange={e => set(setMinute, e.target.value, { m: e.target.value })}>
@@ -1459,7 +1470,7 @@ function CronBuilder({
 
       {/* Row 2 — timezone */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-        <span style={{ ...MONO, fontSize: 12, color: 'var(--text-muted)' }}>Timezone</span>
+        <span style={{ ...MONO, fontSize: 12, color: 'var(--text-tertiary)' }}>Timezone</span>
         <select
           style={{ ...SEL, minWidth: 200 }}
           value={timezone}
@@ -1473,12 +1484,12 @@ function CronBuilder({
 
       {/* Summary */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <span style={{ ...SANS, fontSize: 12, color: 'var(--text-body)', flex: 1 }}>
+        <span style={{ ...SANS, fontSize: 12, color: 'var(--text-secondary)', flex: 1 }}>
           {label} — {tzLabel}
         </span>
         <span style={{
           ...MONO, fontSize: 10, padding: '2px 8px', borderRadius: 4,
-          background: '#1D5FFA15', color: '#1D5FFA', border: '1px solid #1D5FFA30',
+          background: 'var(--accent-soft)', color: 'var(--accent)', border: '1px solid var(--blue-border)',
         }}>{value || buildCron(freq, minute, hour, dow, dom)}</span>
       </div>
     </div>
@@ -1602,7 +1613,7 @@ function TriggersSection() {
   }
 
   const ROW: React.CSSProperties = {
-    background: '#fff', border: '1px solid var(--border-light)',
+    background: 'var(--card-bg)', border: '1px solid var(--border)',
     borderRadius: 8, padding: '12px 14px', marginBottom: 8,
   }
 
@@ -1616,17 +1627,17 @@ function TriggersSection() {
 
       {/* Workflow selector */}
       <div style={{ marginBottom: 20 }}>
-        <label style={{ ...MONO, fontSize: 10, color: 'var(--text-muted)', display: 'block', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+        <label style={{ ...MONO, fontSize: 10, color: 'var(--text-tertiary)', display: 'block', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
           Select workflow
         </label>
         <select
           value={selectedWfId}
           onChange={e => handleSelectWf(e.target.value)}
           style={{
-            ...MONO, fontSize: 12, padding: '7px 10px',
-            background: '#fff', color: 'var(--text-body)',
-            border: '1px solid var(--border-light)', borderRadius: 7,
-            minWidth: 280, cursor: 'pointer',
+            ...SANS, fontSize: 14, padding: '10px 14px',
+            backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)',
+            border: '1px solid var(--border)', borderRadius: 8,
+            minWidth: 280, cursor: 'pointer', colorScheme: 'dark light',
           }}
         >
           <option value="">— choose a workflow —</option>
@@ -1639,15 +1650,15 @@ function TriggersSection() {
       {!selectedWfId && (
         <div style={{
           textAlign: 'center', padding: '40px 0',
-          background: '#fff', border: '1px solid var(--border-light)', borderRadius: 10,
+          background: 'var(--card-bg)', border: '1px solid var(--border)', borderRadius: 10,
         }}>
           <div style={{ fontSize: 26, marginBottom: 8 }}>⚡</div>
-          <div style={{ ...MONO, fontSize: 12, color: '#6B7280' }}>Select a workflow to manage its triggers</div>
+          <div style={{ ...MONO, fontSize: 12, color: 'var(--text-tertiary)' }}>Select a workflow to manage its triggers</div>
         </div>
       )}
 
       {selectedWfId && loadingTriggers && (
-        <div style={{ ...MONO, fontSize: 12, color: '#9CA3AF', padding: '20px 0' }}>Loading…</div>
+        <div style={{ ...MONO, fontSize: 12, color: 'var(--text-tertiary)', padding: '20px 0' }}>Loading…</div>
       )}
 
       {selectedWfId && !loadingTriggers && (
@@ -1655,15 +1666,15 @@ function TriggersSection() {
           {/* ── Schedules ── */}
           <div style={{ marginBottom: 24 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-              <span style={{ ...MONO, fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+              <span style={{ ...MONO, fontSize: 10, fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                 Scheduled Runs
               </span>
               <button
                 onClick={() => setShowAddSchedule(o => !o)}
                 style={{
                   ...MONO, fontSize: 10, padding: '3px 10px',
-                  background: '#1D5FFA22', border: '1px solid #1D5FFA44',
-                  color: '#1D5FFA', borderRadius: 5, cursor: 'pointer',
+                  background: 'var(--accent-soft)', border: '1px solid var(--blue-border)',
+                  color: 'var(--accent)', borderRadius: 5, cursor: 'pointer',
                 }}
               >{showAddSchedule ? 'Cancel' : '+ Add schedule'}</button>
             </div>
@@ -1682,7 +1693,7 @@ function TriggersSection() {
                     disabled={savingSchedule || !newCronExpr.trim()}
                     style={{
                       ...MONO, fontSize: 11, padding: '6px 16px',
-                      background: '#1D5FFA', color: '#fff', border: 'none',
+                      background: 'var(--accent)', color: '#fff', border: 'none',
                       borderRadius: 6, cursor: 'pointer', opacity: savingSchedule ? 0.6 : 1,
                     }}
                   >{savingSchedule ? 'Saving…' : 'Add schedule'}</button>
@@ -1690,8 +1701,8 @@ function TriggersSection() {
                     onClick={() => { setShowAddSchedule(false); setNewCronExpr(''); setNewTimezone('UTC') }}
                     style={{
                       ...MONO, fontSize: 11, padding: '6px 12px',
-                      background: 'none', color: 'var(--text-muted)',
-                      border: '1px solid var(--border-light)', borderRadius: 6, cursor: 'pointer',
+                      background: 'none', color: 'var(--text-tertiary)',
+                      border: '1px solid var(--border)', borderRadius: 6, cursor: 'pointer',
                     }}
                   >Cancel</button>
                 </div>
@@ -1699,7 +1710,7 @@ function TriggersSection() {
             )}
 
             {schedules.length === 0 && !showAddSchedule && (
-              <div style={{ ...SANS, fontSize: 12, color: '#9CA3AF', fontStyle: 'italic', padding: '8px 0' }}>
+              <div style={{ ...SANS, fontSize: 12, color: 'var(--text-tertiary)', fontStyle: 'italic', padding: '8px 0' }}>
                 No schedules yet.
               </div>
             )}
@@ -1707,24 +1718,24 @@ function TriggersSection() {
             {schedules.map(s => (
               <div key={s.trigger_id} style={ROW}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ ...MONO, fontSize: 12, color: 'var(--text-body)', flex: 1 }}>{s.cron_expr}</span>
-                  <span style={{ ...MONO, fontSize: 10, color: 'var(--text-muted)' }}>
+                  <span style={{ ...MONO, fontSize: 12, color: 'var(--text-secondary)', flex: 1 }}>{s.cron_expr}</span>
+                  <span style={{ ...MONO, fontSize: 10, color: 'var(--text-tertiary)' }}>
                     {TIMEZONES.find(t => t.value === s.timezone)?.label ?? s.timezone ?? 'UTC'}
                   </span>
                   <span style={{
                     ...MONO, fontSize: 9, padding: '2px 6px', borderRadius: 3,
-                    background: s.enabled ? '#10B98120' : '#6B728020',
-                    color: s.enabled ? '#10B981' : '#6B7280',
-                    border: `1px solid ${s.enabled ? '#10B98140' : '#6B728040'}`,
+                    background: s.enabled ? 'var(--accent-soft)' : 'var(--text-tertiary)20',
+                    color: s.enabled ? 'var(--accent)' : 'var(--text-tertiary)',
+                    border: `1px solid ${s.enabled ? 'var(--blue-border)' : 'var(--text-tertiary)40'}`,
                   }}>{s.enabled ? 'on' : 'off'}</span>
                   {s.last_run_at && (
-                    <span style={{ ...MONO, fontSize: 10, color: 'var(--text-muted)' }}>
+                    <span style={{ ...MONO, fontSize: 10, color: 'var(--text-tertiary)' }}>
                       last: {fmtDate(s.last_run_at)}
                     </span>
                   )}
                   <button
                     onClick={() => handleDeleteSchedule(s.trigger_id)}
-                    style={{ background: 'none', border: 'none', color: '#EF4444', cursor: 'pointer', fontSize: 14, padding: '0 2px', lineHeight: 1 }}
+                    style={{ background: 'none', border: 'none', color: 'var(--invalid)', cursor: 'pointer', fontSize: 14, padding: '0 2px', lineHeight: 1 }}
                   >×</button>
                 </div>
               </div>
@@ -1734,7 +1745,7 @@ function TriggersSection() {
           {/* ── Webhooks ── */}
           <div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-              <span style={{ ...MONO, fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+              <span style={{ ...MONO, fontSize: 10, fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                 Webhook Triggers
               </span>
               <button
@@ -1742,15 +1753,15 @@ function TriggersSection() {
                 disabled={savingWebhook}
                 style={{
                   ...MONO, fontSize: 10, padding: '3px 10px',
-                  background: '#7C3AED22', border: '1px solid #7C3AED44',
-                  color: '#7C3AED', borderRadius: 5, cursor: 'pointer',
+                  background: 'var(--accent-soft)', border: '1px solid var(--blue-border)',
+                  color: 'var(--accent)', borderRadius: 5, cursor: 'pointer',
                   opacity: savingWebhook ? 0.6 : 1,
                 }}
               >{savingWebhook ? '…' : '+ Add webhook'}</button>
             </div>
 
             {webhooks.length === 0 && (
-              <div style={{ ...SANS, fontSize: 12, color: '#9CA3AF', fontStyle: 'italic', padding: '8px 0' }}>
+              <div style={{ ...SANS, fontSize: 12, color: 'var(--text-tertiary)', fontStyle: 'italic', padding: '8px 0' }}>
                 No webhooks yet.
               </div>
             )}
@@ -1761,17 +1772,17 @@ function TriggersSection() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
                   <span style={{
                     ...MONO, fontSize: 9, padding: '2px 6px', borderRadius: 3,
-                    background: w.enabled ? '#10B98120' : '#6B728020',
-                    color: w.enabled ? '#10B981' : '#6B7280',
-                    border: `1px solid ${w.enabled ? '#10B98140' : '#6B728040'}`,
+                    background: w.enabled ? 'var(--accent-soft)' : 'var(--text-tertiary)20',
+                    color: w.enabled ? 'var(--accent)' : 'var(--text-tertiary)',
+                    border: `1px solid ${w.enabled ? 'var(--blue-border)' : 'var(--text-tertiary)40'}`,
                   }}>{w.enabled ? 'on' : 'off'}</span>
                   {w.last_triggered_at && (
-                    <span style={{ ...MONO, fontSize: 10, color: 'var(--text-muted)' }}>
+                    <span style={{ ...MONO, fontSize: 10, color: 'var(--text-tertiary)' }}>
                       last: {fmtDate(w.last_triggered_at)}
                     </span>
                   )}
                   <span style={{
-                    ...MONO, fontSize: 9, color: 'var(--text-muted)', flex: 1,
+                    ...MONO, fontSize: 9, color: 'var(--text-tertiary)', flex: 1,
                     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                   }}>{BASE_URL}/triggers/webhooks/{w.webhook_id}/trigger</span>
                   <button
@@ -1780,12 +1791,12 @@ function TriggersSection() {
                     style={{
                       ...MONO, fontSize: 9, padding: '2px 7px',
                       background: 'none', border: '1px solid var(--border)',
-                      color: 'var(--text-muted)', borderRadius: 4, cursor: 'pointer',
+                      color: 'var(--text-tertiary)', borderRadius: 4, cursor: 'pointer',
                     }}
                   >↻ Rotate</button>
                   <button
                     onClick={() => handleDeleteWebhook(w.webhook_id)}
-                    style={{ background: 'none', border: 'none', color: '#EF4444', cursor: 'pointer', fontSize: 14, padding: '0 2px', lineHeight: 1 }}
+                    style={{ background: 'none', border: 'none', color: 'var(--invalid)', cursor: 'pointer', fontSize: 14, padding: '0 2px', lineHeight: 1 }}
                   >×</button>
                 </div>
 
@@ -1838,9 +1849,12 @@ export default function Settings() {
 
   return (
     <div style={{
-      padding: '36px 48px',
+      padding: '28px 36px',
       width: '100%',
       boxSizing: 'border-box',
+      background: 'var(--bg-page)',
+      minHeight: '100%',
+      ...SANS,
     }}>
 
       {/* ── Section 1: MCP Tool Servers ─────────────────────────────────── */}
@@ -1859,10 +1873,12 @@ export default function Settings() {
           <button
             onClick={() => setShowAddForm(v => !v)}
             style={{
-              ...MONO, fontSize: 12, padding: '8px 16px',
-              background: showAddForm ? '#1D5FFA33' : '#1D5FFA',
-              color: '#fff', border: 'none', borderRadius: 7,
-              cursor: 'pointer', fontWeight: 700, flexShrink: 0, marginTop: 2,
+              ...SANS, fontSize: 13, padding: '8px 16px',
+              background: showAddForm ? 'var(--accent-soft)' : 'var(--btn-upload-bg)',
+              color: showAddForm ? 'var(--accent)' : 'var(--btn-upload-text)',
+              border: showAddForm ? '1px solid var(--blue-border)' : 'none',
+              borderRadius: 999,
+              cursor: 'pointer', fontWeight: 600, flexShrink: 0, marginTop: 2,
             }}
           >
             {showAddForm ? 'Cancel' : '+ Add MCP Server'}
@@ -1878,9 +1894,9 @@ export default function Settings() {
 
         {loadError && (
           <div style={{
-            ...MONO, fontSize: 12, color: '#EF4444',
-            padding: '10px 14px', background: '#EF444415',
-            border: '1px solid #EF444440', borderRadius: 7, marginBottom: 12,
+            ...MONO, fontSize: 12, color: 'var(--invalid)',
+            padding: '10px 14px', background: 'var(--invalid-dim)',
+            border: '1px solid rgba(239,68,68,0.28)', borderRadius: 7, marginBottom: 12,
           }}>
             {loadError}
           </div>
@@ -1888,7 +1904,7 @@ export default function Settings() {
 
         {loading ? (
           <div style={{
-            ...MONO, fontSize: 12, color: '#9CA3AF',
+            ...MONO, fontSize: 12, color: 'var(--text-tertiary)',
             padding: '40px 0', textAlign: 'center',
           }}>
             Loading servers…
@@ -1896,14 +1912,14 @@ export default function Settings() {
         ) : servers.length === 0 && !showAddForm ? (
           <div style={{
             textAlign: 'center', padding: '48px 0',
-            background: '#fff', border: '1px solid var(--border-light)',
+            background: 'var(--card-bg)', border: '1px solid var(--border)',
             borderRadius: 10,
           }}>
             <div style={{ fontSize: 28, marginBottom: 10 }}>🔌</div>
-            <div style={{ ...MONO, fontSize: 13, color: '#6B7280', fontWeight: 600, marginBottom: 4 }}>
+            <div style={{ ...SANS, fontSize: 14, color: 'var(--text-primary)', fontWeight: 600, marginBottom: 4 }}>
               No MCP servers configured
             </div>
-            <div style={{ ...SANS, fontSize: 12, color: '#9CA3AF' }}>
+            <div style={{ ...SANS, fontSize: 13, color: 'var(--text-tertiary)' }}>
               Add an MCP server to expose its tools to your agents.
             </div>
           </div>
@@ -1920,13 +1936,13 @@ export default function Settings() {
       </div>
 
       {/* divider */}
-      <div style={{ borderTop: '1px solid var(--border-light)', marginBottom: 40 }} />
+      <div style={{ borderTop: '1px solid var(--border)', marginBottom: 40 }} />
 
       {/* ── Section 2: API Keys ─────────────────────────────────────────── */}
       <ApiKeysSection />
 
       {/* divider */}
-      <div style={{ borderTop: '1px solid var(--border-light)', margin: '40px 0' }} />
+      <div style={{ borderTop: '1px solid var(--border)', margin: '40px 0' }} />
 
       {/* ── Section 3: Triggers ─────────────────────────────────────────── */}
       <TriggersSection />

@@ -221,8 +221,8 @@ function ChannelRow({ config, onUpdated, onDeleted }: {
 
   return (
     <div style={{
-      background: 'var(--bg-page)',
-      border: '1px solid var(--border-light)',
+      background: 'var(--card-bg)',
+      border: '1px solid var(--border)',
       borderRadius: 10,
       overflow: 'hidden',
       marginBottom: 12,
@@ -234,19 +234,19 @@ function ChannelRow({ config, onUpdated, onDeleted }: {
           <div style={{ opacity: config.enabled ? 1 : 0.35, flexShrink: 0, display: 'flex', alignItems: 'center' }}>
             {meta.icon(20)}
           </div>
-          <span style={{ ...MONO, fontSize: 13, fontWeight: 700, color: config.enabled ? meta.color : 'var(--text-body)' }}>
+          <span style={{ ...MONO, fontSize: 13, fontWeight: 700, color: config.enabled ? meta.color : 'var(--text-secondary)' }}>
             {meta.label}
           </span>
         </div>
 
         {/* Webhook URL */}
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ ...MONO, fontSize: 9, color: '#9CA3AF', marginBottom: 3, letterSpacing: '0.08em' }}>WEBHOOK URL</div>
+          <div style={{ ...MONO, fontSize: 9, color: 'var(--text-tertiary)', marginBottom: 3, letterSpacing: '0.08em' }}>WEBHOOK URL</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <code style={{
               ...MONO, fontSize: 10, flex: 1,
-              background: 'var(--bg-light)', color: 'var(--text-body)',
-              border: '1px solid var(--border-light)',
+              background: 'var(--bg-surface)', color: 'var(--text-secondary)',
+              border: '1px solid var(--border)',
               padding: '4px 8px', borderRadius: 5,
               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             }}>{wUrl}</code>
@@ -255,13 +255,13 @@ function ChannelRow({ config, onUpdated, onDeleted }: {
               style={{
                 ...MONO, fontSize: 9, padding: '3px 10px', flexShrink: 0,
                 background: copied ? '#10B98115' : 'transparent',
-                border: `1px solid ${copied ? '#10B98150' : 'var(--border-light)'}`,
-                color: copied ? '#10B981' : '#6B7280',
+                border: `1px solid ${copied ? '#10B98150' : 'var(--border)'}`,
+                color: copied ? '#10B981' : 'var(--text-tertiary)',
                 borderRadius: 4, cursor: 'pointer',
               }}
             >{copied ? 'Copied!' : 'Copy'}</button>
           </div>
-          <div style={{ ...SANS, fontSize: 10, color: '#9CA3AF', marginTop: 2 }}>
+          <div style={{ ...SANS, fontSize: 10, color: 'var(--text-tertiary)', marginTop: 2 }}>
             Token: {config.bot_token}
           </div>
         </div>
@@ -274,9 +274,9 @@ function ChannelRow({ config, onUpdated, onDeleted }: {
           style={{
             ...MONO, fontSize: 10, fontWeight: 600, flexShrink: 0,
             padding: '3px 10px', borderRadius: 12,
-            background: config.enabled ? '#10B98118' : '#F3F4F6',
-            color: config.enabled ? '#10B981' : '#9CA3AF',
-            border: `1px solid ${config.enabled ? '#10B98140' : '#E5E7EB'}`,
+            background: config.enabled ? 'var(--accent-soft)' : 'var(--bg-hover)',
+            color: config.enabled ? 'var(--accent)' : 'var(--text-tertiary)',
+            border: `1px solid ${config.enabled ? 'var(--blue-border)' : 'var(--border)'}`,
             cursor: 'pointer',
           }}
         >{config.enabled ? 'ENABLED' : 'DISABLED'}</button>
@@ -286,9 +286,9 @@ function ChannelRow({ config, onUpdated, onDeleted }: {
           onClick={() => { setShowSetup(v => !v); setShowEdit(false) }}
           style={{
             ...MONO, fontSize: 10, padding: '3px 10px', flexShrink: 0,
-            background: showSetup ? '#1D5FFA15' : 'transparent',
-            border: '1px solid var(--border-light)',
-            color: showSetup ? '#1D5FFA' : '#6B7280',
+            background: showSetup ? 'var(--accent-soft)' : 'transparent',
+            border: '1px solid var(--border)',
+            color: showSetup ? 'var(--accent)' : 'var(--text-tertiary)',
             borderRadius: 5, cursor: 'pointer',
           }}
         >{showSetup ? '▲ Setup' : '▼ Setup'}</button>
@@ -299,8 +299,8 @@ function ChannelRow({ config, onUpdated, onDeleted }: {
           style={{
             ...MONO, fontSize: 10, padding: '3px 10px', flexShrink: 0,
             background: showEdit ? '#F59E0B15' : 'transparent',
-            border: `1px solid ${showEdit ? '#F59E0B50' : 'var(--border-light)'}`,
-            color: showEdit ? '#F59E0B' : '#6B7280',
+            border: `1px solid ${showEdit ? '#F59E0B50' : 'var(--border)'}`,
+            color: showEdit ? '#F59E0B' : 'var(--text-tertiary)',
             borderRadius: 5, cursor: 'pointer',
           }}
         >Edit</button>
@@ -319,9 +319,9 @@ function ChannelRow({ config, onUpdated, onDeleted }: {
       {/* Edit panel */}
       {showEdit && (
         <div style={{
-          borderTop: '1px solid var(--border-light)',
+          borderTop: '1px solid var(--border)',
           padding: '14px 20px',
-          background: 'var(--bg-light)',
+          background: 'var(--bg-surface)',
         }}>
           <div style={{ ...MONO, fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', color: '#F59E0B', marginBottom: 12 }}>
             EDIT SETTINGS
@@ -329,7 +329,7 @@ function ChannelRow({ config, onUpdated, onDeleted }: {
 
           {/* Bot token update */}
           <div style={{ marginBottom: 12 }}>
-            <div style={{ ...MONO, fontSize: 10, color: '#6B7280', marginBottom: 4 }}>NEW BOT TOKEN <span style={{ color: '#9CA3AF', fontWeight: 400 }}>(leave blank to keep current)</span></div>
+            <div style={{ ...MONO, fontSize: 10, color: 'var(--text-tertiary)', marginBottom: 4 }}>NEW BOT TOKEN <span style={{ color: 'var(--text-tertiary)', fontWeight: 400 }}>(leave blank to keep current)</span></div>
             <input
               type="password"
               value={editToken}
@@ -337,8 +337,8 @@ function ChannelRow({ config, onUpdated, onDeleted }: {
               placeholder={CHANNEL_META[config.channel_type].placeholder}
               style={{
                 ...MONO, fontSize: 12, padding: '7px 10px', width: '100%',
-                background: 'var(--bg-page)', color: 'var(--text-dark)',
-                border: '1px solid var(--border-light)', borderRadius: 6,
+                background: 'var(--bg-page)', color: 'var(--text-primary)',
+                border: '1px solid var(--border)', borderRadius: 6,
                 boxSizing: 'border-box', outline: 'none',
               }}
             />
@@ -347,19 +347,19 @@ function ChannelRow({ config, onUpdated, onDeleted }: {
           {/* WhatsApp WABA ID */}
           {config.channel_type === 'whatsapp' && (
             <div style={{ marginBottom: 12 }}>
-              <div style={{ ...MONO, fontSize: 10, color: '#6B7280', marginBottom: 4 }}>WHATSAPP BUSINESS ACCOUNT ID (WABA ID)</div>
+              <div style={{ ...MONO, fontSize: 10, color: 'var(--text-tertiary)', marginBottom: 4 }}>WHATSAPP BUSINESS ACCOUNT ID (WABA ID)</div>
               <input
                 value={editWabaId}
                 onChange={e => setEditWabaId(e.target.value)}
                 placeholder="e.g. 123456789012345 — from Meta dashboard"
                 style={{
                   ...MONO, fontSize: 12, padding: '7px 10px', width: '100%',
-                  background: 'var(--bg-page)', color: 'var(--text-dark)',
-                  border: '1px solid var(--border-light)', borderRadius: 6,
+                  background: 'var(--bg-page)', color: 'var(--text-primary)',
+                  border: '1px solid var(--border)', borderRadius: 6,
                   boxSizing: 'border-box', outline: 'none',
                 }}
               />
-              <div style={{ ...SANS, fontSize: 10, color: '#9CA3AF', marginTop: 3 }}>
+              <div style={{ ...SANS, fontSize: 10, color: 'var(--text-tertiary)', marginTop: 3 }}>
                 Found in Meta for Developers → WhatsApp → API Setup → WhatsApp Business Account ID
               </div>
             </div>
@@ -367,14 +367,14 @@ function ChannelRow({ config, onUpdated, onDeleted }: {
 
           {/* Model selector */}
           <div style={{ marginBottom: 12 }}>
-            <div style={{ ...MONO, fontSize: 10, color: '#6B7280', marginBottom: 4 }}>AI MODEL</div>
+            <div style={{ ...MONO, fontSize: 10, color: 'var(--text-tertiary)', marginBottom: 4 }}>AI MODEL</div>
             <select
               value={editModelId}
               onChange={e => setEditModelId(e.target.value)}
               style={{
                 ...MONO, fontSize: 12, padding: '7px 10px', width: '100%',
-                background: 'var(--bg-page)', color: 'var(--text-dark)',
-                border: '1px solid var(--border-light)', borderRadius: 6, outline: 'none',
+                background: 'var(--bg-page)', color: 'var(--text-primary)',
+                border: '1px solid var(--border)', borderRadius: 6, outline: 'none',
               }}
             >
               <option value=''>Auto (fastest available)</option>
@@ -389,21 +389,21 @@ function ChannelRow({ config, onUpdated, onDeleted }: {
 
           {/* Timezone */}
           <div style={{ marginBottom: 12 }}>
-            <div style={{ ...MONO, fontSize: 10, color: '#6B7280', marginBottom: 4 }}>SCHEDULE TIMEZONE</div>
+            <div style={{ ...MONO, fontSize: 10, color: 'var(--text-tertiary)', marginBottom: 4 }}>SCHEDULE TIMEZONE</div>
             <select
               value={editTimezone}
               onChange={e => setEditTimezone(e.target.value)}
               style={{
                 ...MONO, fontSize: 12, padding: '7px 10px', width: '100%',
-                background: 'var(--bg-page)', color: 'var(--text-dark)',
-                border: '1px solid var(--border-light)', borderRadius: 6, outline: 'none',
+                background: 'var(--bg-page)', color: 'var(--text-primary)',
+                border: '1px solid var(--border)', borderRadius: 6, outline: 'none',
               }}
             >
               {TIMEZONES.map(tz => (
                 <option key={tz.value} value={tz.value}>{tz.label}</option>
               ))}
             </select>
-            <div style={{ ...SANS, fontSize: 10, color: '#9CA3AF', marginTop: 3 }}>
+            <div style={{ ...SANS, fontSize: 10, color: 'var(--text-tertiary)', marginTop: 3 }}>
               Used when the bot creates schedules via chat.
             </div>
           </div>
@@ -413,8 +413,8 @@ function ChannelRow({ config, onUpdated, onDeleted }: {
             style={{
               display: 'flex', alignItems: 'flex-start', gap: 10,
               padding: '10px 12px', marginBottom: 12,
-              background: editConversational ? 'rgba(29,95,250,0.06)' : 'rgba(0,0,0,0.03)',
-              border: `1px solid ${editConversational ? 'rgba(29,95,250,0.2)' : 'var(--border-light)'}`,
+              background: editConversational ? 'var(--accent-soft)' : 'var(--bg-hover)',
+              border: `1px solid ${editConversational ? 'var(--blue-border)' : 'var(--border)'}`,
               borderRadius: 6, cursor: 'pointer',
             }}
             onClick={() => setEditConversational(v => !v)}
@@ -422,7 +422,7 @@ function ChannelRow({ config, onUpdated, onDeleted }: {
             <div style={{
               flexShrink: 0, marginTop: 1,
               width: 32, height: 18, borderRadius: 9,
-              background: editConversational ? '#1D5FFA' : '#D1D5DB',
+              background: editConversational ? 'var(--accent)' : 'var(--text-tertiary)',
               position: 'relative', transition: 'background 0.15s',
             }}>
               <div style={{
@@ -434,10 +434,10 @@ function ChannelRow({ config, onUpdated, onDeleted }: {
               }} />
             </div>
             <div>
-              <div style={{ ...MONO, fontSize: 11, fontWeight: 600, color: editConversational ? '#1D5FFA' : '#6B7280' }}>
+              <div style={{ ...MONO, fontSize: 11, fontWeight: 600, color: editConversational ? 'var(--accent)' : 'var(--text-tertiary)' }}>
                 CONVERSATIONAL MODE
               </div>
-              <div style={{ ...SANS, fontSize: 11, color: '#9CA3AF', marginTop: 2, lineHeight: 1.4 }}>
+              <div style={{ ...SANS, fontSize: 11, color: 'var(--text-tertiary)', marginTop: 2, lineHeight: 1.4 }}>
                 {editConversational
                   ? 'The bot remembers context within each user\'s conversation. History is compressed automatically when it grows large.'
                   : 'Each message is answered independently. No history is stored. Best for quick one-off queries.'}
@@ -460,8 +460,8 @@ function ChannelRow({ config, onUpdated, onDeleted }: {
               onClick={() => setShowEdit(false)}
               style={{
                 ...MONO, fontSize: 12, padding: '6px 14px',
-                background: 'transparent', border: '1px solid var(--border-light)',
-                color: '#6B7280', borderRadius: 6, cursor: 'pointer',
+                background: 'transparent', border: '1px solid var(--border)',
+                color: 'var(--text-tertiary)', borderRadius: 6, cursor: 'pointer',
               }}
             >Cancel</button>
           </div>
@@ -471,9 +471,9 @@ function ChannelRow({ config, onUpdated, onDeleted }: {
       {/* Setup steps */}
       {showSetup && (
         <div style={{
-          borderTop: '1px solid var(--border-light)',
+          borderTop: '1px solid var(--border)',
           padding: '14px 20px',
-          background: 'var(--bg-light)',
+          background: 'var(--bg-surface)',
         }}>
           <div style={{ ...MONO, fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', color: meta.color, marginBottom: 10 }}>
             {meta.label.toUpperCase()} SETUP GUIDE
@@ -488,7 +488,7 @@ function ChannelRow({ config, onUpdated, onDeleted }: {
                   border: `1px solid ${meta.color}40`,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>{s.step}</span>
-                <span style={{ ...SANS, fontSize: 12, color: 'var(--text-body)', lineHeight: 1.5 }}>{s.action}</span>
+                <span style={{ ...SANS, fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>{s.action}</span>
               </div>
             ))}
           </div>
@@ -598,10 +598,11 @@ function AddChannelForm({ onCreated, onCancel, existingTypes }: {
   const meta = CHANNEL_META[channelType]
 
   const inputStyle: React.CSSProperties = {
-    ...MONO, fontSize: 12, padding: '7px 10px',
-    background: 'var(--bg-light)', color: 'var(--text-dark)',
-    border: '1px solid var(--border-light)', borderRadius: 6,
+    ...MONO, fontSize: 12, padding: '8px 12px',
+    backgroundColor: 'var(--bg-page)', color: 'var(--text-primary)',
+    border: '1px solid var(--border)', borderRadius: 8,
     boxSizing: 'border-box', outline: 'none',
+    colorScheme: 'dark light',
   }
 
   const submit = async (e: React.FormEvent) => {
@@ -624,12 +625,12 @@ function AddChannelForm({ onCreated, onCancel, existingTypes }: {
   if (available.length === 0) {
     return (
       <div style={{
-        background: '#F0F5FF', border: '1px solid #C7D9FF',
-        borderRadius: 8, padding: '14px 18px', marginBottom: 12,
-        ...SANS, fontSize: 13, color: '#6B7280',
+        background: 'var(--card-bg)', border: '1px solid var(--border)',
+        borderRadius: 10, padding: '14px 18px', marginBottom: 12,
+        ...SANS, fontSize: 13, color: 'var(--text-secondary)',
       }}>
         All supported channels are already configured.
-        <button onClick={onCancel} style={{ marginLeft: 12, ...MONO, fontSize: 11, padding: '3px 10px', background: 'transparent', border: '1px solid var(--border-light)', color: '#6B7280', borderRadius: 5, cursor: 'pointer' }}>Close</button>
+        <button onClick={onCancel} style={{ marginLeft: 12, ...SANS, fontSize: 12, padding: '5px 12px', background: 'var(--bg-hover)', border: '1px solid var(--border)', color: 'var(--text-secondary)', borderRadius: 8, cursor: 'pointer' }}>Close</button>
       </div>
     )
   }
@@ -638,17 +639,18 @@ function AddChannelForm({ onCreated, onCancel, existingTypes }: {
     <form
       onSubmit={submit}
       style={{
-        background: '#F0F5FF', border: '1px solid #C7D9FF',
-        borderRadius: 8, padding: '16px 18px', marginBottom: 12,
+        background: 'var(--card-bg)', border: '1px solid var(--border)',
+        borderLeft: '3px solid var(--accent)',
+        borderRadius: 10, padding: '16px 18px', marginBottom: 12,
       }}
     >
-      <div style={{ ...MONO, fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', color: '#1D5FFA', marginBottom: 12 }}>
+      <div style={{ ...MONO, fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', color: 'var(--accent)', marginBottom: 12 }}>
         ADD CHANNEL
       </div>
 
       <div style={{ display: 'flex', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
         <div style={{ flex: '0 0 160px' }}>
-          <div style={{ ...MONO, fontSize: 10, color: '#6B7280', marginBottom: 4 }}>PLATFORM</div>
+          <div style={{ ...MONO, fontSize: 10, color: 'var(--text-tertiary)', marginBottom: 4 }}>PLATFORM</div>
           <select
             value={channelType}
             onChange={e => { setChannelType(e.target.value as ChannelType); setBotToken(''); setError('') }}
@@ -661,7 +663,7 @@ function AddChannelForm({ onCreated, onCancel, existingTypes }: {
         </div>
 
         <div style={{ flex: 1, minWidth: 200 }}>
-          <div style={{ ...MONO, fontSize: 10, color: '#6B7280', marginBottom: 4 }}>BOT TOKEN</div>
+          <div style={{ ...MONO, fontSize: 10, color: 'var(--text-tertiary)', marginBottom: 4 }}>BOT TOKEN</div>
           <input
             type="password"
             value={botToken}
@@ -670,33 +672,33 @@ function AddChannelForm({ onCreated, onCancel, existingTypes }: {
             style={{ ...inputStyle, width: '100%' }}
             autoFocus
           />
-          <div style={{ ...SANS, fontSize: 10, color: '#9CA3AF', marginTop: 3 }}>{meta.hint}</div>
+          <div style={{ ...SANS, fontSize: 10, color: 'var(--text-tertiary)', marginTop: 3 }}>{meta.hint}</div>
         </div>
       </div>
 
       {channelType === 'discord' && (
         <div style={{ marginBottom: 12 }}>
-          <div style={{ ...MONO, fontSize: 10, color: '#6B7280', marginBottom: 4 }}>PUBLIC KEY</div>
+          <div style={{ ...MONO, fontSize: 10, color: 'var(--text-tertiary)', marginBottom: 4 }}>PUBLIC KEY</div>
           <input
             value={discordPublicKey}
             onChange={e => setDiscordPublicKey(e.target.value)}
             placeholder="From Discord Developer Portal → General Information"
             style={{ ...inputStyle, width: '100%' }}
           />
-          <div style={{ ...SANS, fontSize: 10, color: '#9CA3AF', marginTop: 3 }}>Required for Discord to verify requests to your webhook.</div>
+          <div style={{ ...SANS, fontSize: 10, color: 'var(--text-tertiary)', marginTop: 3 }}>Required for Discord to verify requests to your webhook.</div>
         </div>
       )}
 
       {channelType === 'whatsapp' && (
         <div style={{ marginBottom: 12 }}>
-          <div style={{ ...MONO, fontSize: 10, color: '#6B7280', marginBottom: 4 }}>WHATSAPP BUSINESS ACCOUNT ID (WABA ID)</div>
+          <div style={{ ...MONO, fontSize: 10, color: 'var(--text-tertiary)', marginBottom: 4 }}>WHATSAPP BUSINESS ACCOUNT ID (WABA ID)</div>
           <input
             value={whatsappWabaId}
             onChange={e => setWhatsappWabaId(e.target.value)}
             placeholder="e.g. 123456789012345"
             style={{ ...inputStyle, width: '100%' }}
           />
-          <div style={{ ...SANS, fontSize: 10, color: '#9CA3AF', marginTop: 3 }}>
+          <div style={{ ...SANS, fontSize: 10, color: 'var(--text-tertiary)', marginTop: 3 }}>
             Found in Meta for Developers → WhatsApp → API Setup → WhatsApp Business Account ID
           </div>
         </div>
@@ -704,7 +706,7 @@ function AddChannelForm({ onCreated, onCancel, existingTypes }: {
 
       {/* Model selector */}
       <div style={{ marginBottom: 12 }}>
-        <div style={{ ...MONO, fontSize: 10, color: '#6B7280', marginBottom: 4 }}>AI MODEL</div>
+        <div style={{ ...MONO, fontSize: 10, color: 'var(--text-tertiary)', marginBottom: 4 }}>AI MODEL</div>
         <select
           value={modelId}
           onChange={e => setModelId(e.target.value)}
@@ -722,7 +724,7 @@ function AddChannelForm({ onCreated, onCancel, existingTypes }: {
 
       {/* Timezone */}
       <div style={{ marginBottom: 12 }}>
-        <div style={{ ...MONO, fontSize: 10, color: '#6B7280', marginBottom: 4 }}>SCHEDULE TIMEZONE</div>
+        <div style={{ ...MONO, fontSize: 10, color: 'var(--text-tertiary)', marginBottom: 4 }}>SCHEDULE TIMEZONE</div>
         <select
           value={timezone}
           onChange={e => setTimezone(e.target.value)}
@@ -732,7 +734,7 @@ function AddChannelForm({ onCreated, onCancel, existingTypes }: {
             <option key={tz.value} value={tz.value}>{tz.label}</option>
           ))}
         </select>
-        <div style={{ ...SANS, fontSize: 10, color: '#9CA3AF', marginTop: 3 }}>
+        <div style={{ ...SANS, fontSize: 10, color: 'var(--text-tertiary)', marginTop: 3 }}>
           Used when the bot creates schedules via chat.
         </div>
       </div>
@@ -741,14 +743,14 @@ function AddChannelForm({ onCreated, onCancel, existingTypes }: {
       <div style={{
         display: 'flex', alignItems: 'flex-start', gap: 10,
         padding: '10px 12px', marginBottom: 12,
-        background: conversational ? 'rgba(29,95,250,0.06)' : 'rgba(0,0,0,0.03)',
-        border: `1px solid ${conversational ? 'rgba(29,95,250,0.2)' : 'var(--border-light)'}`,
+        background: conversational ? 'var(--accent-soft)' : 'var(--bg-hover)',
+        border: `1px solid ${conversational ? 'var(--blue-border)' : 'var(--border)'}`,
         borderRadius: 6, cursor: 'pointer',
       }} onClick={() => setConversational(v => !v)}>
         <div style={{
           flexShrink: 0, marginTop: 1,
           width: 32, height: 18, borderRadius: 9,
-          background: conversational ? '#1D5FFA' : '#D1D5DB',
+          background: conversational ? 'var(--accent)' : 'var(--text-tertiary)',
           position: 'relative', transition: 'background 0.15s',
         }}>
           <div style={{
@@ -760,10 +762,10 @@ function AddChannelForm({ onCreated, onCancel, existingTypes }: {
           }} />
         </div>
         <div>
-          <div style={{ ...MONO, fontSize: 11, fontWeight: 600, color: conversational ? '#1D5FFA' : '#6B7280' }}>
+          <div style={{ ...MONO, fontSize: 11, fontWeight: 600, color: conversational ? 'var(--accent)' : 'var(--text-tertiary)' }}>
             CONVERSATIONAL MODE
           </div>
-          <div style={{ ...SANS, fontSize: 11, color: '#9CA3AF', marginTop: 2, lineHeight: 1.4 }}>
+          <div style={{ ...SANS, fontSize: 11, color: 'var(--text-tertiary)', marginTop: 2, lineHeight: 1.4 }}>
             {conversational
               ? 'The bot remembers context within each user\'s conversation. History is compressed automatically when it grows large.'
               : 'Each message is answered independently. No history is stored. Best for quick one-off queries.'}
@@ -784,19 +786,20 @@ function AddChannelForm({ onCreated, onCancel, existingTypes }: {
           type="submit"
           disabled={saving}
           style={{
-            ...MONO, fontSize: 12, padding: '7px 16px',
-            background: saving ? '#1D5FFA88' : '#1D5FFA',
-            color: '#fff', border: 'none', borderRadius: 6,
-            cursor: saving ? 'wait' : 'pointer', fontWeight: 700,
+            ...SANS, fontSize: 13, padding: '8px 16px',
+            background: 'var(--btn-upload-bg)',
+            color: 'var(--btn-upload-text)', border: 'none', borderRadius: 999,
+            cursor: saving ? 'wait' : 'pointer', fontWeight: 600,
+            opacity: saving ? 0.7 : 1,
           }}
         >{saving ? 'Adding…' : 'Add Channel'}</button>
         <button
           type="button"
           onClick={onCancel}
           style={{
-            ...MONO, fontSize: 12, padding: '7px 14px',
-            background: 'transparent', border: '1px solid var(--border-light)',
-            color: '#6B7280', borderRadius: 6, cursor: 'pointer',
+            ...SANS, fontSize: 13, padding: '8px 14px',
+            background: 'transparent', border: '1px solid var(--border)',
+            color: 'var(--text-secondary)', borderRadius: 999, cursor: 'pointer',
           }}
         >Cancel</button>
       </div>
@@ -812,7 +815,7 @@ const GUIDES: Record<ChannelType, GuideStep[]> = {
   slack: [
     {
       title: 'Create a new Slack app',
-      body: <>Open the <a href="https://api.slack.com/apps" target="_blank" rel="noopener" style={{ color: '#1D5FFA' }}>Slack App Portal</a> and click <strong>Create New App</strong>. Choose <strong>From scratch</strong>, give it a name like <code>FlowStudio Bot</code>, and pick your workspace.</>,
+      body: <>Open the <a href="https://api.slack.com/apps" target="_blank" rel="noopener" style={{ color: 'var(--accent)' }}>Slack App Portal</a> and click <strong>Create New App</strong>. Choose <strong>From scratch</strong>, give it a name like <code>FlowStudio Bot</code>, and pick your workspace.</>,
     },
     {
       title: 'Add Bot Token Scopes',
@@ -846,7 +849,7 @@ const GUIDES: Record<ChannelType, GuideStep[]> = {
   telegram: [
     {
       title: 'Create a bot with BotFather',
-      body: <>Open Telegram and message <a href="https://t.me/BotFather" target="_blank" rel="noopener" style={{ color: '#1D5FFA' }}>@BotFather</a>. Send <code>/newbot</code> and follow the prompts. The username must end in <code>bot</code>, for example <code>myflow_bot</code>.</>,
+      body: <>Open Telegram and message <a href="https://t.me/BotFather" target="_blank" rel="noopener" style={{ color: 'var(--accent)' }}>@BotFather</a>. Send <code>/newbot</code> and follow the prompts. The username must end in <code>bot</code>, for example <code>myflow_bot</code>.</>,
     },
     {
       title: 'Copy the bot token',
@@ -868,7 +871,7 @@ const GUIDES: Record<ChannelType, GuideStep[]> = {
   discord: [
     {
       title: 'Create a new application',
-      body: <>Go to the <a href="https://discord.com/developers/applications" target="_blank" rel="noopener" style={{ color: '#1D5FFA' }}>Discord Developer Portal</a> and click <strong>New Application</strong>. Give it a name and accept the terms.</>,
+      body: <>Go to the <a href="https://discord.com/developers/applications" target="_blank" rel="noopener" style={{ color: 'var(--accent)' }}>Discord Developer Portal</a> and click <strong>New Application</strong>. Give it a name and accept the terms.</>,
     },
     {
       title: 'Copy the Public Key and bot token',
@@ -898,7 +901,7 @@ const GUIDES: Record<ChannelType, GuideStep[]> = {
   whatsapp: [
     {
       title: 'Create a Meta developer app',
-      body: <>Go to <a href="https://developers.facebook.com/apps/" target="_blank" rel="noopener" style={{ color: '#1D5FFA' }}>developers.facebook.com/apps</a> and click <strong>Create App</strong>. Choose <strong>Business</strong> as the type. If you do not have a verified Meta Business account set one up first at <a href="https://business.facebook.com" target="_blank" rel="noopener" style={{ color: '#1D5FFA' }}>business.facebook.com</a>.</>,
+      body: <>Go to <a href="https://developers.facebook.com/apps/" target="_blank" rel="noopener" style={{ color: 'var(--accent)' }}>developers.facebook.com/apps</a> and click <strong>Create App</strong>. Choose <strong>Business</strong> as the type. If you do not have a verified Meta Business account set one up first at <a href="https://business.facebook.com" target="_blank" rel="noopener" style={{ color: 'var(--accent)' }}>business.facebook.com</a>.</>,
     },
     {
       title: 'Add WhatsApp to your app',
@@ -906,7 +909,7 @@ const GUIDES: Record<ChannelType, GuideStep[]> = {
     },
     {
       title: 'Get your access token and WABA ID',
-      body: <>Go to <strong>WhatsApp &gt; API Setup</strong>. Copy the <strong>Temporary access token</strong> and the <strong>WhatsApp Business Account ID</strong> (labeled "WhatsApp Business Account ID" just below the phone number). For production, generate a permanent system user token at <a href="https://business.facebook.com/settings/system-users" target="_blank" rel="noopener" style={{ color: '#1D5FFA' }}>Business Settings &gt; System Users</a> with <code>whatsapp_business_messaging</code> permission.</>,
+      body: <>Go to <strong>WhatsApp &gt; API Setup</strong>. Copy the <strong>Temporary access token</strong> and the <strong>WhatsApp Business Account ID</strong> (labeled "WhatsApp Business Account ID" just below the phone number). For production, generate a permanent system user token at <a href="https://business.facebook.com/settings/system-users" target="_blank" rel="noopener" style={{ color: 'var(--accent)' }}>Business Settings &gt; System Users</a> with <code>whatsapp_business_messaging</code> permission.</>,
     },
     {
       title: 'Add the channel in FlowStudio',
@@ -942,7 +945,7 @@ function SetupGuideSection() {
   return (
     <div style={{
       marginTop: 40,
-      border: '1px solid var(--border-light)',
+      border: '1px solid var(--border)',
       borderRadius: 12,
       overflow: 'hidden',
       background: 'var(--bg-page)',
@@ -950,14 +953,14 @@ function SetupGuideSection() {
       {/* Section header */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '16px 20px', borderBottom: '1px solid var(--border-light)',
-        background: 'var(--bg-light)',
+        padding: '16px 20px', borderBottom: '1px solid var(--border)',
+        background: 'var(--bg-surface)',
       }}>
         <div>
-          <div style={{ ...MONO, fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', color: '#1D5FFA', marginBottom: 3 }}>
+          <div style={{ ...MONO, fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', color: 'var(--accent)', marginBottom: 3 }}>
             SETUP GUIDES
           </div>
-          <div style={{ ...SANS, fontSize: 14, fontWeight: 700, color: 'var(--text-dark)' }}>
+          <div style={{ ...SANS, fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>
             Step-by-step integration docs
           </div>
         </div>
@@ -982,7 +985,7 @@ function SetupGuideSection() {
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', borderBottom: '1px solid var(--border-light)', background: 'var(--bg-light)' }}>
+      <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', background: 'var(--bg-surface)' }}>
         {CHANNEL_TYPES.map(type => (
           <button
             key={type}
@@ -991,7 +994,7 @@ function SetupGuideSection() {
               ...MONO, fontSize: 11, fontWeight: 600,
               padding: '10px 18px', background: 'none', border: 'none',
               borderBottom: activeTab === type ? `2px solid ${CHANNEL_META[type].color}` : '2px solid transparent',
-              color: activeTab === type ? CHANNEL_META[type].color : '#6B7280',
+              color: activeTab === type ? CHANNEL_META[type].color : 'var(--text-tertiary)',
               cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
               marginBottom: -1, whiteSpace: 'nowrap',
               transition: 'color 0.12s',
@@ -1009,7 +1012,7 @@ function SetupGuideSection() {
           <div
             key={i}
             style={{
-              display: 'flex', gap: 0, borderBottom: i < steps.length - 1 ? '1px solid var(--border-light)' : 'none',
+              display: 'flex', gap: 0, borderBottom: i < steps.length - 1 ? '1px solid var(--border)' : 'none',
               position: 'relative',
             }}
           >
@@ -1028,7 +1031,7 @@ function SetupGuideSection() {
               {i < steps.length - 1 && (
                 <div style={{
                   position: 'absolute', top: 46, bottom: 0, left: '50%',
-                  width: 1, background: 'var(--border-light)',
+                  width: 1, background: 'var(--border)',
                   transform: 'translateX(-50%)',
                 }} />
               )}
@@ -1036,13 +1039,13 @@ function SetupGuideSection() {
 
             {/* Content */}
             <div style={{ flex: 1, padding: '18px 20px 20px 0' }}>
-              <div style={{ ...MONO, fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', color: '#9CA3AF', marginBottom: 4, textTransform: 'uppercase' }}>
+              <div style={{ ...MONO, fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', color: 'var(--text-tertiary)', marginBottom: 4, textTransform: 'uppercase' }}>
                 Step {i + 1}
               </div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-dark)', marginBottom: 7, ...SANS }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 7, ...SANS }}>
                 {s.title}
               </div>
-              <div style={{ ...SANS, fontSize: 12, color: 'var(--text-body)', lineHeight: 1.7 }}>
+              <div style={{ ...SANS, fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.7 }}>
                 {s.body}
               </div>
             </div>
@@ -1081,28 +1084,33 @@ export default function Channels() {
   const existingTypes = new Set(channels.map(c => c.channel_type))
 
   return (
-    <div style={{ padding: '36px 48px', width: '100%', boxSizing: 'border-box' }}>
+    <div style={{
+      padding: '28px 36px', width: '100%', boxSizing: 'border-box',
+      background: 'var(--bg-page)', minHeight: '100%', ...SANS,
+    }}>
 
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 28 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 24 }}>
         <div>
-          <div style={{ ...MONO, fontSize: 10, fontWeight: 600, letterSpacing: '0.14em', color: '#1D5FFA', marginBottom: 6 }}>
+          <div style={{ ...MONO, fontSize: 10, fontWeight: 600, letterSpacing: '0.14em', color: 'var(--accent)', marginBottom: 6 }}>
             CHANNELS
           </div>
-          <h2 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-dark)', margin: 0 }}>
+          <h2 style={{ ...SANS, fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
             Bot Integrations
           </h2>
-          <p style={{ ...SANS, fontSize: 13, color: 'var(--text-body)', marginTop: 6, marginBottom: 0, maxWidth: 540 }}>
+          <p style={{ ...SANS, fontSize: 13, color: 'var(--text-secondary)', marginTop: 6, marginBottom: 0, maxWidth: 540 }}>
             Connect FlowStudio to messaging platforms. Users can trigger and monitor workflows by chatting with your bot.
           </p>
         </div>
         <button
           onClick={() => setShowAddForm(v => !v)}
           style={{
-            ...MONO, fontSize: 12, padding: '9px 18px',
-            background: showAddForm ? '#1D5FFA33' : '#1D5FFA',
-            color: '#fff', border: 'none', borderRadius: 7,
-            cursor: 'pointer', fontWeight: 700, flexShrink: 0, marginTop: 2,
+            ...SANS, fontSize: 13, padding: '8px 16px',
+            background: showAddForm ? 'var(--accent-soft)' : 'var(--btn-upload-bg)',
+            color: showAddForm ? 'var(--accent)' : 'var(--btn-upload-text)',
+            border: showAddForm ? '1px solid var(--blue-border)' : 'none',
+            borderRadius: 999,
+            cursor: 'pointer', fontWeight: 600, flexShrink: 0, marginTop: 2,
           }}
         >{showAddForm ? 'Cancel' : '+ Add Channel'}</button>
       </div>
@@ -1117,27 +1125,27 @@ export default function Channels() {
 
       {/* Channel list */}
       {loading ? (
-        <div style={{ ...MONO, fontSize: 12, color: '#9CA3AF', padding: '40px 0', textAlign: 'center' }}>
+        <div style={{ ...MONO, fontSize: 12, color: 'var(--text-tertiary)', padding: '40px 0', textAlign: 'center' }}>
           Loading…
         </div>
       ) : channels.length === 0 && !showAddForm ? (
         <div style={{
           textAlign: 'center', padding: '60px 0',
-          background: 'var(--bg-page)', border: '1px solid var(--border-light)', borderRadius: 12,
+          background: 'var(--bg-page)', border: '1px solid var(--border)', borderRadius: 12,
         }}>
           <div style={{ fontSize: 36, marginBottom: 14 }}>💬</div>
-          <div style={{ ...MONO, fontSize: 14, color: 'var(--text-dark)', fontWeight: 600, marginBottom: 6 }}>
+          <div style={{ ...MONO, fontSize: 14, color: 'var(--text-primary)', fontWeight: 600, marginBottom: 6 }}>
             No channels connected
           </div>
-          <div style={{ ...SANS, fontSize: 13, color: '#9CA3AF', maxWidth: 340, margin: '0 auto 20px' }}>
+          <div style={{ ...SANS, fontSize: 13, color: 'var(--text-tertiary)', maxWidth: 340, margin: '0 auto 20px' }}>
             Add Slack, Telegram, Discord, or WhatsApp so users can chat directly with your workflows.
           </div>
           <button
             onClick={() => setShowAddForm(true)}
             style={{
-              ...MONO, fontSize: 12, padding: '9px 20px',
-              background: '#1D5FFA', color: '#fff', border: 'none',
-              borderRadius: 7, cursor: 'pointer', fontWeight: 700,
+              ...SANS, fontSize: 13, padding: '8px 16px',
+              background: 'var(--btn-upload-bg)', color: 'var(--btn-upload-text)', border: 'none',
+              borderRadius: 999, cursor: 'pointer', fontWeight: 600,
             }}
           >+ Add Your First Channel</button>
         </div>
@@ -1155,12 +1163,12 @@ export default function Channels() {
       {/* Info box */}
       {!loading && channels.length > 0 && (
         <div style={{
-          ...SANS, fontSize: 12, color: '#6B7280',
-          padding: '12px 16px', background: 'var(--bg-light)',
-          border: '1px solid var(--border-light)', borderRadius: 8,
+          ...SANS, fontSize: 12, color: 'var(--text-tertiary)',
+          padding: '12px 16px', background: 'var(--bg-surface)',
+          border: '1px solid var(--border)', borderRadius: 8,
           lineHeight: 1.6, marginTop: 4,
         }}>
-          <strong style={{ color: 'var(--text-body)' }}>How it works:</strong>{' '}
+          <strong style={{ color: 'var(--text-secondary)' }}>How it works:</strong>{' '}
           Users message your bot. The bot routes their intent to the right workflow automatically using AI.
           Supported commands: <em>run [workflow]</em>, <em>status</em>, <em>schedule [workflow] daily at 9am</em>, <em>list schedules</em>, and natural language questions about your data.
         </div>

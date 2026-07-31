@@ -29,13 +29,16 @@ interface AgentPanelProps {
   onClose: () => void
 }
 
+const MONO = { fontFamily: 'var(--font-mono)' }
+const SANS = { fontFamily: 'var(--font-sans)' }
+
 const LABEL_STYLE = {
-  fontFamily: 'var(--font-mono)',
+  ...MONO,
   fontSize: 10,
   fontWeight: 600,
   letterSpacing: '0.12em',
   textTransform: 'uppercase' as const,
-  color: 'var(--text-body)',
+  color: 'var(--text-tertiary)',
   marginBottom: 8,
   display: 'block',
 }
@@ -44,14 +47,30 @@ const INPUT_STYLE = {
   width: '100%',
   padding: '9px 12px',
   borderRadius: 8,
-  border: '1px solid var(--border-light)',
-  fontFamily: 'var(--font-sans)',
+  border: '1px solid var(--border)',
+  ...SANS,
   fontSize: 13.5,
-  color: 'var(--text-dark)',
-  background: '#fff',
+  color: 'var(--text-primary)',
+  backgroundColor: 'var(--card-bg)',
   outline: 'none',
   transition: 'border-color 0.15s, box-shadow 0.15s',
   boxSizing: 'border-box' as const,
+  colorScheme: 'dark light' as const,
+}
+
+const SELECT_STYLE: React.CSSProperties = {
+  ...INPUT_STYLE,
+  ...SANS,
+  fontSize: 13,
+  appearance: 'none',
+  WebkitAppearance: 'none',
+  MozAppearance: 'none',
+  paddingRight: 36,
+  cursor: 'pointer',
+  backgroundColor: 'var(--card-bg)',
+  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M2.5 4.5L6 8L9.5 4.5' stroke='%2371717A' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`,
+  backgroundRepeat: 'no-repeat',
+  backgroundPosition: 'right 12px center',
 }
 
 export default function AgentPanel({ mode, agent, availableTools, communityTools = [], onSave, onClose }: AgentPanelProps) {
@@ -188,11 +207,11 @@ export default function AgentPanel({ mode, agent, availableTools, communityTools
   }
 
   const focusStyle = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    e.target.style.borderColor = 'var(--blue)'
-    e.target.style.boxShadow = '0 0 0 3px var(--blue-dim)'
+    e.target.style.borderColor = 'var(--accent)'
+    e.target.style.boxShadow = '0 0 0 3px var(--accent-soft)'
   }
   const blurStyle = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    e.target.style.borderColor = 'var(--border-light)'
+    e.target.style.borderColor = 'var(--border)'
     e.target.style.boxShadow = 'none'
   }
 
@@ -213,39 +232,41 @@ export default function AgentPanel({ mode, agent, availableTools, communityTools
         style={{
           position: 'fixed', top: 0, right: 0, bottom: 0,
           width: 520, maxWidth: '94vw',
-          background: '#ffffff',
+          background: 'var(--bg-surface)',
           zIndex: 101,
           boxShadow: 'var(--shadow-panel)',
           display: 'flex', flexDirection: 'column',
           transform: visible ? 'translateX(0)' : 'translateX(100%)',
           transition: 'transform 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
+          ...SANS,
         }}
       >
         {/* Header */}
         <div style={{
           padding: '20px 24px',
-          borderBottom: '1px solid rgba(255,255,255,0.08)',
-          background: 'var(--bg-dark)',
+          borderBottom: '1px solid var(--border)',
+          background: 'var(--bg-page)',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
         }}>
           <div>
             <div style={{
-              fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 600,
+              ...MONO, fontSize: 10, fontWeight: 600,
               letterSpacing: '0.12em', textTransform: 'uppercase',
-              color: 'rgba(255,255,255,0.4)', marginBottom: 4,
+              color: 'var(--text-tertiary)', marginBottom: 4,
             }}>
               {mode === 'create' ? 'New Agent' : 'Edit Agent'}
             </div>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 700, color: '#fff' }}>
+            <div style={{ ...MONO, fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>
               {mode === 'edit' ? (agent?.name ?? 'Agent') : 'Configure your agent'}
             </div>
           </div>
           <button
             onClick={handleClose}
             style={{
-              background: 'rgba(255,255,255,0.08)',
-              border: '1px solid rgba(255,255,255,0.12)',
-              borderRadius: 8, color: 'rgba(255,255,255,0.6)',
+              ...SANS,
+              background: 'var(--bg-hover)',
+              border: '1px solid var(--border)',
+              borderRadius: 8, color: 'var(--text-secondary)',
               cursor: 'pointer', padding: '5px 10px', fontSize: 12, flexShrink: 0,
             }}
           >
@@ -287,50 +308,36 @@ export default function AgentPanel({ mode, agent, availableTools, communityTools
           {/* Model */}
           <div>
             <label style={LABEL_STYLE}>Model</label>
-            <div style={{ position: 'relative' }}>
-              <select
-                value={modelId}
-                onChange={(e) => setModelId(e.target.value)}
-                style={{
-                  ...INPUT_STYLE,
-                  appearance: 'none',
-                  paddingRight: 36,
-                  cursor: 'pointer',
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: 13,
-                }}
-                onFocus={focusStyle}
-                onBlur={blurStyle}
-              >
-                <optgroup label="Anthropic">
-                  {ANTHROPIC_MODELS.map((m) => (
-                    <option key={m.id} value={m.id}>{m.label}</option>
-                  ))}
-                </optgroup>
-                <optgroup label="OpenAI">
-                  {OPENAI_MODELS.map((m) => (
-                    <option key={m.id} value={m.id}>{m.label}</option>
-                  ))}
-                </optgroup>
-              </select>
-              <svg
-                width="12" height="12" viewBox="0 0 12 12" fill="none"
-                style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}
-              >
-                <path d="M2 4L6 8L10 4" stroke="var(--text-body)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </div>
+            <select
+              value={modelId}
+              onChange={(e) => setModelId(e.target.value)}
+              style={SELECT_STYLE}
+              onFocus={focusStyle}
+              onBlur={blurStyle}
+            >
+              <optgroup label="Anthropic" style={SANS}>
+                {ANTHROPIC_MODELS.map((m) => (
+                  <option key={m.id} value={m.id} style={SANS}>{m.label}</option>
+                ))}
+              </optgroup>
+              <optgroup label="OpenAI" style={SANS}>
+                {OPENAI_MODELS.map((m) => (
+                  <option key={m.id} value={m.id} style={SANS}>{m.label}</option>
+                ))}
+              </optgroup>
+            </select>
             <div style={{
-              marginTop: 6, display: 'flex', alignItems: 'center', gap: 6,
-              fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-body)',
+              marginTop: 8, display: 'flex', alignItems: 'center', gap: 6,
+              ...MONO, fontSize: 11, color: 'var(--text-tertiary)',
             }}>
               Provider:
               <span style={{
-                padding: '1px 8px', borderRadius: 4, fontSize: 11,
-                background: provider === 'anthropic' ? 'var(--blue-dim)' : 'rgba(11,16,32,0.06)',
-                border: `1px solid ${provider === 'anthropic' ? 'var(--blue-border)' : 'var(--border-light)'}`,
-                color: provider === 'anthropic' ? 'var(--blue)' : 'var(--text-dark)',
-                fontFamily: 'var(--font-mono)',
+                padding: '2px 8px', borderRadius: 4, fontSize: 10, fontWeight: 600,
+                letterSpacing: '0.04em', textTransform: 'uppercase',
+                background: provider === 'anthropic' ? 'var(--accent-soft)' : 'var(--bg-hover)',
+                border: `1px solid ${provider === 'anthropic' ? 'var(--blue-border)' : 'var(--border)'}`,
+                color: provider === 'anthropic' ? 'var(--accent)' : 'var(--text-secondary)',
+                ...MONO,
               }}>
                 {provider === 'anthropic' ? 'Anthropic' : 'OpenAI'}
               </span>
@@ -347,7 +354,7 @@ export default function AgentPanel({ mode, agent, availableTools, communityTools
               rows={6}
               style={{
                 ...INPUT_STYLE,
-                fontFamily: 'var(--font-mono)',
+                ...MONO,
                 fontSize: 12.5,
                 lineHeight: 1.7,
                 resize: 'vertical',
@@ -364,10 +371,10 @@ export default function AgentPanel({ mode, agent, availableTools, communityTools
             {availableSources.length === 0 ? (
               <div style={{
                 padding: '14px 16px', borderRadius: 8,
-                background: 'rgba(11,16,32,0.03)',
-                border: '1px solid var(--border-light)',
+                background: 'var(--bg-hover)',
+                border: '1px solid var(--border)',
                 fontFamily: 'var(--font-mono)', fontSize: 12,
-                color: 'var(--text-body)',
+                color: 'var(--text-secondary)',
               }}>
                 No data sources yet — create one in the Data Sources page.
               </div>
@@ -382,9 +389,9 @@ export default function AgentPanel({ mode, agent, availableTools, communityTools
                       style={{
                         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                         padding: '8px 12px', borderRadius: 6, textAlign: 'left', cursor: 'pointer',
-                        border: `1px solid ${active ? 'var(--blue-border)' : 'var(--border-light)'}`,
+                        border: `1px solid ${active ? 'var(--blue-border)' : 'var(--border)'}`,
                         background: active ? 'var(--blue-dim)' : 'transparent',
-                        color: active ? 'var(--blue)' : 'var(--text-body)',
+                        color: active ? 'var(--blue)' : 'var(--text-secondary)',
                         transition: 'all 0.15s',
                       }}
                     >
@@ -431,10 +438,10 @@ export default function AgentPanel({ mode, agent, availableTools, communityTools
             {availableTools.length === 0 && autoInjectedTools.length === 0 ? (
               <div style={{
                 padding: '14px 16px', borderRadius: 8,
-                background: 'rgba(11,16,32,0.03)',
-                border: '1px solid var(--border-light)',
+                background: 'var(--bg-hover)',
+                border: '1px solid var(--border)',
                 fontFamily: 'var(--font-mono)', fontSize: 12,
-                color: 'var(--text-body)',
+                color: 'var(--text-secondary)',
               }}>
                 No tools available — upload a tool first.
               </div>
@@ -443,7 +450,7 @@ export default function AgentPanel({ mode, agent, availableTools, communityTools
                 {availableTools.length > 0 && (
                   <>
                     {communityTools.length > 0 && (
-                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', color: 'var(--text-body)', marginBottom: 6, textTransform: 'uppercase' }}>
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', color: 'var(--text-secondary)', marginBottom: 6, textTransform: 'uppercase' }}>
                         Your Tools
                       </div>
                     )}
@@ -459,9 +466,9 @@ export default function AgentPanel({ mode, agent, availableTools, communityTools
                         fontSize: 12,
                         padding: '5px 12px',
                         borderRadius: 6,
-                        border: `1px solid ${active ? 'var(--blue-border)' : 'var(--border-light)'}`,
+                        border: `1px solid ${active ? 'var(--blue-border)' : 'var(--border)'}`,
                         background: active ? 'var(--blue-dim)' : 'transparent',
-                        color: active ? 'var(--blue)' : 'var(--text-body)',
+                        color: active ? 'var(--blue)' : 'var(--text-secondary)',
                         cursor: 'pointer',
                         transition: 'all 0.15s',
                       }}
@@ -516,7 +523,7 @@ export default function AgentPanel({ mode, agent, availableTools, communityTools
                               borderRadius: 6,
                               border: `1px solid ${active ? '#10B98150' : '#10B98125'}`,
                               background: active ? '#10B98115' : 'transparent',
-                              color: active ? '#10B981' : 'var(--text-body)',
+                              color: active ? '#10B981' : 'var(--text-secondary)',
                               cursor: 'pointer',
                               transition: 'all 0.15s',
                             }}
@@ -532,7 +539,7 @@ export default function AgentPanel({ mode, agent, availableTools, communityTools
             )}
             {autoInjectedTools.length > 0 && (
               <div style={{
-                marginTop: 8, fontSize: 11, color: 'var(--text-body)',
+                marginTop: 8, fontSize: 11, color: 'var(--text-secondary)',
                 fontFamily: 'var(--font-mono)', display: 'flex', alignItems: 'center', gap: 5,
               }}>
                 <svg width="9" height="9" viewBox="0 0 10 10" fill="none"><path d="M5.5 1L2 5.5h3.5L4.5 9 8 4.5H4.5L5.5 1Z" fill="currentColor"/></svg>
@@ -547,16 +554,16 @@ export default function AgentPanel({ mode, agent, availableTools, communityTools
               MCP Tools ({selectedMcpTools.size} selected)
             </label>
             {loadingMcp ? (
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-body)', padding: '10px 0' }}>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-secondary)', padding: '10px 0' }}>
                 Loading MCP servers…
               </div>
             ) : mcpServers.length === 0 ? (
               <div style={{
                 padding: '14px 16px', borderRadius: 8,
-                background: 'rgba(11,16,32,0.03)',
-                border: '1px solid var(--border-light)',
+                background: 'var(--bg-hover)',
+                border: '1px solid var(--border)',
                 fontFamily: 'var(--font-mono)', fontSize: 12,
-                color: 'var(--text-body)',
+                color: 'var(--text-secondary)',
               }}>
                 No MCP servers configured — add one in Settings.
               </div>
@@ -569,20 +576,20 @@ export default function AgentPanel({ mode, agent, availableTools, communityTools
                   const allSelected = tools.length > 0 && selectedCount === tools.length
                   return (
                     <div key={server.server_id} style={{
-                      border: '1px solid var(--border-light)', borderRadius: 8, overflow: 'hidden',
+                      border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden',
                     }}>
                       {/* Server header row */}
                       <div style={{
                         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                         padding: '8px 12px',
-                        background: 'rgba(11,16,32,0.03)',
-                        borderBottom: tools.length > 0 ? '1px solid var(--border-light)' : 'none',
+                        background: 'var(--bg-hover)',
+                        borderBottom: tools.length > 0 ? '1px solid var(--border)' : 'none',
                       }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 600, color: 'var(--text-dark)' }}>
+                          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>
                             {server.name}
                           </span>
-                          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-body)' }}>
+                          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-secondary)' }}>
                             {tools.length} tool{tools.length !== 1 ? 's' : ''}
                           </span>
                         </div>
@@ -592,9 +599,9 @@ export default function AgentPanel({ mode, agent, availableTools, communityTools
                             style={{
                               fontFamily: 'var(--font-mono)', fontSize: 11,
                               padding: '3px 10px', borderRadius: 5, cursor: 'pointer',
-                              border: `1px solid ${allSelected ? 'var(--blue-border)' : 'var(--border-light)'}`,
+                              border: `1px solid ${allSelected ? 'var(--blue-border)' : 'var(--border)'}`,
                               background: allSelected ? 'var(--blue-dim)' : 'transparent',
-                              color: allSelected ? 'var(--blue)' : 'var(--text-body)',
+                              color: allSelected ? 'var(--blue)' : 'var(--text-secondary)',
                             }}
                           >
                             {allSelected ? 'Deselect all' : 'Select all'}
@@ -643,9 +650,9 @@ export default function AgentPanel({ mode, agent, availableTools, communityTools
                                 style={{
                                   fontFamily: 'var(--font-mono)', fontSize: 12,
                                   padding: '4px 11px', borderRadius: 5, cursor: 'pointer',
-                                  border: `1px solid ${active ? 'var(--blue-border)' : 'var(--border-light)'}`,
+                                  border: `1px solid ${active ? 'var(--blue-border)' : 'var(--border)'}`,
                                   background: active ? 'var(--blue-dim)' : 'transparent',
-                                  color: active ? 'var(--blue)' : 'var(--text-body)',
+                                  color: active ? 'var(--blue)' : 'var(--text-secondary)',
                                   transition: 'all 0.12s',
                                 }}
                               >
@@ -666,14 +673,15 @@ export default function AgentPanel({ mode, agent, availableTools, communityTools
         {/* Footer */}
         <div style={{
           padding: '16px 24px',
-          borderTop: '1px solid var(--border-light)',
+          borderTop: '1px solid var(--border)',
           display: 'flex', alignItems: 'center', gap: 10,
+          background: 'var(--bg-surface)',
         }}>
           {error && (
             <span style={{
               flex: 1, fontSize: 12,
               color: 'var(--invalid)',
-              fontFamily: 'var(--font-mono)',
+              ...MONO,
             }}>
               {error}
             </span>
