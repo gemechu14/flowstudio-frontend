@@ -17,6 +17,7 @@ import {
 const NODE_W = 200
 const NODE_H = 80
 const MONO = { fontFamily: 'var(--font-mono)' }
+const SANS = { fontFamily: 'var(--font-sans)' }
 
 const MODE_LABELS: Record<ExecutionMode, string> = {
   sequential: 'Sequential — Pipeline',
@@ -280,21 +281,21 @@ function CanvasNodeCard({
         <div style={{ marginTop: 4 }}>
           <div style={{ display: 'flex', gap: 6 }}>
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 9, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2, fontFamily: 'monospace' }}>Timeout (s)</div>
+              <div style={{ fontSize: 9, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2, fontFamily: 'var(--font-mono)' }}>Timeout (s)</div>
               <input type="number" min="0" placeholder="∞"
                 value={(node.config.timeout_seconds as number | undefined) || ''}
                 onChange={e => onConfigChange({ ...node.config, timeout_seconds: e.target.value ? Number(e.target.value) : undefined })}
                 onClick={e => e.stopPropagation()}
-                style={{ width: '100%', fontSize: 10, padding: '2px 5px', background: 'var(--bg-page)', color: 'var(--text-body)', border: '1px solid var(--border)', borderRadius: 4, fontFamily: 'monospace' }}
+                style={{ width: '100%', fontSize: 10, padding: '2px 5px', background: 'var(--bg-page)', color: 'var(--text-body)', border: '1px solid var(--border)', borderRadius: 4, fontFamily: 'var(--font-mono)' }}
               />
             </div>
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 9, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2, fontFamily: 'monospace' }}>Retry delay (s)</div>
+              <div style={{ fontSize: 9, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2, fontFamily: 'var(--font-mono)' }}>Retry delay (s)</div>
               <input type="number" min="0" step="0.5" placeholder="1.0"
                 value={(node.config.retry_delay as number | undefined) || ''}
                 onChange={e => onConfigChange({ ...node.config, retry_delay: e.target.value ? Number(e.target.value) : undefined })}
                 onClick={e => e.stopPropagation()}
-                style={{ width: '100%', fontSize: 10, padding: '2px 5px', background: 'var(--bg-page)', color: 'var(--text-body)', border: '1px solid var(--border)', borderRadius: 4, fontFamily: 'monospace' }}
+                style={{ width: '100%', fontSize: 10, padding: '2px 5px', background: 'var(--bg-page)', color: 'var(--text-body)', border: '1px solid var(--border)', borderRadius: 4, fontFamily: 'var(--font-mono)' }}
               />
             </div>
           </div>
@@ -304,11 +305,11 @@ function CanvasNodeCard({
         {/* Splitter/Aggregator toggles — parallel and hybrid modes */}
         {(execMode === 'parallel' || execMode === 'hybrid') && node.node_type === 'agent' && (
           <div style={{ marginTop: 4, display: 'flex', gap: 6 }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, cursor: 'pointer', fontFamily: 'monospace', color: '#F59E0B' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, cursor: 'pointer', fontFamily: 'var(--font-mono)', color: '#F59E0B' }}>
               <input type="checkbox" checked={!!(node.config.is_splitter)} onChange={e => onConfigChange({ ...node.config, is_splitter: e.target.checked, is_aggregator: false })} onClick={ev => ev.stopPropagation()} />
               Splitter
             </label>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, cursor: 'pointer', fontFamily: 'monospace', color: '#10B981' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, cursor: 'pointer', fontFamily: 'var(--font-mono)', color: '#10B981' }}>
               <input type="checkbox" checked={!!(node.config.is_aggregator)} onChange={e => onConfigChange({ ...node.config, is_aggregator: e.target.checked, is_splitter: false })} onClick={ev => ev.stopPropagation()} />
               Aggregator
             </label>
@@ -357,19 +358,19 @@ function CanvasNodeCard({
             </div>
             {execMode === 'event_driven' && ((node.config.subscribes_to as string[] | undefined) || []).length > 0 && (
               <div style={{ marginTop: 4 }}>
-                <div style={{ fontSize: 9, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2, fontFamily: 'monospace' }}>Event timeout (s)</div>
+                <div style={{ fontSize: 9, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2, fontFamily: 'var(--font-mono)' }}>Event timeout (s)</div>
                 <input type="number" min="10" placeholder="300"
                   value={(node.config.event_timeout_seconds as number | undefined) || ''}
                   onChange={e => onConfigChange({ ...node.config, event_timeout_seconds: e.target.value ? Number(e.target.value) : undefined })}
                   onClick={e => e.stopPropagation()}
-                  style={{ width: '100%', fontSize: 10, padding: '2px 5px', background: 'var(--bg-page)', color: 'var(--text-body)', border: '1px solid var(--border)', borderRadius: 4, fontFamily: 'monospace' }}
+                  style={{ width: '100%', fontSize: 10, padding: '2px 5px', background: 'var(--bg-page)', color: 'var(--text-body)', border: '1px solid var(--border)', borderRadius: 4, fontFamily: 'var(--font-mono)' }}
                 />
-                <div style={{ fontSize: 9, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2, marginTop: 4, fontFamily: 'monospace' }}>Fallback if event times out</div>
+                <div style={{ fontSize: 9, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2, marginTop: 4, fontFamily: 'var(--font-mono)' }}>Fallback if event times out</div>
                 <input placeholder="fallback text or leave empty"
                   value={(node.config.event_fallback as string | undefined) || ''}
                   onChange={e => onConfigChange({ ...node.config, event_fallback: e.target.value })}
                   onClick={e => e.stopPropagation()}
-                  style={{ width: '100%', fontSize: 10, padding: '2px 5px', background: 'var(--bg-page)', color: 'var(--text-body)', border: '1px solid var(--border)', borderRadius: 4, fontFamily: 'monospace' }}
+                  style={{ width: '100%', fontSize: 10, padding: '2px 5px', background: 'var(--bg-page)', color: 'var(--text-body)', border: '1px solid var(--border)', borderRadius: 4, fontFamily: 'var(--font-mono)' }}
                 />
               </div>
             )}
@@ -379,12 +380,12 @@ function CanvasNodeCard({
         {/* Sub-workflow config */}
         {node.node_type === 'subworkflow' && (
           <div style={{ marginTop: 6 }}>
-            <div style={{ fontSize: 9, color: '#7C3AED', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2, fontFamily: 'monospace' }}>Target Workflow</div>
+            <div style={{ fontSize: 9, color: '#7C3AED', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2, fontFamily: 'var(--font-mono)' }}>Target Workflow</div>
             <select
               value={(node.config.target_workflow_id as string | undefined) || ''}
               onChange={e => onConfigChange({ ...node.config, target_workflow_id: e.target.value })}
               onClick={e => e.stopPropagation()}
-              style={{ width: '100%', fontSize: 10, padding: '3px 6px', background: 'var(--bg-page)', color: 'var(--text-body)', border: '1px solid #7C3AED', borderRadius: 5, fontFamily: 'monospace' }}
+              style={{ width: '100%', fontSize: 10, padding: '3px 6px', background: 'var(--bg-page)', color: 'var(--text-body)', border: '1px solid #7C3AED', borderRadius: 5, fontFamily: 'var(--font-mono)' }}
             >
               <option value="">— select workflow —</option>
               {workflows.filter(w => w.workflow_id !== selected?.workflow_id).map(w => (
@@ -398,21 +399,21 @@ function CanvasNodeCard({
         {node.node_type === 'collaborative_node' && (
           <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 4 }}>
             <div>
-              <div style={{ fontSize: 9, color: '#EC4899', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2, fontFamily: 'monospace' }}>Rounds</div>
+              <div style={{ fontSize: 9, color: '#EC4899', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2, fontFamily: 'var(--font-mono)' }}>Rounds</div>
               <input type="number" min="1" max="10"
                 value={(node.config.loop_iterations as number | undefined) || 3}
                 onChange={e => onConfigChange({ ...node.config, loop_iterations: Number(e.target.value) })}
                 onClick={e => e.stopPropagation()}
-                style={{ width: '100%', fontSize: 10, padding: '2px 5px', background: 'var(--bg-page)', color: 'var(--text-body)', border: '1px solid #EC4899', borderRadius: 4, fontFamily: 'monospace' }}
+                style={{ width: '100%', fontSize: 10, padding: '2px 5px', background: 'var(--bg-page)', color: 'var(--text-body)', border: '1px solid #EC4899', borderRadius: 4, fontFamily: 'var(--font-mono)' }}
               />
             </div>
             <div>
-              <div style={{ fontSize: 9, color: '#EC4899', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2, fontFamily: 'monospace' }}>Stop when</div>
+              <div style={{ fontSize: 9, color: '#EC4899', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2, fontFamily: 'var(--font-mono)' }}>Stop when</div>
               <input placeholder="contains:APPROVED"
                 value={(node.config.convergence_expr as string | undefined) || ''}
                 onChange={e => onConfigChange({ ...node.config, convergence_expr: e.target.value })}
                 onClick={e => e.stopPropagation()}
-                style={{ width: '100%', fontSize: 10, padding: '2px 5px', background: 'var(--bg-page)', color: 'var(--text-body)', border: '1px solid #EC4899', borderRadius: 4, fontFamily: 'monospace' }}
+                style={{ width: '100%', fontSize: 10, padding: '2px 5px', background: 'var(--bg-page)', color: 'var(--text-body)', border: '1px solid #EC4899', borderRadius: 4, fontFamily: 'var(--font-mono)' }}
               />
             </div>
           </div>
@@ -583,8 +584,8 @@ function CanvasNodeCard({
                   onClick={e => { e.stopPropagation(); onConfigChange({ ...node.config, max_retries: n }) }}
                   style={{
                     ...MONO, fontSize: 10, width: 22, height: 22,
-                    background: (node.config.max_retries as number | undefined || 0) === n ? '#1D5FFA' : 'var(--bg-page)',
-                    color: (node.config.max_retries as number | undefined || 0) === n ? '#fff' : 'var(--text-muted)',
+                    background: (node.config.max_retries as number | undefined || 0) === n ? 'var(--accent)' : 'var(--bg-page)',
+                    color: (node.config.max_retries as number | undefined || 0) === n ? 'var(--btn-upload-text)' : 'var(--text-muted)',
                     border: '1px solid var(--border)', borderRadius: 3, cursor: 'pointer',
                   }}
                 >{n}</button>
@@ -1311,8 +1312,8 @@ function _TriggersPanel({ workflowId, onClose }: { workflowId: string; onClose: 
                   onClick={() => setShowAddSchedule(!showAddSchedule)}
                   style={{
                     ...MONO, fontSize: 10, padding: '2px 8px',
-                    background: '#1D5FFA22', border: '1px solid #1D5FFA44',
-                    color: '#1D5FFA', borderRadius: 4, cursor: 'pointer',
+                    background: 'var(--accent-soft)', border: '1px solid var(--blue-border)',
+                    color: 'var(--accent-text)', borderRadius: 4, cursor: 'pointer',
                   }}
                 >+ Add schedule</button>
               </div>
@@ -1363,7 +1364,7 @@ function _TriggersPanel({ workflowId, onClose }: { workflowId: string; onClose: 
                     disabled={savingSchedule || !newCronExpr.trim()}
                     style={{
                       ...MONO, fontSize: 10, padding: '4px 10px',
-                      background: '#1D5FFA', color: '#fff', border: 'none',
+                      background: 'var(--accent)', color: 'var(--btn-upload-text)', border: 'none',
                       borderRadius: 5, cursor: 'pointer', opacity: savingSchedule ? 0.6 : 1,
                     }}
                   >{savingSchedule ? '…' : 'Add'}</button>
@@ -1457,6 +1458,117 @@ function _TriggersPanel({ workflowId, onClose }: { workflowId: string; onClose: 
   )
 }
 
+// ─── skeleton ────────────────────────────────────────────────────────────────
+
+function Bone({
+  h, w, r = 6, delay = 0, style,
+}: {
+  h: number | string
+  w: number | string
+  r?: number
+  delay?: number
+  style?: React.CSSProperties
+}) {
+  return (
+    <div
+      className="skeleton-bone"
+      style={{
+        height: h,
+        width: w,
+        borderRadius: r,
+        ['--skel-delay' as string]: `${delay}s`,
+        ...style,
+      }}
+    />
+  )
+}
+
+function WorkflowsListSkeleton({ count = 6 }: { count?: number }) {
+  const widths = [130, 150, 110, 140, 120, 155]
+  return (
+    <div aria-busy="true" aria-label="Loading workflows">
+      {Array.from({ length: count }).map((_, i) => {
+        const base = i * 0.06
+        return (
+          <div
+            key={i}
+            style={{
+              padding: '10px 14px',
+              borderBottom: '1px solid var(--skeleton-border)',
+              borderLeft: '3px solid var(--skeleton-accent)',
+              background: 'var(--skeleton-card)',
+            }}
+          >
+            <Bone h={13} w={widths[i % widths.length]} delay={base} style={{ marginBottom: 8 }} />
+            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+              <Bone h={16} w={72} r={4} delay={base + 0.04} />
+              <Bone h={10} w={48} delay={base + 0.08} />
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+function WorkflowsCanvasSkeleton() {
+  return (
+    <div
+      aria-busy="true"
+      aria-label="Loading workflow editor"
+      style={{
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        minWidth: 0,
+        overflow: 'hidden',
+        ...SANS,
+      }}
+    >
+      <div style={{
+        padding: '10px 20px',
+        borderBottom: '1px solid var(--skeleton-border)',
+        background: 'var(--skeleton-card)',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10,
+        flexShrink: 0,
+      }}>
+        <Bone h={18} w={160} delay={0} />
+        <Bone h={14} w={200} delay={0.05} style={{ flex: 1, maxWidth: 280 }} />
+        <Bone h={28} w={120} r={5} delay={0.08} />
+        <Bone h={28} w={72} r={5} delay={0.1} />
+        <Bone h={28} w={64} r={5} delay={0.12} />
+      </div>
+      <div style={{
+        flex: 1,
+        background: 'var(--bg-page)',
+        backgroundImage: 'radial-gradient(var(--border) 1px, transparent 1px)',
+        backgroundSize: '24px 24px',
+        padding: 40,
+        display: 'flex',
+        gap: 24,
+        alignItems: 'flex-start',
+      }}>
+        <Bone h={80} w={200} r={10} delay={0.1} />
+        <Bone h={80} w={200} r={10} delay={0.16} style={{ marginTop: 40 }} />
+        <Bone h={80} w={200} r={10} delay={0.22} style={{ marginTop: 10 }} />
+      </div>
+      <div style={{
+        borderTop: '1px solid var(--skeleton-border)',
+        background: 'var(--skeleton-card)',
+        padding: '12px 20px',
+        display: 'flex',
+        gap: 10,
+        alignItems: 'center',
+      }}>
+        <Bone h={36} w="100%" r={6} delay={0.14} style={{ maxWidth: 480 }} />
+        <Bone h={36} w={88} r={6} delay={0.18} />
+      </div>
+    </div>
+  )
+}
+
 // ─── main page ───────────────────────────────────────────────────────────────
 
 export default function WorkflowsPage() {
@@ -1466,6 +1578,7 @@ export default function WorkflowsPage() {
   const [loading, setLoading] = useState(true)
   const [wfSearch, setWfSearch] = useState('')
   const [wfModeFilter, setWfModeFilter] = useState<ExecutionMode | ''>('')
+  const [mobileShowDetail, setMobileShowDetail] = useState(false)
 
   // Canvas state
   const [nodes, setNodes] = useState<WorkflowNode[]>([])
@@ -1945,6 +2058,7 @@ export default function WorkflowsPage() {
     setEdges([])
     setCurrentRun(null)
     setRuns([])
+    setMobileShowDetail(true)
   }
 
   // ── delete workflow ───────────────────────────────────────────────────────
@@ -1964,8 +2078,13 @@ export default function WorkflowsPage() {
     const remaining = workflows.filter(w => w.workflow_id !== wfId)
     setWorkflows(remaining)
     if (selected?.workflow_id === wfId) {
-      if (remaining.length > 0) loadWorkflow(remaining[0])
-      else newWorkflow()
+      if (remaining.length > 0) {
+        loadWorkflow(remaining[0])
+        setMobileShowDetail(true)
+      } else {
+        newWorkflow()
+        setMobileShowDetail(false)
+      }
     }
   }
 
@@ -2189,39 +2308,42 @@ export default function WorkflowsPage() {
   // ─────────────────────────────────────────────────────────────────────────
 
   return (
-    <div style={{ display: 'flex', height: '100%', gap: 0 }}>
+    <div className={`wf-page${mobileShowDetail ? ' is-detail-open' : ''}`} style={{ display: 'flex', height: '100%', gap: 0, ...SANS }}>
       {/* ── Left panel ── */}
-      <div style={{
+      <div
+        className="wf-list-pane"
+        style={{
         width: 220, flexShrink: 0,
         borderRight: '1px solid var(--border)',
         display: 'flex', flexDirection: 'column',
         background: 'var(--bg-card)',
       }}>
-        <div style={{
+        <div className="wf-list-header" style={{
           padding: '14px 14px 8px',
           borderBottom: '1px solid var(--border)',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         }}>
-          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-heading)' }}>Workflows</span>
+          <span style={{ ...SANS, fontSize: 12, fontWeight: 700, color: 'var(--text-heading)' }}>Workflows</span>
           <button
+            className="wf-new-btn"
             onClick={newWorkflow}
             style={{
-              ...MONO, fontSize: 11, padding: '3px 8px',
-              background: '#1D5FFA22', border: '1px solid #1D5FFA44',
-              color: '#1D5FFA', borderRadius: 5, cursor: 'pointer',
+              ...SANS, fontSize: 11, padding: '3px 8px', fontWeight: 600,
+              background: 'var(--accent-soft)', border: '1px solid var(--blue-border)',
+              color: 'var(--accent-text)', borderRadius: 5, cursor: 'pointer',
             }}
           >+ New</button>
         </div>
 
         {/* Search + mode filter */}
-        <div style={{ padding: '8px 10px', borderBottom: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <div className="wf-list-filters" style={{ padding: '8px 10px', borderBottom: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 6 }}>
           <input
             value={wfSearch}
             onChange={e => setWfSearch(e.target.value)}
             placeholder="Search workflows…"
             style={{
               width: '100%', boxSizing: 'border-box',
-              padding: '5px 8px', fontSize: 11, ...MONO,
+              padding: '5px 8px', fontSize: 11, ...SANS,
               background: 'var(--bg-page)', color: 'var(--text-body)',
               border: '1px solid var(--border)', borderRadius: 5, outline: 'none',
             }}
@@ -2231,7 +2353,7 @@ export default function WorkflowsPage() {
             onChange={e => setWfModeFilter(e.target.value as ExecutionMode | '')}
             style={{
               width: '100%', boxSizing: 'border-box',
-              padding: '5px 8px', fontSize: 11, ...MONO,
+              padding: '5px 8px', fontSize: 11, ...SANS,
               background: 'var(--bg-page)', color: 'var(--text-body)',
               border: '1px solid var(--border)', borderRadius: 5, outline: 'none', cursor: 'pointer',
             }}
@@ -2246,43 +2368,45 @@ export default function WorkflowsPage() {
           </select>
         </div>
 
-        <div style={{ flex: 1, overflow: 'auto' }}>
-          {loading && (
-            <div style={{ padding: 14, color: 'var(--text-muted)', fontSize: 12 }}>Loading…</div>
+        <div className="wf-list-scroll" style={{ flex: 1, overflow: 'auto' }}>
+          {loading ? (
+            <WorkflowsListSkeleton />
+          ) : (
+            workflows
+              .filter(wf =>
+                (!wfSearch || wf.name.toLowerCase().includes(wfSearch.toLowerCase())) &&
+                (!wfModeFilter || wf.execution_mode === wfModeFilter)
+              )
+              .map(wf => (
+              <div
+                key={wf.workflow_id}
+                className={`wf-list-item${selected?.workflow_id === wf.workflow_id ? ' is-active' : ''}`}
+                onClick={() => { loadWorkflow(wf); setMobileShowDetail(true) }}
+                style={{
+                  padding: '10px 14px',
+                  cursor: 'pointer',
+                  background: selected?.workflow_id === wf.workflow_id ? 'var(--bg-page)' : 'transparent',
+                  borderBottom: '1px solid var(--border)',
+                  borderLeft: selected?.workflow_id === wf.workflow_id ? '3px solid var(--accent)' : '3px solid transparent',
+                }}
+              >
+                <div style={{ ...SANS, fontSize: 13, fontWeight: 600, color: 'var(--text-heading)', marginBottom: 3 }}>
+                  {wf.name}
+                </div>
+                <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                  <Chip label={wf.execution_mode} />
+                  <span style={{ ...MONO, fontSize: 10, color: 'var(--text-muted)' }}>
+                    {wf.nodes?.length || wf.steps?.length || 0} nodes
+                  </span>
+                </div>
+              </div>
+            ))
           )}
-          {workflows
-            .filter(wf =>
-              (!wfSearch || wf.name.toLowerCase().includes(wfSearch.toLowerCase())) &&
-              (!wfModeFilter || wf.execution_mode === wfModeFilter)
-            )
-            .map(wf => (
-            <div
-              key={wf.workflow_id}
-              onClick={() => loadWorkflow(wf)}
-              style={{
-                padding: '10px 14px',
-                cursor: 'pointer',
-                background: selected?.workflow_id === wf.workflow_id ? 'var(--bg-page)' : 'transparent',
-                borderBottom: '1px solid var(--border)',
-                borderLeft: selected?.workflow_id === wf.workflow_id ? '3px solid #1D5FFA' : '3px solid transparent',
-              }}
-            >
-              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-heading)', marginBottom: 3 }}>
-                {wf.name}
-              </div>
-              <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                <Chip label={wf.execution_mode} />
-                <span style={{ ...MONO, fontSize: 10, color: 'var(--text-muted)' }}>
-                  {wf.nodes?.length || wf.steps?.length || 0} nodes
-                </span>
-              </div>
-            </div>
-          ))}
         </div>
 
         {/* Run history in left panel */}
         {selected && (
-          <div style={{ borderTop: '1px solid var(--border)', maxHeight: 220, overflow: 'auto' }}>
+          <div className="wf-run-history" style={{ borderTop: '1px solid var(--border)', maxHeight: 220, overflow: 'auto' }}>
             <div style={{
               padding: '8px 14px', fontSize: 11, fontWeight: 700,
               color: 'var(--text-muted)', ...MONO, letterSpacing: '0.1em',
@@ -2296,6 +2420,7 @@ export default function WorkflowsPage() {
                 setInitialInput(r.initial_input)
                 setRunError('')
                 setRunPanelH(420)
+                setMobileShowDetail(true)
               }}
               selectedRunId={selectedHistoryRun?.run_id}
               workflowId={selected?.workflow_id ?? ''}
@@ -2312,33 +2437,62 @@ export default function WorkflowsPage() {
       </div>
 
       {/* ── Main area ── */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
+      {loading ? (
+        <div className="wf-detail-pane" style={{ flex: 1, minWidth: 0, display: 'flex', overflow: 'hidden' }}>
+          <WorkflowsCanvasSkeleton />
+        </div>
+      ) : (
+      <div className="wf-detail-pane" style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
 
         {/* Toolbar */}
-        <div style={{
+        <div className="wf-toolbar" style={{
           padding: '10px 20px',
           borderBottom: '1px solid var(--border)',
           display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
           background: 'var(--bg-card)',
           flexShrink: 0,
         }}>
+          <button
+            type="button"
+            className="wf-back"
+            onClick={() => setMobileShowDetail(false)}
+            style={{
+              display: 'none',
+              alignItems: 'center',
+              gap: 6,
+              ...SANS,
+              fontSize: 13,
+              fontWeight: 600,
+              color: 'var(--accent-text)',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              padding: '4px 0',
+              width: '100%',
+              flexBasis: '100%',
+            }}
+          >
+            <span aria-hidden>‹</span> All workflows
+          </button>
           <input
+            className="wf-name-input"
             value={wfName}
             onChange={e => setWfName(e.target.value)}
             placeholder="Workflow name"
             style={{
-              fontSize: 15, fontWeight: 700, color: 'var(--text-heading)',
+              ...SANS, fontSize: 15, fontWeight: 700, color: 'var(--text-heading)',
               background: 'transparent', border: 'none', outline: 'none',
               minWidth: 160,
             }}
           />
-          <span style={{ color: 'var(--border)', fontSize: 16 }}>|</span>
+          <span className="wf-toolbar-sep" style={{ color: 'var(--border)', fontSize: 16 }}>|</span>
           <input
+            className="wf-desc-input"
             value={wfDesc}
             onChange={e => setWfDesc(e.target.value)}
             placeholder="Description (optional)"
             style={{
-              fontSize: 12, color: 'var(--text-muted)',
+              ...SANS, fontSize: 12, color: 'var(--text-muted)',
               background: 'transparent', border: 'none', outline: 'none',
               minWidth: 200, flex: 1,
             }}
@@ -2382,7 +2536,7 @@ export default function WorkflowsPage() {
             </button>
             <button onClick={zoomIn} style={{ ...toolBtn, padding: '3px 9px', fontSize: 15, lineHeight: 1 }} title="Zoom in (Ctrl+scroll)">+</button>
           </div>
-          <button onClick={() => addNode('agent')} style={{ ...toolBtn, color: '#1D5FFA' }}>
+          <button onClick={() => addNode('agent')} style={{ ...toolBtn, color: 'var(--accent-text)' }}>
             + Agent Node
           </button>
           {(execMode === 'hierarchical' || execMode === 'hybrid') && (
@@ -2433,25 +2587,29 @@ export default function WorkflowsPage() {
 
           <div style={{ flex: 1 }} />
 
+          <div className="wf-toolbar-actions" style={{ display: 'contents' }}>
           {selected && (
             <button
+              className="wf-delete-btn"
               onClick={() => doDeleteWorkflow(selected.workflow_id)}
               style={{ ...toolBtn, color: '#EF4444' }}
             >Delete</button>
           )}
 
           <button
+            className="wf-save-btn"
             onClick={saveWorkflow}
             disabled={saving}
             style={{
               ...MONO, fontSize: 11, padding: '4px 14px',
-              background: '#1D5FFA', color: '#fff',
+              background: 'var(--accent)', color: 'var(--btn-upload-text)',
               border: 'none', borderRadius: 5, cursor: 'pointer',
               opacity: saving ? 0.6 : 1,
             }}
           >
             {saving ? 'Saving…' : 'Save'}
           </button>
+          </div>
 
 
           {saveMsg && (
@@ -2461,6 +2619,7 @@ export default function WorkflowsPage() {
 
         {/* Canvas */}
         <div
+          className="wf-canvas-wrap"
           style={{ flex: 1, overflow: 'auto', position: 'relative', minHeight: 0 }}
           onWheel={e => {
             if (!e.ctrlKey && !e.metaKey) return
@@ -2663,7 +2822,7 @@ export default function WorkflowsPage() {
                           placeholder="label…"
                           style={{ width: '100%', height: '100%', fontSize: 10, textAlign: 'center',
                             background: '#1a1200', color: '#F59E0B', border: '1px solid #F59E0B',
-                            borderRadius: 6, outline: 'none', fontFamily: 'monospace', fontWeight: 700,
+                            borderRadius: 6, outline: 'none', fontFamily: 'var(--font-mono)', fontWeight: 700,
                             padding: '0 4px', boxSizing: 'border-box' }} />
                       </foreignObject>
                     )}
@@ -2687,15 +2846,15 @@ export default function WorkflowsPage() {
                 textAlign: 'center', color: 'var(--text-muted)',
               }}>
                 <div style={{ fontSize: 32, marginBottom: 12 }}>◈</div>
-                <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 6 }}>
+                <div style={{ ...SANS, fontSize: 14, fontWeight: 600, marginBottom: 6 }}>
                   No nodes yet
                 </div>
-                <div style={{ fontSize: 12, marginBottom: 14 }}>
+                <div style={{ ...SANS, fontSize: 12, marginBottom: 14 }}>
                   Add agent nodes and connect them to build your workflow
                 </div>
                 <button onClick={() => addNode('agent')} style={{
-                  ...MONO, fontSize: 12, padding: '8px 18px',
-                  background: '#1D5FFA', color: '#fff',
+                  ...SANS, fontSize: 12, padding: '8px 18px', fontWeight: 600,
+                  background: 'var(--accent)', color: 'var(--btn-upload-text)',
                   border: 'none', borderRadius: 6, cursor: 'pointer',
                 }}>+ Add First Node</button>
               </div>
@@ -2704,21 +2863,24 @@ export default function WorkflowsPage() {
         </div>
 
         {/* Run panel */}
-        <div style={{
+        <div
+          className="wf-run-panel"
+          style={{
           borderTop: '1px solid var(--border)',
           background: 'var(--bg-card)',
           flexShrink: 0,
         }}>
-          <div style={{
+          <div className="wf-run-controls" style={{
             padding: '12px 20px',
             display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
           }}>
             <input
+              className="wf-run-input"
               value={initialInput}
               onChange={e => setInitialInput(e.target.value)}
               placeholder="Initial prompt / input for the workflow…"
               style={{
-                flex: 1, minWidth: 200, fontSize: 13,
+                flex: 1, minWidth: 200, fontSize: 13, ...SANS,
                 padding: '7px 12px',
                 background: 'var(--bg-page)', color: 'var(--text-body)',
                 border: '1px solid var(--border)', borderRadius: 6,
@@ -2791,12 +2953,13 @@ export default function WorkflowsPage() {
             )}
 
             <button
+              className="wf-run-btn"
               onClick={doRun}
               disabled={running || !selected}
               style={{
                 ...MONO, fontSize: 12, padding: '7px 20px',
-                background: running ? '#10B98144' : '#1D5FFA',
-                color: '#fff', border: 'none', borderRadius: 6,
+                background: running ? '#10B98144' : 'var(--accent)',
+                color: 'var(--btn-upload-text)', border: 'none', borderRadius: 6,
                 cursor: running ? 'wait' : 'pointer',
                 opacity: running || !selected ? 0.7 : 1,
               }}
@@ -2809,14 +2972,14 @@ export default function WorkflowsPage() {
           </div>
 
           {/* Mode tabs + notes */}
-          <div style={{ padding: '0 20px 10px' }}>
+          <div className="wf-mode-tabs" style={{ padding: '0 20px 10px' }}>
             <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
               {allModes.map(m => (
                 <div key={m} style={{
                   ...MONO, fontSize: 10,
-                  color: execMode === m ? '#1D5FFA' : 'var(--text-muted)',
+                  color: execMode === m ? 'var(--accent-text)' : 'var(--text-muted)',
                   cursor: 'pointer', padding: '3px 0',
-                  borderBottom: execMode === m ? '2px solid #1D5FFA' : '2px solid transparent',
+                  borderBottom: execMode === m ? '2px solid var(--accent)' : '2px solid transparent',
                 }} onClick={() => setExecMode(m)}>
                   {modeIcons[m]} {m.charAt(0).toUpperCase() + m.slice(1)}
                 </div>
@@ -2932,6 +3095,7 @@ export default function WorkflowsPage() {
           </div>
         )}
       </div>
+      )}
 
       <style>{`
         @keyframes pulse { 0%,100% { opacity:1 } 50% { opacity:0.5 } }
@@ -2959,7 +3123,7 @@ export default function WorkflowsPage() {
             onClick={e => e.stopPropagation()}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ ...MONO, fontSize: 11, fontWeight: 700, color: '#1D5FFA', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              <span style={{ ...MONO, fontSize: 11, fontWeight: 700, color: 'var(--accent-text)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                 {expandPage.label}
               </span>
               <button
@@ -2978,9 +3142,9 @@ export default function WorkflowsPage() {
                 fontSize: 13, lineHeight: 1.6,
                 padding: '10px 14px',
                 background: 'var(--bg-page)', color: 'var(--text-body)',
-                border: '1px solid #1D5FFA44',
+                border: '1px solid var(--blue-border)',
                 borderRadius: 7, resize: 'vertical',
-                fontFamily: 'inherit',
+                fontFamily: 'var(--font-sans)',
               }}
             />
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
@@ -2994,7 +3158,7 @@ export default function WorkflowsPage() {
                   else setInitialInput(expandPageValue)
                   setExpandPage(null)
                 }}
-                style={{ ...MONO, fontSize: 11, padding: '7px 18px', background: '#1D5FFA', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#fff', fontWeight: 700 }}
+                style={{ ...MONO, fontSize: 11, padding: '7px 18px', background: 'var(--accent)', border: 'none', borderRadius: 6, cursor: 'pointer', color: 'var(--btn-upload-text)', fontWeight: 700 }}
               >Apply</button>
             </div>
           </div>

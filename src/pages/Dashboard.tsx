@@ -397,10 +397,11 @@ function Bone({
 function DashboardSkeleton() {
   return (
     <div
+      className="dashboard-page"
       style={{
         height: '100%', width: '100%',
         display: 'flex', flexDirection: 'column',
-        boxSizing: 'border-box', overflow: 'hidden',
+        boxSizing: 'border-box', overflowX: 'hidden', overflowY: 'auto',
         background: 'var(--topbar-bg)',
       }}
       aria-busy="true"
@@ -590,7 +591,7 @@ export default function Dashboard() {
       style={{
       height: '100%', width: '100%',
       display: 'flex', flexDirection: 'column',
-      boxSizing: 'border-box', overflow: 'hidden',
+      boxSizing: 'border-box', overflowX: 'hidden', overflowY: 'auto',
       background: 'var(--topbar-bg)',
       transition: 'background-color 0.25s ease',
     }}>

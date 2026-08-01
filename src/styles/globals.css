@@ -67,6 +67,8 @@
   --text-primary: #FAFAFA;
   --text-secondary: #A1A1AA;
   --text-tertiary: #71717A;
+  --text-heading: var(--text-primary);
+  --text-muted: var(--text-tertiary);
   --border: #27272A;
   --border-strong: #3F3F46;
   /* Amber option: --accent: #EC940D; --accent-soft: rgba(236, 148, 13, 0.12); --accent-text: #EC940D; */
@@ -158,6 +160,8 @@
   --text-primary: #0B1020;
   --text-secondary: #4A5163;
   --text-tertiary: #8B92A4;
+  --text-heading: var(--text-primary);
+  --text-muted: var(--text-tertiary);
   --border: rgba(11, 16, 32, 0.08);
   --border-strong: rgba(11, 16, 32, 0.12);
   /* Amber option: --accent: #EC940D; --accent-soft: rgba(236, 148, 13, 0.10); --accent-text: #EC940D; */
@@ -256,6 +260,8 @@
   --text-primary: #FAFAFA;
   --text-secondary: #A1A1AA;
   --text-tertiary: #71717A;
+  --text-heading: var(--text-primary);
+  --text-muted: var(--text-tertiary);
   --border: #27272A;
   --border-strong: #3F3F46;
   /* Amber option: --accent: #EC940D; --accent-soft: rgba(236, 148, 13, 0.12); --accent-text: #EC940D; */
@@ -472,7 +478,9 @@ optgroup {
 }
 
 .dashboard-page {
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+  min-height: 0;
 }
 
 .dashboard-top {
@@ -611,7 +619,8 @@ optgroup {
   }
 
   .dashboard-page {
-    overflow: auto !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
     height: auto !important;
     min-height: 100%;
   }
@@ -1532,5 +1541,161 @@ optgroup {
     width: 52px !important;
     height: 52px !important;
     font-size: 18px !important;
+  }
+}
+
+/* ─── Workflows page responsive ─────────────────────────────── */
+.wf-back {
+  display: none;
+}
+
+@media (max-width: 1100px) {
+  .wf-page {
+    flex-direction: column !important;
+  }
+
+  .wf-list-pane {
+    width: 100% !important;
+    flex: 1 1 auto !important;
+    border-right: none !important;
+    min-height: 0;
+  }
+
+  .wf-page.is-detail-open .wf-list-pane {
+    display: none !important;
+  }
+
+  .wf-detail-pane {
+    display: none !important;
+  }
+
+  .wf-page.is-detail-open .wf-detail-pane {
+    display: flex !important;
+    flex: 1 1 auto !important;
+    width: 100%;
+    min-height: 0;
+  }
+
+  .wf-back {
+    display: inline-flex !important;
+  }
+
+  .wf-list-header {
+    padding: 16px 16px 12px !important;
+  }
+
+  .wf-list-header > span {
+    font-size: 15px !important;
+  }
+
+  .wf-new-btn {
+    padding: 8px 14px !important;
+    border-radius: 10px !important;
+    font-size: 13px !important;
+  }
+
+  .wf-list-filters {
+    padding: 10px 16px !important;
+    gap: 8px !important;
+  }
+
+  .wf-list-filters input,
+  .wf-list-filters select {
+    padding: 10px 12px !important;
+    font-size: 13px !important;
+    min-height: 40px;
+    border-radius: 10px !important;
+  }
+
+  .wf-list-item {
+    padding: 14px 16px !important;
+  }
+
+  .wf-run-history {
+    max-height: 180px !important;
+  }
+
+  .wf-toolbar {
+    padding: 12px 16px !important;
+    gap: 8px !important;
+  }
+
+  .wf-name-input {
+    min-width: 0 !important;
+    width: 100% !important;
+    flex: 1 1 100% !important;
+    font-size: 16px !important;
+  }
+
+  .wf-toolbar-sep {
+    display: none !important;
+  }
+
+  .wf-desc-input {
+    min-width: 0 !important;
+    width: 100% !important;
+    flex: 1 1 100% !important;
+  }
+
+  .wf-toolbar-actions {
+    display: flex !important;
+    width: 100%;
+    gap: 8px;
+  }
+
+  .wf-toolbar-actions > button,
+  .wf-save-btn,
+  .wf-delete-btn {
+    flex: 1 1 0;
+    min-height: 40px;
+    justify-content: center;
+    border-radius: 10px !important;
+    padding: 8px 12px !important;
+  }
+
+  .wf-canvas-wrap {
+    min-height: 220px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .wf-run-panel {
+    max-height: 46vh;
+    overflow-y: auto;
+  }
+
+  .wf-run-controls {
+    padding: 12px 16px !important;
+    gap: 8px !important;
+  }
+
+  .wf-run-input {
+    min-width: 0 !important;
+    flex: 1 1 100% !important;
+    width: 100% !important;
+    font-size: 14px !important;
+  }
+
+  .wf-run-btn {
+    width: 100%;
+    min-height: 42px;
+    border-radius: 10px !important;
+  }
+
+  .wf-mode-tabs {
+    padding: 0 16px 12px !important;
+  }
+
+  .wf-mode-tabs > div {
+    gap: 10px !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .wf-list-header > span {
+    font-size: 16px !important;
+  }
+
+  .wf-run-panel {
+    max-height: 42vh;
   }
 }
