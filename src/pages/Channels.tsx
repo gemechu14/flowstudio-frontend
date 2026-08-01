@@ -477,14 +477,14 @@ function ChannelRow({ config, onUpdated, onDeleted }: {
           padding: '14px 20px',
           background: 'var(--bg-surface)',
         }}>
-          <div style={{ ...MONO, fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', color: meta.color, marginBottom: 10 }}>
-            {meta.label.toUpperCase()} SETUP GUIDE
+          <div style={{ ...SANS, fontSize: 12, fontWeight: 600, color: meta.color, marginBottom: 10 }}>
+            {meta.label} setup guide
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {steps.map(s => (
               <div key={s.step} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
                 <span style={{
-                  ...MONO, fontSize: 10, fontWeight: 700, flexShrink: 0,
+                  ...SANS, fontSize: 11, fontWeight: 700, flexShrink: 0,
                   width: 20, height: 20, borderRadius: '50%',
                   background: `${meta.color}20`, color: meta.color,
                   border: `1px solid ${meta.color}40`,
@@ -501,8 +501,8 @@ function ChannelRow({ config, onUpdated, onDeleted }: {
                 onClick={connectTelegram}
                 disabled={connecting}
                 style={{
-                  ...MONO, fontSize: 12, fontWeight: 700,
-                  padding: '7px 16px', borderRadius: 6, border: 'none',
+                  ...SANS, fontSize: 13, fontWeight: 600,
+                  padding: '8px 16px', borderRadius: 8, border: 'none',
                   background: connecting ? `${meta.color}88` : meta.color,
                   color: '#fff', cursor: connecting ? 'wait' : 'pointer',
                 }}
@@ -525,7 +525,7 @@ function ChannelRow({ config, onUpdated, onDeleted }: {
                 onClick={connectWhatsapp}
                 disabled={connecting}
                 style={{
-                  ...MONO, fontSize: 12, fontWeight: 700,
+                  ...SANS, fontSize: 13, fontWeight: 600,
                   padding: '7px 16px', borderRadius: 6, border: 'none',
                   background: connecting ? `${meta.color}88` : meta.color,
                   color: '#fff', cursor: connecting ? 'wait' : 'pointer',
@@ -549,7 +549,7 @@ function ChannelRow({ config, onUpdated, onDeleted }: {
                 onClick={connectDiscord}
                 disabled={connecting}
                 style={{
-                  ...MONO, fontSize: 12, fontWeight: 700,
+                  ...SANS, fontSize: 13, fontWeight: 600,
                   padding: '7px 16px', borderRadius: 6, border: 'none',
                   background: connecting ? `${meta.color}88` : meta.color,
                   color: '#fff', cursor: connecting ? 'wait' : 'pointer',
@@ -765,8 +765,8 @@ function AddChannelForm({ onCreated, onCancel, existingTypes }: {
           }} />
         </div>
         <div>
-          <div style={{ ...MONO, fontSize: 11, fontWeight: 600, color: conversational ? 'var(--accent)' : 'var(--text-tertiary)' }}>
-            CONVERSATIONAL MODE
+          <div style={{ ...SANS, fontSize: 12, fontWeight: 600, color: conversational ? 'var(--accent)' : 'var(--text-tertiary)' }}>
+            Conversational mode
           </div>
           <div style={{ ...SANS, fontSize: 11, color: 'var(--text-tertiary)', marginTop: 2, lineHeight: 1.4 }}>
             {conversational
@@ -778,7 +778,7 @@ function AddChannelForm({ onCreated, onCancel, existingTypes }: {
 
       {error && (
         <div style={{
-          ...MONO, fontSize: 11, color: '#EF4444', marginBottom: 10,
+          ...SANS, fontSize: 12, color: 'var(--invalid)', marginBottom: 10,
           padding: '7px 10px', background: '#EF444418',
           border: '1px solid #EF444440', borderRadius: 6,
         }}>{error}</div>
@@ -1156,7 +1156,7 @@ export default function Channels() {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 24 }}>
         <div>
-          <div style={{ ...MONO, fontSize: 10, fontWeight: 600, letterSpacing: '0.14em', color: 'var(--accent)', marginBottom: 6 }}>
+          <div style={{ ...SANS, fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', color: 'var(--accent)', marginBottom: 6 }}>
             CHANNELS
           </div>
           <h2 style={{ ...SANS, fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
