@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import ConfirmModal from '../components/ui/ConfirmModal'
 import { TIMEZONES } from '../constants'
 import {
@@ -6,6 +7,7 @@ import {
   listChannels, createChannel, updateChannel, deleteChannel, webhookUrl,
   registerTelegramWebhook, registerDiscordCommands, registerWhatsappWebhook,
 } from '../api/channels'
+import { queryKeys } from '../lib/queryClient'
 
 const MONO = { fontFamily: 'var(--font-mono)' }
 const SANS = { fontFamily: 'var(--font-sans)' }
@@ -1167,18 +1169,13 @@ function ChannelsListSkeleton({ count = 3 }: { count?: number }) {
 }
 
 export default function Channels() {
-  const [channels, setChannels] = useState<ChannelConfig[]>([])
-  const [loading, setLoading] = useState(true)
+  const queryClient = useQueryClient()
   const [showAddForm, setShowAddForm] = useState(false)
 
-  const reload = useCallback(() => {
-    listChannels()
-      .then(setChannels)
-      .catch(() => {})
-      .finally(() => setLoading(false))
-  }, [])
-
-  useEffect(() => { reload() }, [reload])
+  const { data: channels = [], isLoading: loading } = useQuery({
+    queryKey: queryKeys.channels,
+    queryFn: () => listChannels().catch(() => [] as ChannelConfig[]),
+  })
 
   const existingTypes = new Set(channels.map(c => c.channel_type))
 
@@ -1222,7 +1219,10 @@ export default function Channels() {
 
       {showAddForm && (
         <AddChannelForm
-          onCreated={c => { setChannels(prev => [...prev, c]); setShowAddForm(false) }}
+          onCreated={c => {
+            queryClient.setQueryData<ChannelConfig[]>(queryKeys.channels, (prev = []) => [...prev, c])
+            setShowAddForm(false)
+          }}
           onCancel={() => setShowAddForm(false)}
           existingTypes={existingTypes}
         />
@@ -1257,8 +1257,12 @@ export default function Channels() {
           <ChannelRow
             key={c.config_id}
             config={c}
-            onUpdated={updated => setChannels(prev => prev.map(x => x.config_id === updated.config_id ? updated : x))}
-            onDeleted={() => setChannels(prev => prev.filter(x => x.config_id !== c.config_id))}
+            onUpdated={updated => queryClient.setQueryData<ChannelConfig[]>(queryKeys.channels, (prev = []) =>
+              prev.map(x => x.config_id === updated.config_id ? updated : x)
+            )}
+            onDeleted={() => queryClient.setQueryData<ChannelConfig[]>(queryKeys.channels, (prev = []) =>
+              prev.filter(x => x.config_id !== c.config_id)
+            )}
           />
         ))
       )}

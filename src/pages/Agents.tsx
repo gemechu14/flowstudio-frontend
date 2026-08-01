@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useMemo } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import ConfirmModal from '../components/ui/ConfirmModal'
 import AgentPanel from '../components/agents/AgentPanel'
 import AgentChat from '../components/agents/AgentChat'
@@ -6,6 +7,7 @@ import { AgentRecord, listAgents, deleteAgent } from '../api/agents'
 import { listTools } from '../api/tools'
 import { getCatalog } from '../api/communityTools'
 import { listWorkflows, WorkflowRecord } from '../api/workflows'
+import { invalidateDashboardStats, queryKeys } from '../lib/queryClient'
 
 const BUILTIN_TOOLS: string[] = []
 
@@ -231,10 +233,7 @@ function ActionBtn({
 }
 
 export default function Agents() {
-  const [agents, setAgents] = useState<AgentRecord[]>([])
-  const [workflows, setWorkflows] = useState<WorkflowRecord[]>([])
-  const [availableTools, setAvailableTools] = useState<string[]>(BUILTIN_TOOLS)
-  const [communityTools, setCommunityTools] = useState<string[]>([])
+  const queryClient = useQueryClient()
   const [panel, setPanel] = useState<PanelState>({ open: false })
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<AgentRecord | null>(null)
@@ -243,34 +242,47 @@ export default function Agents() {
   const [filterProvider, setFilterProvider] = useState('')
   const [filterModel, setFilterModel] = useState('')
   const [filterWorkflow, setFilterWorkflow] = useState('')
-  const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    setLoading(true)
-    Promise.all([
-      listAgents().then(setAgents).catch(() => setAgents([])),
-      listWorkflows().then(setWorkflows).catch(() => {}),
-      listTools()
-        .then((apiTools) => {
-          const customNames = apiTools.map((t) => t.name)
-          setAvailableTools([...BUILTIN_TOOLS, ...customNames])
-        })
-        .catch(() => {}),
-      getCatalog()
-        .then((tools) => {
-          setCommunityTools(tools.filter(t => t.is_enabled).map(t => t.name))
-        })
-        .catch(() => {}),
-    ]).finally(() => setLoading(false))
-  }, [])
+  const { data: agents = [], isLoading: agentsLoading } = useQuery({
+    queryKey: queryKeys.agents,
+    queryFn: () => listAgents().catch(() => [] as AgentRecord[]),
+  })
+
+  const { data: workflows = [] } = useQuery({
+    queryKey: queryKeys.workflows,
+    queryFn: () => listWorkflows().catch(() => [] as WorkflowRecord[]),
+  })
+
+  const { data: toolsData } = useQuery({
+    queryKey: queryKeys.tools,
+    queryFn: () => listTools().catch(() => []),
+  })
+
+  const { data: catalogData } = useQuery({
+    queryKey: queryKeys.communityCatalog,
+    queryFn: () => getCatalog().catch(() => []),
+  })
+
+  const availableTools = useMemo(() => {
+    const customNames = (toolsData ?? []).map((t) => t.name)
+    return [...BUILTIN_TOOLS, ...customNames]
+  }, [toolsData])
+
+  const communityTools = useMemo(
+    () => (catalogData ?? []).filter(t => t.is_enabled).map(t => t.name),
+    [catalogData],
+  )
+
+  const loading = agentsLoading
 
   const handleSave = (saved: AgentRecord) => {
-    setAgents((prev) => {
+    queryClient.setQueryData<AgentRecord[]>(queryKeys.agents, (prev = []) => {
       const exists = prev.find((a) => a.agent_id === saved.agent_id)
       return exists
         ? prev.map((a) => (a.agent_id === saved.agent_id ? saved : a))
         : [saved, ...prev]
     })
+    invalidateDashboardStats()
   }
 
   const handleDelete = (agent: AgentRecord) => setDeleteTarget(agent)
@@ -282,7 +294,10 @@ export default function Agents() {
     setDeletingId(agentId)
     try {
       await deleteAgent(agentId)
-      setAgents((prev) => prev.filter((a) => a.agent_id !== agentId))
+      queryClient.setQueryData<AgentRecord[]>(queryKeys.agents, (prev = []) =>
+        prev.filter((a) => a.agent_id !== agentId),
+      )
+      invalidateDashboardStats()
     } catch (e: unknown) {
       console.error('Failed to delete agent', e)
     } finally {

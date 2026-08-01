@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { TIMEZONES } from '../constants'
 import ConfirmModal from '../components/ui/ConfirmModal'
 import {
@@ -15,6 +16,7 @@ import {
 import { AgentRecord, listAgents } from '../api/agents'
 import { DataSourceRecord, listDataSources } from '../api/dataSources'
 import { BASE_URL } from '../api/client'
+import { queryKeys } from '../lib/queryClient'
 
 // ─── design tokens ────────────────────────────────────────────────────────────
 
@@ -925,17 +927,16 @@ function ApiKeyRow({
 }
 
 function ApiKeysSection() {
-  const [statuses, setStatuses] = useState<KeyStatus[]>([])
-  const [loading, setLoading] = useState(true)
+  const queryClient = useQueryClient()
 
-  const reload = useCallback(() => {
-    listApiKeys()
-      .then(setStatuses)
-      .catch(() => {})
-      .finally(() => setLoading(false))
-  }, [])
+  const { data: statuses = [], isLoading: loading } = useQuery({
+    queryKey: queryKeys.apiKeys,
+    queryFn: () => listApiKeys().catch(() => [] as KeyStatus[]),
+  })
 
-  useEffect(() => { reload() }, [reload])
+  const reload = () => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.apiKeys })
+  }
 
   return (
     <div>
@@ -1503,9 +1504,6 @@ function CronBuilder({
 }
 
 function TriggersSection() {
-  const [workflows, setWorkflows] = useState<WorkflowRecord[]>([])
-  const [agents, setAgents] = useState<AgentRecord[]>([])
-  const [datasources, setDatasources] = useState<DataSourceRecord[]>([])
   const [selectedWfId, setSelectedWfId] = useState<string>('')
   const [schedules, setSchedules] = useState<ScheduleTrigger[]>([])
   const [webhooks, setWebhooks] = useState<WebhookTrigger[]>([])
@@ -1518,11 +1516,18 @@ function TriggersSection() {
   // Map from webhook_id → secret (kept in local state only until dismissed)
   const [pendingSecrets, setPendingSecrets] = useState<Record<string, string>>({})
 
-  useEffect(() => {
-    Promise.all([listWorkflows(), listAgents(), listDataSources()])
-      .then(([wfs, ags, dss]) => { setWorkflows(wfs); setAgents(ags); setDatasources(dss) })
-      .catch(() => {})
-  }, [])
+  const { data: workflows = [] } = useQuery({
+    queryKey: queryKeys.workflows,
+    queryFn: () => listWorkflows().catch(() => [] as WorkflowRecord[]),
+  })
+  const { data: agents = [] } = useQuery({
+    queryKey: queryKeys.agents,
+    queryFn: () => listAgents().catch(() => [] as AgentRecord[]),
+  })
+  const { data: datasources = [] } = useQuery({
+    queryKey: queryKeys.dataSources,
+    queryFn: () => listDataSources().catch(() => [] as DataSourceRecord[]),
+  })
 
   const selectedWf = workflows.find(w => w.workflow_id === selectedWfId) ?? null
   const agentNodes: WorkflowNode[] = selectedWf
@@ -1826,32 +1831,38 @@ function TriggersSection() {
 // ─── main Settings page ───────────────────────────────────────────────────────
 
 export default function Settings() {
-  const [servers, setServers] = useState<McpServer[]>([])
-  const [loading, setLoading] = useState(true)
-  const [loadError, setLoadError] = useState('')
+  const queryClient = useQueryClient()
   const [showAddForm, setShowAddForm] = useState(false)
 
-  const reload = useCallback(() => {
-    setLoadError('')
-    listMcpServers()
-      .then(setServers)
-      .catch(err => setLoadError(err.message || 'Failed to load MCP servers'))
-      .finally(() => setLoading(false))
-  }, [])
+  const {
+    data: servers = [],
+    isLoading: loading,
+    isError,
+    error,
+  } = useQuery({
+    queryKey: queryKeys.mcpServers,
+    queryFn: () => listMcpServers(),
+  })
 
-  useEffect(() => { reload() }, [reload])
+  const loadError = isError
+    ? ((error as Error)?.message || 'Failed to load MCP servers')
+    : ''
 
   const handleCreated = (server: McpServer) => {
-    setServers(prev => [...prev, server])
+    queryClient.setQueryData<McpServer[]>(queryKeys.mcpServers, (prev = []) => [...prev, server])
     setShowAddForm(false)
   }
 
   const handleDeleted = (serverId: string) => {
-    setServers(prev => prev.filter(s => s.server_id !== serverId))
+    queryClient.setQueryData<McpServer[]>(queryKeys.mcpServers, (prev = []) =>
+      prev.filter(s => s.server_id !== serverId)
+    )
   }
 
   const handleSynced = (updated: McpServer) => {
-    setServers(prev => prev.map(s => s.server_id === updated.server_id ? updated : s))
+    queryClient.setQueryData<McpServer[]>(queryKeys.mcpServers, (prev = []) =>
+      prev.map(s => s.server_id === updated.server_id ? updated : s)
+    )
   }
 
   return (

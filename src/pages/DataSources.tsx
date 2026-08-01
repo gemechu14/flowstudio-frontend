@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import ConfirmModal from '../components/ui/ConfirmModal'
 import { FilterBuilder, conditionsToSql, sqlToConditions, Condition } from '../components/ui/FilterBuilder'
 import {
@@ -8,6 +9,7 @@ import {
   deleteFile, crawlWebsite, FileInfo, schemaFromUrl,
 } from '../api/dataSources'
 import { AgentRecord, listAgents } from '../api/agents'
+import { queryKeys } from '../lib/queryClient'
 
 // ─── design tokens ────────────────────────────────────────────────────────────
 
@@ -2060,31 +2062,36 @@ function SourceDetailSkeleton() {
 // ─── page ─────────────────────────────────────────────────────────────────────
 
 export default function DataSources() {
-  const [sources, setSources] = useState<DataSourceRecord[]>([])
+  const queryClient = useQueryClient()
   const [selected, setSelected] = useState<DataSourceRecord | null>(null)
   const [showCreate, setShowCreate] = useState(false)
-  const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [filterType, setFilterType] = useState<SourceType | 'all'>('all')
   const [mobileShowDetail, setMobileShowDetail] = useState(false)
+  const initializedRef = useRef(false)
+
+  const { data: sources = [], isLoading: loading } = useQuery({
+    queryKey: queryKeys.dataSources,
+    queryFn: () => listDataSources().catch(() => [] as DataSourceRecord[]),
+  })
 
   useEffect(() => {
-    listDataSources()
-      .then(data => { setSources(data); if (data.length > 0) setSelected(data[0]) })
-      .catch(() => {})
-      .finally(() => setLoading(false))
-  }, [])
+    if (initializedRef.current || loading) return
+    initializedRef.current = true
+    if (sources.length > 0) setSelected(sources[0])
+  }, [loading, sources])
 
   const handleCreated = (src: DataSourceRecord) => {
-    setSources(prev => [src, ...prev])
+    queryClient.setQueryData<DataSourceRecord[]>(queryKeys.dataSources, (prev = []) => [src, ...prev])
     setSelected(src)
     setMobileShowDetail(true)
     setShowCreate(false)
   }
 
   const handleDeleted = () => {
-    setSources(prev => {
-      const next = prev.filter(s => s.source_id !== selected?.source_id)
+    const deletedId = selected?.source_id
+    queryClient.setQueryData<DataSourceRecord[]>(queryKeys.dataSources, (prev = []) => {
+      const next = prev.filter(s => s.source_id !== deletedId)
       setSelected(next[0] ?? null)
       setMobileShowDetail(false)
       return next
@@ -2092,7 +2099,9 @@ export default function DataSources() {
   }
 
   const handleUpdated = (updated: DataSourceRecord) => {
-    setSources(prev => prev.map(s => s.source_id === updated.source_id ? updated : s))
+    queryClient.setQueryData<DataSourceRecord[]>(queryKeys.dataSources, (prev = []) =>
+      prev.map(s => s.source_id === updated.source_id ? updated : s)
+    )
     setSelected(updated)
   }
 

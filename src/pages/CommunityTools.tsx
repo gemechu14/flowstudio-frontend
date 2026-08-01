@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useRef } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../contexts/AuthContext'
 import {
   getCatalog, getSubmissions, enableTool, disableTool,
@@ -7,6 +8,7 @@ import {
 } from '../api/communityTools'
 import { updateTool, testTool, TestResult } from '../api/tools'
 import { ToolEnvVarsEditor } from '../components/tools/ToolEnvVarsEditor'
+import { invalidateDashboardStats, queryKeys } from '../lib/queryClient'
 
 const MONO = { fontFamily: 'var(--font-mono)' }
 const SANS = { fontFamily: 'var(--font-sans)' }
@@ -561,28 +563,31 @@ function ToolCardItem({
 export default function CommunityTools() {
   const { user } = useAuth()
   const isSuperAdmin = user?.role === 'super_admin'
+  const queryClient = useQueryClient()
   const [tab, setTab] = useState<'catalog' | 'submissions'>('catalog')
-  const [catalog, setCatalog] = useState<CommunityToolCard[]>([])
-  const [submissions, setSubmissions] = useState<CommunityToolCard[]>([])
   const [filterCategory, setFilterCategory] = useState('all')
   const [search, setSearch] = useState('')
-  const [loading, setLoading] = useState(true)
 
-  async function load() {
-    setLoading(true)
-    try {
-      const [cat, subs] = await Promise.all([
-        getCatalog(),
-        isSuperAdmin ? getSubmissions() : Promise.resolve([]),
-      ])
-      setCatalog(cat)
-      setSubmissions(subs)
-    } finally {
-      setLoading(false)
+  const { data: catalog = [], isLoading: catalogLoading } = useQuery({
+    queryKey: queryKeys.communityCatalog,
+    queryFn: () => getCatalog().catch(() => [] as CommunityToolCard[]),
+  })
+
+  const { data: submissions = [], isLoading: submissionsLoading } = useQuery({
+    queryKey: queryKeys.communitySubmissions,
+    queryFn: () => getSubmissions().catch(() => [] as CommunityToolCard[]),
+    enabled: isSuperAdmin,
+  })
+
+  const loading = catalogLoading || (isSuperAdmin && submissionsLoading)
+
+  const refresh = () => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.communityCatalog })
+    if (isSuperAdmin) {
+      queryClient.invalidateQueries({ queryKey: queryKeys.communitySubmissions })
     }
+    invalidateDashboardStats()
   }
-
-  useEffect(() => { load() }, [])
 
   const displayed = (tab === 'catalog' ? catalog : submissions).filter(t => {
     const matchCat = filterCategory === 'all' || t.category === filterCategory
@@ -697,7 +702,7 @@ export default function CommunityTools() {
               key={tool.tool_id}
               tool={tool}
               isSuperAdmin={isSuperAdmin}
-              onAction={load}
+              onAction={refresh}
             />
           ))
         )}

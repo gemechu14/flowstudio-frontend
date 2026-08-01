@@ -1,6 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { apiFetch } from '../api/client'
+import { queryKeys } from '../lib/queryClient'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -553,22 +555,22 @@ function DashboardSkeleton() {
 
 export default function Dashboard() {
   const navigate = useNavigate()
-  const [stats, setStats] = useState<Stats | null>(null)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    apiFetch<Stats>('/workflows/dashboard/stats')
-      .then(setStats)
-      .catch(e => setError(e?.message ?? 'Failed to load'))
-  }, [])
+  const {
+    data: stats,
+    error,
+    isLoading,
+  } = useQuery({
+    queryKey: queryKeys.dashboardStats,
+    queryFn: () => apiFetch<Stats>('/workflows/dashboard/stats'),
+  })
 
   if (error) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--invalid)', fontFamily: 'var(--font-mono)', fontSize: 12 }}>
-      {error}
+      {(error as Error)?.message ?? 'Failed to load'}
     </div>
   )
 
-  if (!stats) return <DashboardSkeleton />
+  if (isLoading || !stats) return <DashboardSkeleton />
 
   const totalByStatus = Object.values(stats.runs_by_status).reduce((a, b) => a + b, 0)
   const successRate = totalByStatus > 0

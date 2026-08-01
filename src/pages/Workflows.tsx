@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { BASE_URL } from '../api/client'
 import ConfirmModal from '../components/ui/ConfirmModal'
 import { AgentRecord, listAgents } from '../api/agents'
@@ -11,6 +12,7 @@ import {
   listWebhooks, createWebhook, deleteWebhook,
   getCheckpoint, resumeRun,
 } from '../api/workflows'
+import { invalidateDashboardStats, queryKeys } from '../lib/queryClient'
 
 // ─── constants ───────────────────────────────────────────────────────────────
 
@@ -1572,13 +1574,12 @@ function WorkflowsCanvasSkeleton() {
 // ─── main page ───────────────────────────────────────────────────────────────
 
 export default function WorkflowsPage() {
-  const [workflows, setWorkflows] = useState<WorkflowRecord[]>([])
-  const [agents, setAgents] = useState<AgentRecord[]>([])
+  const queryClient = useQueryClient()
   const [selected, setSelected] = useState<WorkflowRecord | null>(null)
-  const [loading, setLoading] = useState(true)
   const [wfSearch, setWfSearch] = useState('')
   const [wfModeFilter, setWfModeFilter] = useState<ExecutionMode | ''>('')
   const [mobileShowDetail, setMobileShowDetail] = useState(false)
+  const initializedRef = useRef(false)
 
   // Canvas state
   const [nodes, setNodes] = useState<WorkflowNode[]>([])
@@ -1618,7 +1619,6 @@ export default function WorkflowsPage() {
   const [runError, setRunError] = useState('')
 
   // History
-  const [runs, setRuns] = useState<WorkflowRun[]>([])
   const [selectedHistoryRun, setSelectedHistoryRun] = useState<WorkflowRun | null>(null)
 
   // Canvas zoom
@@ -1639,6 +1639,26 @@ export default function WorkflowsPage() {
 
   const canvasRef = useRef<HTMLDivElement>(null)
 
+  const { data: workflows = [], isLoading: workflowsLoading } = useQuery({
+    queryKey: queryKeys.workflows,
+    queryFn: () => listWorkflows().catch(() => [] as WorkflowRecord[]),
+  })
+
+  const { data: agents = [] } = useQuery({
+    queryKey: queryKeys.agents,
+    queryFn: () => listAgents().catch(() => [] as AgentRecord[]),
+  })
+
+  const selectedId = selected?.workflow_id ?? ''
+
+  const { data: runs = [] } = useQuery({
+    queryKey: queryKeys.workflowRuns(selectedId),
+    queryFn: () => listRuns(selectedId).catch(() => [] as WorkflowRun[]),
+    enabled: !!selectedId,
+  })
+
+  const loading = workflowsLoading
+
   // Run panel drag-resize
   useEffect(() => {
     const onMove = (e: MouseEvent) => {
@@ -1650,18 +1670,6 @@ export default function WorkflowsPage() {
     window.addEventListener('mousemove', onMove)
     window.addEventListener('mouseup', onUp)
     return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
-  }, [])
-
-  // Load on mount
-  useEffect(() => {
-    Promise.all([listWorkflows(), listAgents()])
-      .then(([wfs, ags]) => {
-        setWorkflows(wfs)
-        setAgents(ags)
-        if (wfs.length > 0) loadWorkflow(wfs[0])
-      })
-      .catch(_err => {})
-      .finally(() => setLoading(false))
   }, [])
 
   const loadWorkflow = (wf: WorkflowRecord) => {
@@ -1700,8 +1708,14 @@ export default function WorkflowsPage() {
     setSelectedHistoryRun(null)
     setInitialInput('')
     setRunError('')
-    listRuns(wf.workflow_id).then(setRuns).catch(() => setRuns([]))
   }
+
+  // Select first workflow once data is ready
+  useEffect(() => {
+    if (initializedRef.current || workflowsLoading) return
+    initializedRef.current = true
+    if (workflows.length > 0) loadWorkflow(workflows[0])
+  }, [workflowsLoading, workflows])
 
   // ── canvas mouse events ──────────────────────────────────────────────────
   // Listeners are attached to window during drag so fast mouse movement
@@ -2031,10 +2045,11 @@ export default function WorkflowsPage() {
         wf = await createWorkflow(body)
       }
       setSelected(wf)
-      setWorkflows(prev => {
+      queryClient.setQueryData<WorkflowRecord[]>(queryKeys.workflows, (prev = []) => {
         const idx = prev.findIndex(w => w.workflow_id === wf.workflow_id)
         return idx >= 0 ? prev.map((w, i) => i === idx ? wf : w) : [wf, ...prev]
       })
+      invalidateDashboardStats()
       setSaveMsg('Saved')
       setTimeout(() => setSaveMsg(''), 2000)
     } catch (e) {
@@ -2057,7 +2072,6 @@ export default function WorkflowsPage() {
     setNodes([])
     setEdges([])
     setCurrentRun(null)
-    setRuns([])
     setMobileShowDetail(true)
   }
 
@@ -2076,7 +2090,8 @@ export default function WorkflowsPage() {
       return
     }
     const remaining = workflows.filter(w => w.workflow_id !== wfId)
-    setWorkflows(remaining)
+    queryClient.setQueryData<WorkflowRecord[]>(queryKeys.workflows, remaining)
+    invalidateDashboardStats()
     if (selected?.workflow_id === wfId) {
       if (remaining.length > 0) {
         loadWorkflow(remaining[0])
@@ -2097,20 +2112,23 @@ export default function WorkflowsPage() {
       try {
         const updated = await getRun(workflowId, run.run_id)
         setCurrentRun(updated)
-        setRuns(prev => prev.map(r => r.run_id === updated.run_id ? updated : r))
+        queryClient.setQueryData<WorkflowRun[]>(queryKeys.workflowRuns(workflowId), (prev = []) =>
+          prev.map(r => r.run_id === updated.run_id ? updated : r)
+        )
         if (updated.status === 'running' || updated.status === 'awaiting_checkpoint') {
           if (updated.status === 'running') setRunning(true)
           else setRunning(false)  // allow user to interact with HITL panel
           pollRun(workflowId, updated)
         } else {
           setRunning(false)
-          listRuns(workflowId).then(setRuns).catch(() => {})
+          queryClient.invalidateQueries({ queryKey: queryKeys.workflowRuns(workflowId) })
+          invalidateDashboardStats()
         }
       } catch {
         setRunning(false)
       }
     }, 2000)
-  }, [])
+  }, [queryClient])
 
   const doRun = async () => {
     if (!selected) { setRunError('Save the workflow first.'); return }
@@ -2119,7 +2137,10 @@ export default function WorkflowsPage() {
     try {
       const run = await runWorkflow(selected.workflow_id, initialInput, '')
       setCurrentRun(run)
-      setRuns(prev => [run, ...prev])
+      queryClient.setQueryData<WorkflowRun[]>(queryKeys.workflowRuns(selected.workflow_id), (prev = []) =>
+        [run, ...prev]
+      )
+      invalidateDashboardStats()
       // Server returns immediately (202); start polling for completion
       pollRun(selected.workflow_id, run)
     } catch (e: any) {
@@ -2425,11 +2446,13 @@ export default function WorkflowsPage() {
               selectedRunId={selectedHistoryRun?.run_id}
               workflowId={selected?.workflow_id ?? ''}
               onRunsChanged={() => {
-                setRuns([])
                 setSelectedHistoryRun(null)
                 setCurrentRun(null)
                 setInitialInput('')
-                if (selected) listRuns(selected.workflow_id).then(setRuns)
+                if (selected) {
+                  queryClient.invalidateQueries({ queryKey: queryKeys.workflowRuns(selected.workflow_id) })
+                }
+                invalidateDashboardStats()
               }}
             />
           </div>
@@ -3086,8 +3109,12 @@ export default function WorkflowsPage() {
                   }}
                   onResumed={updated => {
                     setCurrentRun(updated)
-                    setRuns(prev => prev.map(r => r.run_id === updated.run_id ? updated : r))
-                    if (selected) pollRun(selected.workflow_id, updated)
+                    if (selected) {
+                      queryClient.setQueryData<WorkflowRun[]>(queryKeys.workflowRuns(selected.workflow_id), (prev = []) =>
+                        prev.map(r => r.run_id === updated.run_id ? updated : r)
+                      )
+                      pollRun(selected.workflow_id, updated)
+                    }
                   }}
                 />
               )}

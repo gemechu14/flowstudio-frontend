@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   ToolRecord, ToolStatus,
   listTools, uploadTool, updateTool, approveTool, rejectTool, deleteTool,
@@ -8,6 +9,7 @@ import {
 import ConfirmModal from '../components/ui/ConfirmModal'
 import { ToolEnvVarsEditor } from '../components/tools/ToolEnvVarsEditor'
 import { submitTool, CATEGORIES } from '../api/communityTools'
+import { invalidateDashboardStats, queryKeys } from '../lib/queryClient'
 
 const ANTHROPIC_MODELS = [
   { id: 'claude-sonnet-5', label: 'Claude Sonnet 5' },
@@ -1502,8 +1504,7 @@ function RightEmptyState({ onEditor, onUpload, compact }: { onEditor: () => void
 // ─── main page ───────────────────────────────────────────────────────────────
 
 export default function Tools() {
-  const [tools, setTools] = useState<ToolRecord[]>([])
-  const [loading, setLoading] = useState(true)
+  const queryClient = useQueryClient()
   const [activeTab, setActiveTab] = useState<ToolStatus | 'all'>('all')
   const [search, setSearch] = useState('')
   const [showAdd, setShowAdd] = useState<'upload' | 'editor' | 'edit' | false>(false)
@@ -1515,11 +1516,15 @@ export default function Tools() {
   const [deleteError, setDeleteError] = useState('')
   const [listCollapsed, setListCollapsed] = useState(false)
 
-  const reload = useCallback(() => {
-    listTools().then(setTools).catch(() => {}).finally(() => setLoading(false))
-  }, [])
+  const { data: tools = [], isLoading: loading } = useQuery({
+    queryKey: queryKeys.tools,
+    queryFn: () => listTools().catch(() => [] as ToolRecord[]),
+  })
 
-  useEffect(() => { reload() }, [reload])
+  const reload = () => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.tools })
+    invalidateDashboardStats()
+  }
 
   useEffect(() => {
     if (!showAdd) return
