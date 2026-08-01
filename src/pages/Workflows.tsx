@@ -2168,6 +2168,7 @@ export default function WorkflowsPage() {
   const [wfSearch, setWfSearch] = useState('')
   const [wfModeFilter, setWfModeFilter] = useState<ExecutionMode | ''>('')
   const [mobileShowDetail, setMobileShowDetail] = useState(false)
+  const [mobileTab, setMobileTab] = useState<'canvas' | 'run' | 'history'>('canvas')
   const initializedRef = useRef(false)
 
   // Canvas state
@@ -2650,6 +2651,20 @@ export default function WorkflowsPage() {
     }
   }
 
+  const openMobileDetail = (tab: 'canvas' | 'run' | 'history' = 'canvas') => {
+    setMobileTab(tab)
+    setMobileShowDetail(true)
+  }
+
+  const selectHistoryRun = (r: WorkflowRun) => {
+    setSelectedHistoryRun(r)
+    setCurrentRun(null)
+    setInitialInput(r.initial_input)
+    setRunError('')
+    setRunPanelH(420)
+    openMobileDetail('run')
+  }
+
   // ── new workflow ──────────────────────────────────────────────────────────
 
   const newWorkflow = () => {
@@ -2663,7 +2678,7 @@ export default function WorkflowsPage() {
     setNodes([])
     setEdges([])
     setCurrentRun(null)
-    setMobileShowDetail(true)
+    openMobileDetail('canvas')
   }
 
   // ── delete workflow ───────────────────────────────────────────────────────
@@ -2686,7 +2701,7 @@ export default function WorkflowsPage() {
     if (selected?.workflow_id === wfId) {
       if (remaining.length > 0) {
         loadWorkflow(remaining[0])
-        setMobileShowDetail(true)
+        openMobileDetail('canvas')
       } else {
         newWorkflow()
         setMobileShowDetail(false)
@@ -2725,6 +2740,7 @@ export default function WorkflowsPage() {
     if (!selected) { setRunError('Save the workflow first.'); return }
     if (pollRunRef.current) clearTimeout(pollRunRef.current)
     setRunning(true); setRunError(''); setCurrentRun(null); setSelectedHistoryRun(null)
+    setMobileTab('run')
     try {
       const run = await runWorkflow(selected.workflow_id, initialInput, '')
       setCurrentRun(run)
@@ -2948,23 +2964,25 @@ export default function WorkflowsPage() {
 
         {/* Search + mode filter */}
         <div className="wf-list-filters" style={{ padding: '0 12px 12px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <div style={{ position: 'relative' }}>
+          <div className="wf-search-wrap" style={{ position: 'relative' }}>
             <svg
+              className="wf-search-icon"
               width="14" height="14" viewBox="0 0 24 24" fill="none"
               stroke="var(--text-tertiary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-              style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}
+              style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', zIndex: 1 }}
               aria-hidden
             >
               <circle cx="11" cy="11" r="7" />
               <path d="M20 20l-3.5-3.5" />
             </svg>
             <input
+              className="wf-search-input"
               value={wfSearch}
               onChange={e => setWfSearch(e.target.value)}
               placeholder="Search workflows…"
               style={{
                 width: '100%', boxSizing: 'border-box',
-                padding: '8px 10px 8px 32px', fontSize: 12, ...SANS,
+                padding: '8px 10px 8px 36px', fontSize: 12, ...SANS,
                 background: 'var(--bg-page)', color: 'var(--text-primary)',
                 border: '1px solid var(--border)', borderRadius: 8, outline: 'none',
               }}
@@ -3006,7 +3024,7 @@ export default function WorkflowsPage() {
               <div
                 key={wf.workflow_id}
                 className={`wf-list-item${active ? ' is-active' : ''}`}
-                onClick={() => { loadWorkflow(wf); setMobileShowDetail(true) }}
+                onClick={() => { loadWorkflow(wf); openMobileDetail('canvas') }}
                 style={{
                   padding: '12px 12px',
                   cursor: 'pointer',
@@ -3072,14 +3090,7 @@ export default function WorkflowsPage() {
             <RunHistoryPanel
               runs={runs}
               loading={runsBusy}
-              onSelectRun={r => {
-                setSelectedHistoryRun(r)
-                setCurrentRun(null)
-                setInitialInput(r.initial_input)
-                setRunError('')
-                setRunPanelH(420)
-                setMobileShowDetail(true)
-              }}
+              onSelectRun={selectHistoryRun}
               selectedRunId={selectedHistoryRun?.run_id}
               workflowId={selected?.workflow_id ?? ''}
               onRunsChanged={() => {
@@ -3142,7 +3153,7 @@ export default function WorkflowsPage() {
               <span aria-hidden>‹</span> All workflows
             </button>
 
-            <div style={{
+            <div className="wf-toolbar-identity" style={{
               flex: 1, minWidth: 180,
               display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
             }}>
@@ -3165,7 +3176,7 @@ export default function WorkflowsPage() {
               }}>
                 {nodes.length} nodes
               </span>
-              <span style={{ color: 'var(--border)', fontSize: 16, flexShrink: 0 }} aria-hidden>|</span>
+              <span className="wf-toolbar-sep" style={{ color: 'var(--border)', fontSize: 16, flexShrink: 0 }} aria-hidden>|</span>
               <input
                 className="wf-desc-input"
                 value={wfDesc}
@@ -3267,8 +3278,37 @@ export default function WorkflowsPage() {
             </div>
           </div>
 
+          {/* Mobile / tablet detail tabs */}
+          <div className="wf-mobile-tabs" role="tablist" aria-label="Workflow sections">
+            {([
+              { id: 'canvas' as const, label: 'Canvas' },
+              { id: 'run' as const, label: 'Run Result' },
+              { id: 'history' as const, label: 'History' },
+            ]).map(t => {
+              const active = mobileTab === t.id
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  className={`wf-mobile-tab${active ? ' is-active' : ''}`}
+                  onClick={() => setMobileTab(t.id)}
+                >
+                  {t.id === 'history' && (
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                      <circle cx="12" cy="12" r="9" />
+                      <path d="M12 7v5l3 2" strokeLinecap="round" />
+                    </svg>
+                  )}
+                  {t.label}
+                </button>
+              )
+            })}
+          </div>
+
           {/* Row 2 — ADD tools left, auto layout + zoom right */}
-          <div className="wf-toolbar-bottom" style={{
+          <div className={`wf-toolbar-bottom${mobileTab !== 'canvas' ? ' wf-mobile-hide' : ''}`} style={{
             padding: '10px 20px',
             display: 'flex', alignItems: 'center', gap: 12,
             flexWrap: 'wrap',
@@ -3394,7 +3434,7 @@ export default function WorkflowsPage() {
 
         {/* Canvas */}
         <div
-          className="wf-canvas-wrap"
+          className={`wf-canvas-wrap${mobileTab !== 'canvas' ? ' wf-mobile-hide' : ''}`}
           style={{
             flex: 1, overflow: 'auto', position: 'relative', minHeight: 0,
             backgroundColor: 'var(--canvas-bg)',
@@ -3643,7 +3683,7 @@ export default function WorkflowsPage() {
 
         {/* Run panel */}
         <div
-          className="wf-run-panel"
+          className={`wf-run-panel${mobileTab !== 'run' ? ' wf-mobile-hide' : ''}`}
           style={{
           borderTop: '1px solid var(--border)',
           background: 'var(--bg-card)',
@@ -3824,7 +3864,7 @@ export default function WorkflowsPage() {
 
         {/* Results — drag-resizable panel */}
         {(currentRun || selectedHistoryRun) && (
-          <div style={{ flexShrink: 0, position: 'relative' }}>
+          <div className={mobileTab !== 'run' ? 'wf-mobile-hide' : undefined} style={{ flexShrink: 0, position: 'relative' }}>
             {/* Drag handle */}
             <div
               onMouseDown={e => {
@@ -3877,6 +3917,35 @@ export default function WorkflowsPage() {
             </div>
           </div>
         )}
+
+        {/* Mobile / tablet History tab */}
+        <div
+          className={`wf-mobile-history${mobileTab !== 'history' ? ' wf-mobile-hide' : ''}`}
+        >
+          {selected ? (
+            <RunHistoryPanel
+              runs={runs}
+              loading={runsBusy}
+              onSelectRun={selectHistoryRun}
+              selectedRunId={selectedHistoryRun?.run_id}
+              workflowId={selected.workflow_id}
+              onRunsChanged={() => {
+                setSelectedHistoryRun(null)
+                setCurrentRun(null)
+                setInitialInput('')
+                queryClient.invalidateQueries({ queryKey: queryKeys.workflowRuns(selected.workflow_id) })
+                invalidateDashboardStats()
+              }}
+            />
+          ) : (
+            <div style={{
+              padding: 24, textAlign: 'center', color: 'var(--text-muted)',
+              ...SANS, fontSize: 13,
+            }}>
+              Save the workflow to view run history.
+            </div>
+          )}
+        </div>
       </div>
       )}
 
