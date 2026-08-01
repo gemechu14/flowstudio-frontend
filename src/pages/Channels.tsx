@@ -678,8 +678,8 @@ function AddChannelForm({ onCreated, onCancel, existingTypes }: {
         Add channel
       </div>
 
-      <div style={{ display: 'flex', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
-        <div style={{ flex: '0 0 160px' }}>
+      <div className="ch-add-platform-row" style={{ display: 'flex', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
+        <div className="ch-add-platform-field" style={{ flex: '0 0 160px' }}>
           <div style={{ ...SANS, fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 4, fontWeight: 600 }}>Platform</div>
           <select
             value={channelType}
@@ -692,7 +692,7 @@ function AddChannelForm({ onCreated, onCancel, existingTypes }: {
           </select>
         </div>
 
-        <div style={{ flex: 1, minWidth: 200 }}>
+        <div className="ch-add-token-field" style={{ flex: 1, minWidth: 200 }}>
           <div style={{ ...SANS, fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 4, fontWeight: 600 }}>Bot token</div>
           <input
             type="password"

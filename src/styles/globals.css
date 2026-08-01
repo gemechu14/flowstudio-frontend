@@ -1213,18 +1213,6 @@ optgroup {
     border-radius: 10px !important;
   }
 
-  .ds-btn-edit {
-    background: var(--bg-hover) !important;
-    color: var(--text-primary) !important;
-    border-color: var(--border) !important;
-  }
-
-  .ds-btn-delete {
-    background: var(--invalid) !important;
-    color: #fff !important;
-    border-color: transparent !important;
-  }
-
   .ds-metrics {
     width: 100%;
   }
@@ -1322,6 +1310,18 @@ optgroup {
 
   .ch-guides-tabs {
     scrollbar-width: thin;
+  }
+
+  .ch-add-platform-row {
+    flex-direction: column !important;
+    gap: 12px !important;
+  }
+
+  .ch-add-platform-field,
+  .ch-add-token-field {
+    flex: 1 1 100% !important;
+    width: 100% !important;
+    min-width: 0 !important;
   }
 }
 
