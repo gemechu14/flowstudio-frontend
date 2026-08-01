@@ -16,7 +16,7 @@ const FIELD: React.CSSProperties = {
   fontSize: 13,
   padding: '10px 14px',
   backgroundColor: 'var(--card-bg)',
-  color: 'var(--text-primary)',
+  color: 'var(--text-heading)',
   border: '1px solid var(--border)',
   borderRadius: 8,
   outline: 'none',
@@ -83,10 +83,10 @@ function ActionBtn({
   disabled?: boolean
 }) {
   const styles = {
-    neutral: { bg: 'var(--btn-neutral-bg)', border: 'var(--btn-neutral-border)', color: 'var(--btn-neutral-text)' },
-    accent:  { bg: 'var(--btn-accent-bg)', border: 'var(--btn-accent-border)', color: 'var(--btn-accent-text)' },
-    primary: { bg: 'var(--btn-upload-bg)', border: 'transparent', color: 'var(--btn-upload-text)' },
-    danger:  { bg: 'var(--btn-danger-bg)', border: 'var(--btn-danger-border)', color: 'var(--btn-danger-text)' },
+    neutral: { bg: 'var(--bg-hover)', border: 'var(--border)', color: 'var(--text-secondary)' },
+    accent:  { bg: 'var(--bg-hover)', border: 'var(--border)', color: 'var(--text-secondary)' },
+    primary: { bg: 'var(--accent-soft)', border: 'var(--blue-border)', color: 'var(--accent-text)' },
+    danger:  { bg: 'var(--bg-hover)', border: 'var(--border)', color: 'var(--btn-danger-text)' },
   }[variant]
 
   return (
@@ -98,7 +98,7 @@ function ActionBtn({
         padding: '6px 12px',
         minHeight: 32,
         background: disabled ? 'var(--bg-hover)' : styles.bg,
-        border: `1px solid ${disabled ? 'var(--border)' : (styles.border === 'transparent' ? 'transparent' : styles.border)}`,
+        border: `1px solid ${disabled ? 'var(--border)' : styles.border}`,
         color: disabled ? 'var(--text-tertiary)' : styles.color,
         borderRadius: 999,
         cursor: disabled ? 'not-allowed' : 'pointer',
@@ -224,10 +224,10 @@ function CommunityTestPanel({ tool, onClose }: { tool: CommunityToolCard; onClos
       }}>
         <div style={{
           padding: '16px 20px', borderBottom: '1px solid var(--border)',
-          background: 'var(--bg-page)', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          background: 'var(--bg-surface)', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         }}>
           <div>
-            <div style={{ ...MONO, fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>{tool.name}</div>
+            <div style={{ ...MONO, fontSize: 13, fontWeight: 600, color: 'var(--text-heading)' }}>{tool.name}</div>
             <div style={{ ...MONO, fontSize: 10, color: 'var(--text-tertiary)', marginTop: 2 }}>Test run</div>
           </div>
           <button onClick={onClose} style={{
@@ -251,7 +251,7 @@ function CommunityTestPanel({ tool, onClose }: { tool: CommunityToolCard; onClos
                     placeholder={p.description || `Enter ${p.name}`}
                     style={{
                       width: '100%', ...MONO, fontSize: 12, padding: '8px 12px',
-                      backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)',
+                      backgroundColor: 'var(--card-bg)', color: 'var(--text-heading)',
                       border: '1px solid var(--border)', borderRadius: 8, boxSizing: 'border-box',
                       outline: 'none',
                     }}
@@ -266,8 +266,8 @@ function CommunityTestPanel({ tool, onClose }: { tool: CommunityToolCard; onClos
           )}
           <button onClick={run} disabled={running} style={{
             width: '100%', padding: '10px',
-            background: 'var(--btn-upload-bg)', color: 'var(--btn-upload-text)',
-            border: 'none', borderRadius: 999, cursor: running ? 'wait' : 'pointer',
+            background: 'var(--accent-soft)', color: 'var(--accent-text)',
+            border: '1px solid var(--blue-border)', borderRadius: 999, cursor: running ? 'wait' : 'pointer',
             fontWeight: 600, fontSize: 13, ...SANS,
             opacity: running ? 0.7 : 1,
           }}>{running ? 'Running…' : 'Run'}</button>
@@ -403,7 +403,7 @@ function ToolCardItem({
       >
         <div className="ct-card-top">
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
-            <span className="ct-card-title" style={{ ...MONO, fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', wordBreak: 'break-word' }}>
+            <span className="ct-card-title" style={{ ...MONO, fontSize: 14, fontWeight: 600, color: 'var(--text-secondary)', wordBreak: 'break-word' }}>
               {tool.display_name || tool.name}
             </span>
             {tool.display_name && tool.display_name !== tool.name && (
@@ -502,7 +502,7 @@ function ToolCardItem({
             placeholder="Reason for rejection..."
             style={{
               flex: 1, minWidth: 160, ...MONO, fontSize: 12, padding: '8px 12px',
-              backgroundColor: 'var(--bg-page)', color: 'var(--text-primary)',
+              backgroundColor: 'var(--bg-page)', color: 'var(--text-heading)',
               border: '1px solid var(--border)', borderRadius: 8, outline: 'none',
             }}
           />
@@ -529,7 +529,7 @@ function ToolCardItem({
               placeholder="Requirements (e.g. requests==2.31.0)"
               style={{
                 ...MONO, fontSize: 12, padding: '8px 12px',
-                backgroundColor: 'var(--bg-page)', color: 'var(--text-primary)',
+                backgroundColor: 'var(--bg-page)', color: 'var(--text-heading)',
                 border: '1px solid var(--border)', borderRadius: 8, outline: 'none',
               }}
             />
@@ -596,20 +596,20 @@ export default function CommunityTools() {
       className="ct-page"
       style={{
       display: 'flex', flexDirection: 'column', height: '100%',
-      background: 'var(--bg-page)', ...SANS,
+      background: 'var(--bg-surface)', ...SANS,
     }}>
       <div
         className="ct-header"
         style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '20px 28px 16px', borderBottom: '1px solid var(--border)',
-        flexShrink: 0, background: 'var(--topbar-bg)',
+        flexShrink: 0, background: 'var(--bg-surface)',
       }}>
         <div>
           <div style={{ ...MONO, fontSize: 10, fontWeight: 600, letterSpacing: '0.14em', color: 'var(--accent)', marginBottom: 6 }}>
             TOOL LIBRARY
           </div>
-          <h2 style={{ ...SANS, fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
+          <h2 style={{ ...SANS, fontSize: 20, fontWeight: 700, color: 'var(--text-heading)', margin: 0 }}>
             Community Tools
           </h2>
           <p style={{ ...SANS, fontSize: 13, color: 'var(--text-secondary)', marginTop: 4, marginBottom: 0 }}>

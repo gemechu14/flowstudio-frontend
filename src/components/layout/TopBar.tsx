@@ -81,7 +81,7 @@ export default function TopBar() {
               fontFamily: 'var(--font-sans)',
               fontSize: 20,
               fontWeight: 650,
-              color: 'var(--text-primary)',
+              color: 'var(--text-heading)',
               letterSpacing: '-0.02em',
               lineHeight: 1.15,
               margin: 0,

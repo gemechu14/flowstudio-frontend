@@ -238,7 +238,7 @@ function CreateModal({ onClose, onCreated }: {
   const inputStyle: React.CSSProperties = {
     width: '100%', padding: '9px 12px', borderRadius: 8, fontSize: 13.5,
     backgroundColor: 'var(--bg-page)', border: '1px solid var(--border)',
-    color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box',
+    color: 'var(--text-heading)', outline: 'none', boxSizing: 'border-box',
     fontFamily: 'var(--font-sans)', transition: 'border-color 0.15s, box-shadow 0.15s',
     colorScheme: 'dark light',
   }
@@ -279,7 +279,7 @@ function CreateModal({ onClose, onCreated }: {
             <div style={{ fontSize: 10, ...MONO, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--blue)', marginBottom: 4 }}>
               New Data Source
             </div>
-            <div style={{ ...SANS, fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>
+            <div style={{ ...SANS, fontSize: 16, fontWeight: 700, color: 'var(--text-heading)' }}>
               {step === 1 ? 'Choose source type' : step === 3 ? 'Select tables' : step === 4 ? 'Filters' : `Configure ${TYPE_META[type].label.toLowerCase()}`}
             </div>
           </div>
@@ -301,13 +301,13 @@ function CreateModal({ onClose, onCreated }: {
                 <div style={{
                   width: 22, height: 22, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: 11, fontWeight: 700, ...MONO,
-                  background: done ? 'var(--accent)' : active ? 'var(--blue)' : 'var(--border)',
-                  color: done || active ? '#fff' : 'var(--text-secondary)',
+                  background: done || active ? 'var(--accent-soft)' : 'var(--border)',
+                  color: done || active ? 'var(--accent-text)' : 'var(--text-secondary)',
                   border: 'none',
                 }}>
                   {done ? <Ic.Check /> : n}
                 </div>
-                <span style={{ fontSize: 12, color: active ? 'var(--text-primary)' : done ? 'var(--accent)' : 'var(--text-secondary)', fontWeight: active ? 600 : 400 }}>{label}</span>
+                <span style={{ fontSize: 12, color: active ? 'var(--text-heading)' : done ? 'var(--accent)' : 'var(--text-secondary)', fontWeight: active ? 600 : 400 }}>{label}</span>
                 {n < arr.length && <div style={{ width: 24, height: 1, background: 'var(--border)', margin: '0 2px' }} />}
               </div>
             )
@@ -338,7 +338,7 @@ function CreateModal({ onClose, onCreated }: {
                     <Icon s={18} />
                   </div>
                   <div style={{ flex: 1 }}>
-                    <div style={{ ...SANS, fontSize: 13.5, fontWeight: 600, color: active ? t.color : 'var(--text-primary)', marginBottom: 3 }}>{c.title}</div>
+                    <div style={{ ...SANS, fontSize: 13.5, fontWeight: 600, color: active ? t.color : 'var(--text-heading)', marginBottom: 3 }}>{c.title}</div>
                     <div style={{ ...SANS, fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.45 }}>{c.desc}</div>
                   </div>
                   <div style={{
@@ -347,15 +347,16 @@ function CreateModal({ onClose, onCreated }: {
                     background: active ? t.color : 'transparent',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}>
-                    {active && <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#fff' }} />}
+                    {active && <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--accent-text)' }} />}
                   </div>
                 </button>
               )
             })}
             <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: 4 }}>
               <button onClick={() => setStep(2)} style={{
-                ...SANS, padding: '9px 20px', borderRadius: 999, border: 'none',
-                background: 'var(--btn-upload-bg)', color: 'var(--btn-upload-text)',
+                ...SANS, padding: '9px 20px', borderRadius: 999,
+                background: 'var(--accent-soft)', color: 'var(--accent-text)',
+                border: '1px solid var(--blue-border)',
                 fontSize: 13, fontWeight: 600, cursor: 'pointer',
               }}>
                 Continue →
@@ -400,7 +401,7 @@ function CreateModal({ onClose, onCreated }: {
                         cursor: 'pointer', textAlign: 'left',
                       }}>
                         <span style={{ fontSize: 18, lineHeight: 1 }}>{d.icon}</span>
-                        <span style={{ fontSize: 12.5, fontWeight: dialect === d.id ? 600 : 400, color: dialect === d.id ? 'var(--blue)' : 'var(--text-primary)' }}>{d.label}</span>
+                        <span style={{ fontSize: 12.5, fontWeight: dialect === d.id ? 600 : 400, color: dialect === d.id ? 'var(--blue)' : 'var(--text-heading)' }}>{d.label}</span>
                       </button>
                     ))}
                   </div>
@@ -463,7 +464,7 @@ function CreateModal({ onClose, onCreated }: {
                   <label style={labelStyle}>Connection string preview</label>
                   <div style={{
                     padding: '9px 12px', borderRadius: 7, border: '1px solid var(--border)',
-                    background: 'var(--bg-hover)', ...MONO, fontSize: 11.5, color: buildConnectionUrl() ? 'var(--text-primary)' : 'var(--text-tertiary)',
+                    background: 'var(--bg-hover)', ...MONO, fontSize: 11.5, color: buildConnectionUrl() ? 'var(--text-heading)' : 'var(--text-tertiary)',
                     wordBreak: 'break-all', lineHeight: 1.6, minHeight: 36,
                   }}>
                     {buildConnectionUrl() || 'Fill in the fields above to preview'}
@@ -570,7 +571,7 @@ function CreateModal({ onClose, onCreated }: {
                 {type === 'database' ? (
                   <button onClick={handleTestAndNext} disabled={schemaLoading} style={{
                     padding: '7px 20px', borderRadius: 6, border: 'none',
-                    background: TYPE_META.database.color, color: '#fff',
+                    background: 'var(--accent-soft)', color: 'var(--accent-text)',
                     cursor: schemaLoading ? 'wait' : 'pointer', fontSize: 13, fontWeight: 600,
                     opacity: schemaLoading ? 0.7 : 1,
                   }}>
@@ -579,7 +580,7 @@ function CreateModal({ onClose, onCreated }: {
                 ) : (
                   <button onClick={handleCreate} disabled={saving} style={{
                     padding: '7px 20px', borderRadius: 6, border: 'none',
-                    background: TYPE_META[type].color, color: '#fff',
+                    background: 'var(--accent-soft)', color: 'var(--accent-text)',
                     cursor: saving ? 'wait' : 'pointer', fontSize: 13, fontWeight: 600,
                     opacity: saving ? 0.7 : 1,
                   }}>
@@ -639,7 +640,7 @@ function CreateModal({ onClose, onCreated }: {
                       <input type="checkbox" checked={checked} onChange={() => toggleTable(tbl.name)}
                         style={{ width: 14, height: 14, accentColor: 'var(--blue)', flexShrink: 0 }} />
                       <Ic.DB s={13} />
-                      <span style={{ flex: 1, fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', ...MONO }}>{tbl.name}</span>
+                      <span style={{ flex: 1, fontSize: 13, fontWeight: 500, color: 'var(--text-heading)', ...MONO }}>{tbl.name}</span>
                       <span style={{ fontSize: 11, color: 'var(--text-secondary)', ...MONO }}>{tbl.columns.length} cols</span>
                     </label>
                   )
@@ -669,7 +670,7 @@ function CreateModal({ onClose, onCreated }: {
               }}>Cancel</button>
               <button onClick={() => { setStep(4); setError('') }} disabled={selectedTables.size === 0} style={{
                 padding: '7px 20px', borderRadius: 6, border: 'none',
-                background: TYPE_META.database.color, color: '#fff',
+                background: 'var(--accent-soft)', color: 'var(--accent-text)',
                 cursor: 'pointer', fontSize: 13, fontWeight: 600,
                 opacity: selectedTables.size === 0 ? 0.6 : 1,
               }}>
@@ -697,7 +698,7 @@ function CreateModal({ onClose, onCreated }: {
                 <div key={tbl.name} style={{ border: '1px solid var(--border)', borderRadius: 10, overflow: 'visible' }}>
                   <div style={{ padding: '9px 14px', background: 'var(--bg-hover)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8 }}>
                     <Ic.DB s={13} />
-                    <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', ...MONO }}>{tbl.name}</span>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', ...MONO }}>{tbl.name}</span>
                   </div>
 
                   <div style={{ padding: '14px', display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -748,7 +749,7 @@ function CreateModal({ onClose, onCreated }: {
                                   .map(col => (
                                     <button key={col.name} onClick={() => { addRedaction(tbl.name, col.name); setAddColTable(null) }} style={{
                                       width: '100%', textAlign: 'left', padding: '7px 12px', background: 'none',
-                                      border: 'none', cursor: 'pointer', fontSize: 12.5, ...MONO, color: 'var(--text-primary)',
+                                      border: 'none', cursor: 'pointer', fontSize: 12.5, ...MONO, color: 'var(--text-heading)',
                                     }}
                                       onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
                                       onMouseLeave={e => (e.currentTarget.style.background = 'none')}
@@ -783,7 +784,7 @@ function CreateModal({ onClose, onCreated }: {
               }}>Cancel</button>
               <button onClick={handleCreate} disabled={saving} style={{
                 padding: '7px 20px', borderRadius: 6, border: 'none',
-                background: TYPE_META.database.color, color: '#fff',
+                background: 'var(--accent-soft)', color: 'var(--accent-text)',
                 cursor: saving ? 'wait' : 'pointer', fontSize: 13, fontWeight: 600,
                 opacity: saving ? 0.6 : 1,
               }}>
@@ -918,7 +919,7 @@ function EditModal({ source, onClose, onSaved }: {
   const inp: React.CSSProperties = {
     width: '100%', padding: '8px 11px', borderRadius: 7, fontSize: 13.5,
     background: 'var(--card-bg)', border: '1px solid var(--border)',
-    color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box',
+    color: 'var(--text-heading)', outline: 'none', boxSizing: 'border-box',
     fontFamily: 'var(--font-sans)',
   }
   const lbl: React.CSSProperties = {
@@ -944,7 +945,7 @@ function EditModal({ source, onClose, onSaved }: {
             Edit {t.label}
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>{source.name}</h2>
+            <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-heading)', margin: 0 }}>{source.name}</h2>
             <button onClick={onClose} style={{
               width: 28, height: 28, borderRadius: '50%', border: 'none', background: 'var(--bg-hover)',
               cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -965,11 +966,11 @@ function EditModal({ source, onClose, onSaved }: {
                       width: 22, height: 22, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
                       fontSize: 11, fontWeight: 700, ...MONO, flexShrink: 0,
                       background: done || active ? t.color : 'var(--border)',
-                      color: done || active ? '#fff' : 'var(--text-secondary)',
+                      color: done || active ? 'var(--accent-text)' : 'var(--text-secondary)',
                     }}>
                       {done ? '✓' : i + 1}
                     </div>
-                    <span style={{ fontSize: 12.5, fontWeight: active ? 600 : 400, color: active ? 'var(--text-primary)' : 'var(--text-secondary)' }}>{label}</span>
+                    <span style={{ fontSize: 12.5, fontWeight: active ? 600 : 400, color: active ? 'var(--text-heading)' : 'var(--text-secondary)' }}>{label}</span>
                   </div>
                   {i < STEPS.length - 1 && <div style={{ width: 28, height: 1, background: 'var(--border)', margin: '0 10px' }} />}
                 </div>
@@ -1147,7 +1148,7 @@ function EditModal({ source, onClose, onSaved }: {
                           <input type="checkbox" checked={checked} onChange={() => toggleTable(tbl.name)}
                             style={{ width: 14, height: 14, accentColor: t.color, flexShrink: 0 }} />
                           <Ic.DB s={13} />
-                          <span style={{ flex: 1, fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', ...MONO }}>{tbl.name}</span>
+                          <span style={{ flex: 1, fontSize: 13, fontWeight: 500, color: 'var(--text-heading)', ...MONO }}>{tbl.name}</span>
                           <span style={{ fontSize: 11, color: 'var(--text-secondary)', ...MONO }}>{tbl.columns.length} cols</span>
                         </label>
                       )
@@ -1179,7 +1180,7 @@ function EditModal({ source, onClose, onSaved }: {
                     {/* Table header */}
                     <div style={{ padding: '9px 14px', background: 'var(--bg-hover)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8 }}>
                       <Ic.DB s={13} />
-                      <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', ...MONO }}>{tbl.name}</span>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', ...MONO }}>{tbl.name}</span>
                     </div>
 
                     <div style={{ padding: '14px', display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -1243,7 +1244,7 @@ function EditModal({ source, onClose, onSaved }: {
                                     .map(col => (
                                       <button key={col.name} onClick={() => { addRedaction(tbl.name, col.name); setAddColTable(null) }} style={{
                                         width: '100%', textAlign: 'left', padding: '7px 12px', background: 'none',
-                                        border: 'none', cursor: 'pointer', fontSize: 12.5, ...MONO, color: 'var(--text-primary)',
+                                        border: 'none', cursor: 'pointer', fontSize: 12.5, ...MONO, color: 'var(--text-heading)',
                                       }}
                                         onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
                                         onMouseLeave={e => (e.currentTarget.style.background = 'none')}
@@ -1277,7 +1278,7 @@ function EditModal({ source, onClose, onSaved }: {
               <button onClick={() => setStep(step === 'filters' ? 'tables' : 'connect')} style={{
                 display: 'flex', alignItems: 'center', gap: 5, padding: '7px 14px', borderRadius: 7,
                 border: '1px solid var(--border)', background: 'transparent',
-                color: 'var(--text-primary)', cursor: 'pointer', fontSize: 13, fontWeight: 500,
+                color: 'var(--text-heading)', cursor: 'pointer', fontSize: 13, fontWeight: 500,
               }}>
                 ← Back
               </button>
@@ -1288,7 +1289,7 @@ function EditModal({ source, onClose, onSaved }: {
                 disabled={schemaLoading || !name.trim()}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 5, padding: '7px 18px', borderRadius: 7,
-                  border: 'none', background: t.color, color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 600,
+                  background: 'var(--accent-soft)', color: 'var(--accent-text)', border: '1px solid var(--blue-border)', cursor: 'pointer', fontSize: 13, fontWeight: 600,
                   opacity: schemaLoading || !name.trim() ? 0.5 : 1,
                 }}>
                 {schemaLoading ? 'Loading…' : 'Continue →'}
@@ -1297,7 +1298,7 @@ function EditModal({ source, onClose, onSaved }: {
             {/* Connect step → save (doc / website) */}
             {step === 'connect' && !isDb && (
               <button onClick={handleSave} disabled={saving || !name.trim()} style={{
-                padding: '7px 18px', borderRadius: 7, border: 'none', background: t.color, color: '#fff',
+                padding: '7px 18px', borderRadius: 7, background: 'var(--accent-soft)', color: 'var(--accent-text)', border: '1px solid var(--blue-border)',
                 cursor: saving ? 'wait' : 'pointer', fontSize: 13, fontWeight: 600,
                 opacity: saving || !name.trim() ? 0.5 : 1,
               }}>
@@ -1308,7 +1309,7 @@ function EditModal({ source, onClose, onSaved }: {
             {step === 'tables' && (
               <button onClick={() => { setStep('filters'); setError('') }} disabled={!canContinueTables} style={{
                 display: 'flex', alignItems: 'center', gap: 5, padding: '7px 18px', borderRadius: 7,
-                border: 'none', background: t.color, color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 600,
+                background: 'var(--accent-soft)', color: 'var(--accent-text)', border: '1px solid var(--blue-border)', cursor: 'pointer', fontSize: 13, fontWeight: 600,
                 opacity: !canContinueTables ? 0.5 : 1,
               }}>
                 Continue →
@@ -1317,7 +1318,7 @@ function EditModal({ source, onClose, onSaved }: {
             {/* Filters → save */}
             {step === 'filters' && (
               <button onClick={handleSave} disabled={saving} style={{
-                padding: '7px 18px', borderRadius: 7, border: 'none', background: t.color, color: '#fff',
+                padding: '7px 18px', borderRadius: 7, background: 'var(--accent-soft)', color: 'var(--accent-text)', border: '1px solid var(--blue-border)',
                 cursor: saving ? 'wait' : 'pointer', fontSize: 13, fontWeight: 600, opacity: saving ? 0.6 : 1,
               }}>
                 {saving ? 'Saving…' : 'Save changes'}
@@ -1375,7 +1376,7 @@ function FileRow({ file, onDelete }: { file: FileInfo; onDelete: () => void }) {
       transition: 'background 0.12s',
     }}>
       <span style={{ color: 'var(--accent)', flexShrink: 0 }}><Ic.Doc s={13} /></span>
-      <span style={{ flex: 1, fontSize: 13, color: 'var(--text-primary)', ...MONO, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+      <span style={{ flex: 1, fontSize: 13, color: 'var(--text-heading)', ...MONO, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
         {name}
       </span>
       <span style={{ fontSize: 11.5, ...MONO, flexShrink: 0, padding: '1px 7px', background: 'var(--accent-soft)', borderRadius: 4, color: 'var(--accent)', border: '1px solid var(--blue-border)' }}>
@@ -1586,7 +1587,7 @@ function SourceDetail({
           </div>
           <div style={{ minWidth: 0 }}>
             <div style={{ marginBottom: 6 }}><TypeBadge type={source.source_type} /></div>
-            <h2 className="ds-detail-title" style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: 0, lineHeight: 1.2, wordBreak: 'break-word' }}>{source.name}</h2>
+            <h2 className="ds-detail-title" style={{ fontSize: 20, fontWeight: 600, color: 'var(--text-heading)', margin: 0, lineHeight: 1.2, wordBreak: 'break-word' }}>{source.name}</h2>
             {source.description && <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 4, margin: 0 }}>{source.description}</p>}
           </div>
         </div>
@@ -1613,7 +1614,7 @@ function SourceDetail({
       {/* Metrics */}
       <div className="ds-metrics" style={{ display: 'flex', gap: 10 }}>
         <Metric label="Files" value={files.length} color={t.color} />
-        <Metric label="Chunks" value={totalChunks} color="var(--text-primary)" />
+        <Metric label="Chunks" value={totalChunks} color="var(--text-heading)" />
       </div>
 
       {/* Notice */}
@@ -1709,7 +1710,7 @@ function SourceDetail({
                         borderBottom: isAllowed ? '1px solid var(--border)' : 'none',
                       }}>
                         <Ic.DB s={12} />
-                        <span style={{ fontSize: 13, fontWeight: 700, color: isAllowed ? 'var(--text-primary)' : 'var(--text-tertiary)', ...MONO, flex: 1 }}>{tbl.name}</span>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: isAllowed ? 'var(--text-secondary)' : 'var(--text-tertiary)', ...MONO, flex: 1 }}>{tbl.name}</span>
                         {!isAllowed && (
                           <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 4, background: 'var(--bg-hover)', color: 'var(--text-tertiary)', border: '1px solid var(--border)', ...MONO, fontWeight: 600 }}>not exposed</span>
                         )}
@@ -1737,7 +1738,7 @@ function SourceDetail({
                                 padding: '3px 10px', borderRadius: 5, fontSize: 12, ...MONO,
                                 border: `1px solid ${hidden ? 'rgba(239,68,68,0.35)' : 'var(--border)'}`,
                                 background: hidden ? 'var(--invalid-dim)' : 'var(--bg-hover)',
-                                color: hidden ? '#ef4444' : 'var(--text-primary)',
+                                color: hidden ? '#ef4444' : 'var(--text-heading)',
                                 textDecoration: hidden ? 'line-through' : 'none',
                               }}>
                                 {hidden && (
@@ -1818,7 +1819,7 @@ function SourceDetail({
                   </svg>
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.name}</div>
+                  <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-heading)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.name}</div>
                   <div style={{ fontSize: 11, ...MONO, color: 'var(--text-secondary)' }}>{a.model_id}</div>
                 </div>
                 <span style={{
@@ -1883,7 +1884,7 @@ function SourceItem({ source, active, onClick }: { source: DataSourceRecord; act
     }}>
       <TypeIcon type={source.source_type} size={13} />
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 13, fontWeight: active ? 600 : 400, color: active ? 'var(--text-primary)' : 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <div style={{ fontSize: 13, fontWeight: active ? 600 : 400, color: active ? 'var(--text-heading)' : 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {source.name}
         </div>
         <div style={{ fontSize: 10.5, color: active ? t.color : 'var(--text-tertiary)', ...MONO, marginTop: 1 }}>
@@ -1910,7 +1911,7 @@ function EmptyState({ onNew }: { onNew: () => void }) {
         </svg>
       </div>
       <div style={{ textAlign: 'center' }}>
-        <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>No source selected</div>
+        <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-heading)', marginBottom: 6 }}>No source selected</div>
         <div style={{ fontSize: 13, color: 'var(--text-secondary)', maxWidth: 280, lineHeight: 1.6 }}>
           Connect documents, databases, or websites to give your agents grounded knowledge.
         </div>
@@ -2112,7 +2113,7 @@ export default function DataSources() {
   return (
     <div
       className={`ds-page${mobileShowDetail ? ' is-detail-open' : ''}`}
-      style={{ display: 'flex', height: '100%', overflow: 'hidden', background: 'var(--bg-page)', ...SANS }}
+      style={{ display: 'flex', height: '100%', overflow: 'hidden', background: 'var(--bg-surface)', ...SANS }}
     >
 
       {/* Left panel — header fixed, list scrolls */}
@@ -2130,11 +2131,11 @@ export default function DataSources() {
             <div style={{ fontSize: 10, ...MONO, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: 6 }}>
               Data Sources
             </div>
-            <h2 style={{ ...SANS, fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 10px' }}>Sources</h2>
+            <h2 style={{ ...SANS, fontSize: 15, fontWeight: 700, color: 'var(--text-heading)', margin: '0 0 10px' }}>Sources</h2>
             <button className="ds-new-btn" onClick={() => setShowCreate(true)} style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
               width: '100%', padding: '9px', borderRadius: 999,
-              background: 'var(--btn-upload-bg)', border: 'none', color: 'var(--btn-upload-text)',
+              background: 'var(--accent-soft)', border: '1px solid var(--blue-border)', color: 'var(--accent-text)',
               cursor: 'pointer', fontSize: 13, fontWeight: 600, ...SANS,
             }}>
               <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v10M1 6h10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
@@ -2156,7 +2157,7 @@ export default function DataSources() {
               style={{
                 width: '100%', ...SANS, fontSize: 13, padding: '10px 28px 10px 36px',
                 minHeight: 40,
-                backgroundColor: 'var(--bg-page)', color: 'var(--text-primary)',
+                backgroundColor: 'var(--bg-page)', color: 'var(--text-heading)',
                 border: '1px solid var(--border)', borderRadius: 8,
                 boxSizing: 'border-box', outline: 'none',
                 colorScheme: 'dark light',
@@ -2179,7 +2180,7 @@ export default function DataSources() {
               style={{
                 width: '100%', ...SANS, fontSize: 14, padding: '10px 12px',
                 minHeight: 40,
-                backgroundColor: 'var(--bg-page)', color: 'var(--text-primary)',
+                backgroundColor: 'var(--bg-page)', color: 'var(--text-heading)',
                 border: '1px solid var(--border)', borderRadius: 8,
                 boxSizing: 'border-box', outline: 'none', cursor: 'pointer',
                 colorScheme: 'dark light',
@@ -2225,7 +2226,7 @@ export default function DataSources() {
       {/* Right panel */}
       <div
         className="ds-detail-pane"
-        style={{ flex: 1, overflowY: 'auto', padding: '36px 48px', background: 'var(--bg-page)' }}
+        style={{ flex: 1, overflowY: 'auto', padding: '36px 48px', background: 'var(--bg-surface)' }}
       >
         {loading ? (
           <SourceDetailSkeleton />

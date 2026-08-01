@@ -47,7 +47,7 @@ function Field({
             borderRadius: 8,
             border: '1px solid var(--border)',
             background: readOnly ? 'var(--bg-hover)' : 'var(--bg-page)',
-            color: readOnly ? 'var(--text-secondary)' : 'var(--text-primary)',
+            color: readOnly ? 'var(--text-secondary)' : 'var(--text-heading)',
             outline: 'none',
             cursor: readOnly ? 'default' : 'text',
             colorScheme: 'dark light',
@@ -105,7 +105,7 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
       <div className="profile-card-header" style={{
         padding: '16px 24px',
         borderBottom: '1px solid var(--border)',
-        ...SANS, fontSize: 14, fontWeight: 600, color: 'var(--text-primary)',
+        ...SANS, fontSize: 14, fontWeight: 600, color: 'var(--text-heading)',
       }}>
         {title}
       </div>
@@ -124,9 +124,9 @@ function SaveButton({ saving, label = 'Save changes' }: { saving: boolean; label
       style={{
         ...SANS, fontSize: 13, fontWeight: 600,
         padding: '9px 20px', borderRadius: 8,
-        border: 'none',
-        background: 'var(--btn-upload-bg)',
-        color: 'var(--btn-upload-text)',
+        border: '1px solid var(--blue-border)',
+        background: 'var(--accent-soft)',
+        color: 'var(--accent-text)',
         cursor: saving ? 'not-allowed' : 'pointer',
         opacity: saving ? 0.7 : 1,
       }}
@@ -198,7 +198,7 @@ export default function Profile() {
       className="profile-page"
       style={{
       padding: '32px 36px',
-      background: 'var(--bg-page)',
+      background: 'var(--bg-surface)',
       minHeight: '100%',
       boxSizing: 'border-box',
       ...SANS,
@@ -213,7 +213,7 @@ export default function Profile() {
           {initials}
         </div>
         <div style={{ minWidth: 0 }}>
-          <div className="profile-hero-name" style={{ ...SANS, fontSize: 22, fontWeight: 700, color: 'var(--text-primary)', wordBreak: 'break-word' }}>
+          <div className="profile-hero-name" style={{ ...SANS, fontSize: 22, fontWeight: 700, color: 'var(--text-heading)', wordBreak: 'break-word' }}>
             {displayName}
           </div>
           <div style={{ ...SANS, fontSize: 13, color: 'var(--text-secondary)', marginTop: 2 }}>

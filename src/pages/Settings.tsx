@@ -50,7 +50,7 @@ function SectionHeading({ label, title, subtitle }: {
       }}>
         {label}
       </div>
-      <h2 style={{ ...SANS, fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
+      <h2 style={{ ...SANS, fontSize: 18, fontWeight: 700, color: 'var(--text-heading)', margin: 0 }}>
         {title}
       </h2>
       <p style={{ ...SANS, fontSize: 13, color: 'var(--text-secondary)', marginTop: 4, marginBottom: 0 }}>
@@ -128,7 +128,7 @@ function AuthPicker({
 
   const SEL: React.CSSProperties = {
     ...SANS, fontSize: 14, padding: '8px 12px',
-    backgroundColor: 'var(--bg-page)', color: 'var(--text-primary)',
+    backgroundColor: 'var(--bg-page)', color: 'var(--text-heading)',
     border: '1px solid var(--border)', borderRadius: 8,
     cursor: 'pointer', outline: 'none',
     colorScheme: 'dark light',
@@ -250,7 +250,7 @@ function AddServerForm({ onCreated, onCancel }: {
     fontSize: 12,
     padding: '8px 12px',
     backgroundColor: 'var(--bg-page)',
-    color: 'var(--text-primary)',
+    color: 'var(--text-heading)',
     border: '1px solid var(--border)',
     borderRadius: 8,
     boxSizing: 'border-box',
@@ -333,8 +333,8 @@ function AddServerForm({ onCreated, onCancel }: {
           disabled={saving}
           style={{
             ...SANS, fontSize: 13, padding: '8px 16px',
-            background: 'var(--btn-upload-bg)',
-            color: 'var(--btn-upload-text)', border: 'none', borderRadius: 999,
+            background: 'var(--accent-soft)',
+            color: 'var(--accent-text)', border: '1px solid var(--blue-border)', borderRadius: 999,
             cursor: saving ? 'wait' : 'pointer', fontWeight: 600,
             opacity: saving ? 0.7 : 1,
           }}
@@ -475,7 +475,7 @@ function ServerRow({ server, onDeleted, onSynced }: {
     fontSize: 12,
     padding: '8px 12px',
     backgroundColor: 'var(--bg-page)',
-    color: 'var(--text-primary)',
+    color: 'var(--text-heading)',
     border: '1px solid var(--border)',
     borderRadius: 8,
     boxSizing: 'border-box',
@@ -545,7 +545,7 @@ function ServerRow({ server, onDeleted, onSynced }: {
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{
             ...MONO, fontSize: 13, fontWeight: 700,
-            color: 'var(--text-primary)', marginBottom: 2,
+            color: 'var(--text-heading)', marginBottom: 2,
           }}>
             {server.name}
           </div>
@@ -612,9 +612,9 @@ function ServerRow({ server, onDeleted, onSynced }: {
           onClick={openEdit}
           style={{
             ...SANS, fontSize: 12, padding: '5px 12px',
-            background: 'var(--btn-accent-bg)',
-            border: '1px solid var(--btn-accent-border)',
-            color: 'var(--btn-accent-text)',
+            background: 'var(--bg-hover)',
+            border: '1px solid var(--border)',
+            color: 'var(--text-secondary)',
             borderRadius: 999, cursor: 'pointer',
             fontWeight: 500, flexShrink: 0,
           }}
@@ -701,7 +701,7 @@ function ServerRow({ server, onDeleted, onSynced }: {
               disabled={saving}
               style={{
                 ...SANS, fontSize: 13, padding: '8px 16px',
-                background: 'var(--btn-upload-bg)', color: 'var(--btn-upload-text)',
+                background: 'var(--accent-soft)', color: 'var(--accent-text)',
                 border: 'none', borderRadius: 999,
                 cursor: saving ? 'wait' : 'pointer', fontWeight: 600,
                 opacity: saving ? 0.7 : 1,
@@ -784,7 +784,7 @@ function ApiKeyRow({
     <div className="settings-apikey-row" style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
       <div className="settings-apikey-main" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
         <div>
-          <div style={{ ...MONO, fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 3 }}>
+          <div style={{ ...MONO, fontSize: 13, fontWeight: 600, color: 'var(--text-heading)', marginBottom: 3 }}>
             {meta.label}
           </div>
           {meta.envVar && (
@@ -807,8 +807,8 @@ function ApiKeyRow({
                 onClick={() => setEditing(true)}
                 style={{
                   ...SANS, fontSize: 12, padding: '5px 12px', borderRadius: 999,
-                  border: '1px solid var(--border)', background: 'var(--btn-neutral-bg)',
-                  color: 'var(--btn-neutral-text)', cursor: 'pointer',
+                  border: '1px solid var(--border)', background: 'var(--bg-hover)',
+                  color: 'var(--text-secondary)', cursor: 'pointer',
                 }}>
                 Update
               </button>
@@ -860,7 +860,7 @@ function ApiKeyRow({
                   ...MONO, fontSize: 13, width: '100%', boxSizing: 'border-box',
                   padding: '8px 36px 8px 12px', borderRadius: 7,
                   border: error ? '1px solid var(--invalid)' : '1px solid var(--border)',
-                  outline: 'none', background: 'var(--bg-page)', color: 'var(--text-primary)',
+                  outline: 'none', background: 'var(--bg-page)', color: 'var(--text-heading)',
                 }}
               />
               <button
@@ -890,7 +890,7 @@ function ApiKeyRow({
               disabled={saving}
               style={{
                 ...SANS, fontSize: 13, padding: '8px 16px', borderRadius: 7,
-                border: 'none', background: meta.color, color: '#fff',
+                border: '1px solid var(--blue-border)', background: 'var(--accent-soft)', color: 'var(--accent-text)',
                 cursor: 'pointer', fontWeight: 600, opacity: saving ? 0.7 : 1,
                 whiteSpace: 'nowrap',
               }}>
@@ -1125,7 +1125,7 @@ curl -X POST "${fireUrl}?mode=sync&timeout=120" \\
 
   const CODE: React.CSSProperties = {
     ...MONO, fontSize: 10, whiteSpace: 'pre', overflowX: 'auto',
-    background: 'var(--bg-hover)', color: 'var(--text-primary)',
+    background: 'var(--bg-hover)', color: 'var(--text-heading)',
     border: '1px solid var(--border)',
     padding: '10px 12px', borderRadius: 6, lineHeight: 1.55,
     display: 'block',
@@ -1202,7 +1202,7 @@ curl -X POST "${fireUrl}?mode=sync&timeout=120" \\
             onClick={onDismissSecret}
             style={{
               ...MONO, fontSize: 10, padding: '4px 12px',
-              background: 'var(--accent)', color: 'var(--btn-upload-text)', border: 'none',
+              background: 'var(--accent-soft)', color: 'var(--accent-text)', border: '1px solid var(--blue-border)',
               borderRadius: 5, cursor: 'pointer', width: '100%',
             }}
           >I've saved it — dismiss</button>
@@ -1227,7 +1227,7 @@ curl -X POST "${fireUrl}?mode=sync&timeout=120" \\
               style={{
                 ...TAB,
                 background: lang === 'curl' ? 'var(--accent)' : 'transparent',
-                color: lang === 'curl' ? 'var(--btn-upload-text)' : 'var(--text-tertiary)',
+                color: lang === 'curl' ? 'var(--accent-text)' : 'var(--text-tertiary)',
                 borderColor: lang === 'curl' ? 'var(--accent)' : 'var(--border)',
               }}
             >curl</button>
@@ -1236,7 +1236,7 @@ curl -X POST "${fireUrl}?mode=sync&timeout=120" \\
               style={{
                 ...TAB,
                 background: lang === 'json' ? 'var(--accent)' : 'transparent',
-                color: lang === 'json' ? 'var(--btn-upload-text)' : 'var(--text-tertiary)',
+                color: lang === 'json' ? 'var(--accent-text)' : 'var(--text-tertiary)',
                 borderColor: lang === 'json' ? 'var(--accent)' : 'var(--border)',
               }}
             >JSON</button>
@@ -1417,7 +1417,7 @@ function CronBuilder({
 
   const SEL: React.CSSProperties = {
     ...SANS, fontSize: 14, padding: '6px 10px',
-    backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)',
+    backgroundColor: 'var(--card-bg)', color: 'var(--text-heading)',
     border: '1px solid var(--border)', borderRadius: 8,
     cursor: 'pointer', colorScheme: 'dark light',
   }
@@ -1641,7 +1641,7 @@ function TriggersSection() {
           onChange={e => handleSelectWf(e.target.value)}
           style={{
             ...SANS, fontSize: 14, padding: '10px 14px',
-            backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)',
+            backgroundColor: 'var(--card-bg)', color: 'var(--text-heading)',
             border: '1px solid var(--border)', borderRadius: 8,
             minWidth: 280, width: '100%', maxWidth: 480, cursor: 'pointer', colorScheme: 'dark light',
             boxSizing: 'border-box',
@@ -1700,7 +1700,7 @@ function TriggersSection() {
                     disabled={savingSchedule || !newCronExpr.trim()}
                     style={{
                       ...MONO, fontSize: 11, padding: '6px 16px',
-                      background: 'var(--accent)', color: 'var(--btn-upload-text)', border: 'none',
+                      background: 'var(--accent-soft)', color: 'var(--accent-text)', border: '1px solid var(--blue-border)',
                       borderRadius: 6, cursor: 'pointer', opacity: savingSchedule ? 0.6 : 1,
                     }}
                   >{savingSchedule ? 'Saving…' : 'Add schedule'}</button>
@@ -1861,7 +1861,7 @@ export default function Settings() {
       padding: '28px 36px',
       width: '100%',
       boxSizing: 'border-box',
-      background: 'var(--bg-page)',
+      background: 'var(--bg-surface)',
       minHeight: '100%',
       ...SANS,
     }}>
@@ -1887,9 +1887,9 @@ export default function Settings() {
             onClick={() => setShowAddForm(v => !v)}
             style={{
               ...SANS, fontSize: 13, padding: '8px 16px',
-              background: showAddForm ? 'var(--accent-soft)' : 'var(--btn-upload-bg)',
-              color: showAddForm ? 'var(--accent)' : 'var(--btn-upload-text)',
-              border: showAddForm ? '1px solid var(--blue-border)' : 'none',
+              background: 'var(--accent-soft)',
+              color: 'var(--accent-text)',
+              border: '1px solid var(--blue-border)',
               borderRadius: 999,
               cursor: 'pointer', fontWeight: 600, flexShrink: 0, marginTop: 2,
             }}
@@ -1929,7 +1929,7 @@ export default function Settings() {
             borderRadius: 10,
           }}>
             <div style={{ fontSize: 28, marginBottom: 10 }}>🔌</div>
-            <div style={{ ...SANS, fontSize: 14, color: 'var(--text-primary)', fontWeight: 600, marginBottom: 4 }}>
+            <div style={{ ...SANS, fontSize: 14, color: 'var(--text-heading)', fontWeight: 600, marginBottom: 4 }}>
               No MCP servers configured
             </div>
             <div style={{ ...SANS, fontSize: 13, color: 'var(--text-tertiary)' }}>

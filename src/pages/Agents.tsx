@@ -39,7 +39,7 @@ const FIELD: React.CSSProperties = {
   fontSize: 13,
   padding: '8px 12px',
   backgroundColor: 'var(--card-bg)',
-  color: 'var(--text-primary)',
+  color: 'var(--text-heading)',
   border: '1px solid var(--border)',
   borderRadius: 8,
   outline: 'none',
@@ -88,7 +88,7 @@ function Chip({
 function Tag({ children }: { children: React.ReactNode }) {
   return (
     <span style={{
-      ...MONO, fontSize: 11, color: 'var(--text-primary)',
+      ...MONO, fontSize: 11, color: 'var(--text-secondary)',
       background: 'var(--bg-hover)', border: '1px solid var(--border)',
       borderRadius: 4, padding: '2px 8px',
     }}>
@@ -197,10 +197,10 @@ function ActionBtn({
   iconOnly?: boolean
 }) {
   const styles = {
-    neutral: { bg: 'var(--btn-neutral-bg)', border: 'var(--btn-neutral-border)', color: 'var(--btn-neutral-text)' },
-    accent:  { bg: 'var(--btn-accent-bg)', border: 'var(--btn-accent-border)', color: 'var(--btn-accent-text)' },
-    danger:  { bg: 'var(--btn-danger-bg)', border: 'var(--btn-danger-border)', color: 'var(--btn-danger-text)' },
-    primary: { bg: 'var(--btn-upload-bg)', border: 'var(--btn-upload-border)', color: 'var(--btn-upload-text)' },
+    neutral: { bg: 'var(--bg-hover)', border: 'var(--border)', color: 'var(--text-secondary)' },
+    accent:  { bg: 'var(--bg-hover)', border: 'var(--border)', color: 'var(--text-secondary)' },
+    danger:  { bg: 'var(--bg-hover)', border: 'var(--border)', color: 'var(--btn-danger-text)' },
+    primary: { bg: 'var(--accent-soft)', border: 'var(--blue-border)', color: 'var(--accent-text)' },
   }[variant]
 
   return (
@@ -213,12 +213,12 @@ function ActionBtn({
         minWidth: iconOnly ? 32 : undefined,
         minHeight: 32,
         background: disabled ? 'var(--bg-hover)' : styles.bg,
-        border: `1px solid ${disabled ? 'var(--border)' : (styles.border === 'transparent' ? 'transparent' : styles.border)}`,
+        border: `1px solid ${disabled ? 'var(--border)' : styles.border}`,
         color: disabled ? 'var(--text-tertiary)' : styles.color,
         borderRadius: 999,
         cursor: disabled ? 'not-allowed' : 'pointer',
         fontWeight: 500,
-        boxShadow: '0 1px 2px rgba(0,0,0,0.06)',
+        boxShadow: 'none',
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -339,7 +339,7 @@ export default function Agents() {
       className="agents-page"
       style={{
       height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden',
-      background: 'var(--bg-page)', ...SANS,
+      background: 'var(--bg-surface)', ...SANS,
     }}>
 
       {/* ── Header ── */}
@@ -349,7 +349,7 @@ export default function Agents() {
         display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
         gap: 20, padding: '20px 28px 16px', flexShrink: 0, flexWrap: 'wrap',
         borderBottom: '1px solid var(--border)',
-        background: 'var(--topbar-bg)',
+        background: 'var(--bg-surface)',
       }}>
         <div className="agents-header-copy">
           <div style={{
@@ -360,7 +360,7 @@ export default function Agents() {
             Configuration
           </div>
           <h2 style={{
-            ...SANS, fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: 0,
+            ...SANS, fontSize: 20, fontWeight: 700, color: 'var(--text-heading)', margin: 0,
           }}>Agents</h2>
           <p style={{
             ...SANS, fontSize: 13, color: 'var(--text-secondary)', marginTop: 4, marginBottom: 0,
@@ -374,10 +374,10 @@ export default function Agents() {
           style={{
             ...SANS, fontSize: 13, fontWeight: 600, marginTop: 4, flexShrink: 0,
             padding: '8px 16px', borderRadius: 999, cursor: 'pointer',
-            background: 'var(--btn-upload-bg)', color: 'var(--btn-upload-text)',
-            border: '1px solid transparent',
+            background: 'var(--accent-soft)', color: 'var(--accent-text)',
+            border: '1px solid var(--blue-border)',
             display: 'inline-flex', alignItems: 'center', gap: 7,
-            boxShadow: '0 4px 14px rgba(59, 130, 246, 0.28)',
+            boxShadow: 'none',
           }}
         >
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
@@ -394,7 +394,7 @@ export default function Agents() {
           style={{
           padding: '12px 28px', borderBottom: '1px solid var(--border)',
           display: 'flex', gap: 10, alignItems: 'center', flexShrink: 0, flexWrap: 'wrap',
-          background: 'var(--topbar-bg)',
+          background: 'var(--bg-surface)',
         }}>
           <div className="agents-search" style={{ position: 'relative', flex: '1 1 220px', minWidth: 180 }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -503,7 +503,7 @@ export default function Agents() {
       )}
 
       {/* ── Scrollable list ── */}
-      <div className="agents-list" style={{ flex: 1, overflowY: 'auto', padding: '16px 28px 32px', background: 'var(--bg-page)' }}>
+      <div className="agents-list" style={{ flex: 1, overflowY: 'auto', padding: '16px 28px 32px', background: 'var(--bg-surface)' }}>
 
         {loading ? (
           <AgentsListSkeleton count={5} />
@@ -524,7 +524,7 @@ export default function Agents() {
                 <path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/>
               </svg>
             </div>
-            <div style={{ ...SANS, fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 6 }}>
+            <div style={{ ...SANS, fontSize: 16, fontWeight: 700, color: 'var(--text-heading)', marginBottom: 6 }}>
               No agents yet
             </div>
             <p style={{ ...SANS, fontSize: 13, color: 'var(--text-secondary)', marginBottom: 20, lineHeight: 1.55 }}>
@@ -535,8 +535,8 @@ export default function Agents() {
               style={{
                 ...SANS, fontSize: 13, fontWeight: 600,
                 padding: '8px 16px', borderRadius: 999, cursor: 'pointer',
-                background: 'var(--btn-upload-bg)', color: 'var(--btn-upload-text)',
-                border: 'none',
+                background: 'var(--accent-soft)', color: 'var(--accent-text)',
+                border: '1px solid var(--blue-border)',
               }}
             >
               Create Agent
@@ -588,7 +588,7 @@ export default function Agents() {
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                         <span className="agents-card-title" style={{
-                          ...MONO, fontSize: 14, fontWeight: 700, color: 'var(--text-primary)',
+                          ...MONO, fontSize: 14, fontWeight: 600, color: 'var(--text-secondary)',
                           wordBreak: 'break-word',
                         }}>
                           {agent.name}

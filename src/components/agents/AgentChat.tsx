@@ -138,7 +138,7 @@ function ToolStepCard({ step }: { step: ToolStep }) {
               <pre style={{
                 marginTop: 6, padding: '8px 10px', borderRadius: 6,
                 background: 'var(--bg-hover)', border: '1px solid var(--border)',
-                fontSize: 11, ...MONO, color: 'var(--text-primary)',
+                fontSize: 11, ...MONO, color: 'var(--text-heading)',
                 whiteSpace: 'pre-wrap', wordBreak: 'break-all', maxHeight: 200, overflowY: 'auto',
               }}>
                 {step.result_preview}
@@ -156,8 +156,9 @@ function UserBubble({ content }: { content: string }) {
     <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
       <div style={{
         maxWidth: '72%', padding: '10px 14px', borderRadius: '14px 14px 2px 14px',
-        background: 'var(--blue)', color: '#fff', fontSize: 14, lineHeight: 1.6,
-        boxShadow: '0 2px 8px rgba(29,95,250,0.2)',
+        background: 'var(--accent-soft)', color: 'var(--accent-text)', fontSize: 14, lineHeight: 1.6,
+        border: '1px solid var(--blue-border)',
+        boxShadow: 'none',
       }}>
         {content}
       </div>
@@ -180,7 +181,7 @@ function AssistantBubble({ msg }: { msg: ChatMessage }) {
         <div style={{
           padding: '10px 14px', borderRadius: '2px 14px 14px 14px',
           background: 'var(--bg-surface)', border: '1px solid var(--border)',
-          fontSize: 14, lineHeight: 1.7, color: 'var(--text-primary)',
+          fontSize: 14, lineHeight: 1.7, color: 'var(--text-heading)',
           boxShadow: 'var(--shadow-card)',
           whiteSpace: 'pre-wrap', wordBreak: 'break-word',
         }}>
@@ -413,7 +414,7 @@ export default function AgentChat({ agent, onClose }: AgentChatProps) {
             <div style={{ fontSize: 9, ...MONO, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-tertiary)', marginBottom: 2 }}>
               Test Agent
             </div>
-            <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-heading)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {agent.name}
             </div>
           </div>
@@ -473,7 +474,7 @@ export default function AgentChat({ agent, onClose }: AgentChatProps) {
                 </svg>
               </div>
               <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 5 }}>Start a conversation</div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-heading)', marginBottom: 5 }}>Start a conversation</div>
                 <div style={{ fontSize: 13, color: 'var(--text-secondary)', maxWidth: 300, lineHeight: 1.6 }}>
                   {agent.system_prompt
                     ? `System: "${agent.system_prompt.slice(0, 80)}${agent.system_prompt.length > 80 ? '…' : ''}"`
@@ -533,7 +534,7 @@ export default function AgentChat({ agent, onClose }: AgentChatProps) {
               rows={1}
               style={{
                 flex: 1, border: 'none', outline: 'none', resize: 'none',
-                fontFamily: 'var(--font-sans)', fontSize: 14, color: 'var(--text-primary)',
+                fontFamily: 'var(--font-sans)', fontSize: 14, color: 'var(--text-heading)',
                 background: 'transparent', lineHeight: 1.5, maxHeight: 160, overflowY: 'auto',
                 colorScheme: 'dark light',
               }}
@@ -558,10 +559,11 @@ export default function AgentChat({ agent, onClose }: AgentChatProps) {
                 disabled={!input.trim()}
                 style={{
                   flexShrink: 0, padding: '6px 14px', borderRadius: 7, border: 'none',
-                  background: input.trim() ? 'var(--blue)' : 'var(--bg-hover)',
-                  color: input.trim() ? '#fff' : 'var(--text-tertiary)',
+                  background: input.trim() ? 'var(--accent-soft)' : 'var(--bg-hover)',
+                  color: input.trim() ? 'var(--accent-text)' : 'var(--text-tertiary)',
                   cursor: input.trim() ? 'pointer' : 'default',
                   fontSize: 13, fontWeight: 600, transition: 'all 0.13s',
+                  border: input.trim() ? '1px solid var(--blue-border)' : '1px solid transparent',
                 }}>
                 Send ↑
               </button>

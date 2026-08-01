@@ -121,7 +121,7 @@ function StatusChip({ status }: { status: string }) {
       }} />
       <span style={{
         fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 500,
-        color: isCompleted ? 'var(--text-primary)' : color,
+        color: isCompleted ? 'var(--text-heading)' : color,
         textTransform: 'capitalize',
       }}>
         {status}
@@ -148,7 +148,7 @@ function StatusRow({
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
         <span style={{
           fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 600,
-          color: 'var(--text-primary)', textTransform: 'capitalize',
+          color: 'var(--text-heading)', textTransform: 'capitalize',
         }}>
           {label}
         </span>
@@ -181,7 +181,7 @@ function StatusRow({
         }}>
           <div style={{
             fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 600,
-            color: 'var(--text-primary)', textTransform: 'capitalize', marginBottom: 2,
+            color: 'var(--text-heading)', textTransform: 'capitalize', marginBottom: 2,
           }}>
             {label}
           </div>
@@ -300,7 +300,7 @@ function ActivityChart({ data }: { data: { date: string; count: number }[] }) {
                 boxShadow: '0 8px 20px rgba(0,0,0,0.35)',
                 whiteSpace: 'nowrap',
               }}>
-                <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 600, color: 'var(--text-primary)' }}>
+                <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 600, color: 'var(--text-heading)' }}>
                   {hover.count} {hover.count === 1 ? 'run' : 'runs'}
                 </div>
                 <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-tertiary)', marginTop: 2 }}>
@@ -357,7 +357,7 @@ function StatCard({
         </div>
         <div style={{
           marginTop: 12, fontFamily: 'var(--font-mono)', fontSize: 32, fontWeight: 750,
-          color: 'var(--text-primary)', lineHeight: 1, letterSpacing: '-0.03em',
+          color: 'var(--text-heading)', lineHeight: 1, letterSpacing: '-0.03em',
         }}>
           {value}
         </div>
@@ -402,7 +402,7 @@ function DashboardSkeleton() {
         height: '100%', width: '100%',
         display: 'flex', flexDirection: 'column',
         boxSizing: 'border-box', overflowX: 'hidden', overflowY: 'auto',
-        background: 'var(--topbar-bg)',
+        background: 'var(--bg-surface)',
       }}
       aria-busy="true"
       aria-label="Loading dashboard"
@@ -592,7 +592,7 @@ export default function Dashboard() {
       height: '100%', width: '100%',
       display: 'flex', flexDirection: 'column',
       boxSizing: 'border-box', overflowX: 'hidden', overflowY: 'auto',
-      background: 'var(--topbar-bg)',
+      background: 'var(--bg-surface)',
       transition: 'background-color 0.25s ease',
     }}>
 
@@ -602,7 +602,7 @@ export default function Dashboard() {
         style={{
         display: 'flex', flexDirection: 'column', gap: 14,
         flexShrink: 0,
-        background: 'var(--topbar-bg)',
+        background: 'var(--bg-surface)',
       }}>
         <div className="dashboard-stats">
           <StatCard
@@ -711,7 +711,7 @@ export default function Dashboard() {
         className="dashboard-runs"
         style={{
         flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column',
-        background: 'var(--topbar-bg)',
+        background: 'var(--bg-surface)',
       }}>
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -779,7 +779,7 @@ export default function Dashboard() {
                     </svg>
                   </div>
                   <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {run.workflow_name}
                     </div>
                     <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-tertiary)', marginTop: 3 }}>
@@ -789,7 +789,7 @@ export default function Dashboard() {
                 </div>
                 <ModeBadge mode={run.execution_mode} />
                 <StatusChip status={run.status} />
-                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--text-primary)', fontWeight: 500 }}>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--text-heading)', fontWeight: 500 }}>
                   {fmt(run.total_input_tokens + run.total_output_tokens)}
                 </span>
                 <span style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: 'var(--text-secondary)' }}>
@@ -827,8 +827,8 @@ export default function Dashboard() {
                   </div>
                   <div style={{ minWidth: 0, flex: 1 }}>
                     <div style={{
-                      fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 650,
-                      color: 'var(--text-primary)', lineHeight: 1.3,
+                      fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 600,
+                      color: 'var(--text-secondary)', lineHeight: 1.3,
                     }}>
                       {run.workflow_name}
                     </div>
@@ -855,13 +855,13 @@ export default function Dashboard() {
                   </div>
                   <div>
                     <div style={{ ...LABEL, marginBottom: 6 }}>Tokens</div>
-                    <div style={{ fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>
+                    <div style={{ fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 600, color: 'var(--text-heading)' }}>
                       {fmt(run.total_input_tokens + run.total_output_tokens)}
                     </div>
                   </div>
                   <div>
                     <div style={{ ...LABEL, marginBottom: 6 }}>When</div>
-                    <div style={{ fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 500, color: 'var(--text-primary)' }}>
+                    <div style={{ fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 500, color: 'var(--text-heading)' }}>
                       {timeAgo(run.started_at)}
                     </div>
                   </div>

@@ -50,7 +50,7 @@ const INPUT_STYLE = {
   border: '1px solid var(--border)',
   ...SANS,
   fontSize: 13.5,
-  color: 'var(--text-primary)',
+  color: 'var(--text-heading)',
   backgroundColor: 'var(--card-bg)',
   outline: 'none',
   transition: 'border-color 0.15s, box-shadow 0.15s',
@@ -256,7 +256,7 @@ export default function AgentPanel({ mode, agent, availableTools, communityTools
             }}>
               {mode === 'create' ? 'New Agent' : 'Edit Agent'}
             </div>
-            <div style={{ ...MONO, fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>
+            <div style={{ ...MONO, fontSize: 15, fontWeight: 700, color: 'var(--text-heading)' }}>
               {mode === 'edit' ? (agent?.name ?? 'Agent') : 'Configure your agent'}
             </div>
           </div>
@@ -586,7 +586,7 @@ export default function AgentPanel({ mode, agent, availableTools, communityTools
                         borderBottom: tools.length > 0 ? '1px solid var(--border)' : 'none',
                       }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>
+                          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 600, color: 'var(--text-heading)' }}>
                             {server.name}
                           </span>
                           <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-secondary)' }}>

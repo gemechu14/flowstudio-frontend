@@ -1143,7 +1143,7 @@ function ToolRow({ tool, onApprove, onRejectClick, onDelete, onTest, onViewSourc
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             <span className="tools-card-title" style={{
-              ...MONO, fontSize: 14, fontWeight: 700, color: 'var(--text-primary)',
+              ...MONO, fontSize: 14, fontWeight: 600, color: 'var(--text-secondary)',
             }}>
               {tool.name}
             </span>
@@ -1377,11 +1377,11 @@ function Btn({ children, onClick, variant = 'neutral', disabled, iconOnly }: {
   iconOnly?: boolean
 }) {
   const styles = {
-    neutral: { bg: 'var(--btn-neutral-bg)', border: 'var(--btn-neutral-border)', color: 'var(--btn-neutral-text)' },
-    accent:  { bg: 'var(--btn-accent-bg)', border: 'var(--btn-accent-border)', color: 'var(--btn-accent-text)' },
-    success: { bg: 'var(--btn-success-bg)', border: 'var(--btn-success-border)', color: 'var(--btn-success-text)' },
-    danger:  { bg: 'var(--btn-danger-bg)', border: 'var(--btn-danger-border)', color: 'var(--btn-danger-text)' },
-    approve: { bg: 'var(--btn-upload-bg)', border: 'transparent', color: 'var(--btn-upload-text)' },
+    neutral: { bg: 'var(--bg-hover)', border: 'var(--border)', color: 'var(--text-secondary)' },
+    accent:  { bg: 'var(--bg-hover)', border: 'var(--border)', color: 'var(--text-secondary)' },
+    success: { bg: 'transparent', border: 'var(--border-strong)', color: 'var(--text-secondary)' },
+    danger:  { bg: 'var(--bg-hover)', border: 'var(--border)', color: 'var(--btn-danger-text)' },
+    approve: { bg: 'var(--accent-soft)', border: 'var(--blue-border)', color: 'var(--accent-text)' },
   }[variant]
 
   return (
@@ -1394,12 +1394,12 @@ function Btn({ children, onClick, variant = 'neutral', disabled, iconOnly }: {
         minWidth: iconOnly ? 32 : undefined,
         minHeight: 32,
         background: disabled ? 'var(--bg-hover)' : styles.bg,
-        border: `1px solid ${disabled ? 'var(--border)' : (styles.border === 'transparent' ? 'transparent' : styles.border)}`,
+        border: `1px solid ${disabled ? 'var(--border)' : styles.border}`,
         color: disabled ? 'var(--text-tertiary)' : styles.color,
         borderRadius: 999,
         cursor: disabled ? 'not-allowed' : 'pointer',
         fontWeight: variant === 'approve' ? 600 : 500,
-        boxShadow: variant === 'approve' ? 'none' : '0 1px 2px rgba(0,0,0,0.06)',
+        boxShadow: 'none',
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -1420,7 +1420,7 @@ function RightEmptyState({ onEditor, onUpload, compact }: { onEditor: () => void
       style={{
       height: compact ? 'auto' : '100%', display: 'flex', flexDirection: 'column',
       alignItems: 'center', justifyContent: 'flex-start', gap: 20, padding: compact ? '20px 16px' : '28px 32px',
-      background: compact ? 'var(--card-bg)' : 'var(--topbar-bg)',
+      background: compact ? 'var(--card-bg)' : 'var(--bg-surface)',
       border: compact ? '1px solid var(--card-border)' : undefined,
       borderRadius: compact ? 14 : undefined,
     }}>
@@ -1435,7 +1435,7 @@ function RightEmptyState({ onEditor, onUpload, compact }: { onEditor: () => void
             <polyline points="8 6 2 12 8 18"/>
           </svg>
         </div>
-        <div style={{ ...SANS, fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 6 }}>
+        <div style={{ ...SANS, fontSize: 16, fontWeight: 700, color: 'var(--text-heading)', marginBottom: 6 }}>
           Add a Custom Tool
         </div>
         <div style={{ ...SANS, fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, maxWidth: 300 }}>
@@ -1446,11 +1446,11 @@ function RightEmptyState({ onEditor, onUpload, compact }: { onEditor: () => void
       <div style={{ display: 'flex', gap: 10, flexDirection: 'column', width: '100%', maxWidth: 280 }}>
         <button onClick={onUpload} style={{
           ...SANS, fontSize: 13, padding: '11px 16px', width: '100%',
-          background: 'var(--btn-write-primary-bg)', color: 'var(--btn-write-primary-text)',
-          border: 'none',
+          background: 'var(--accent-soft)', color: 'var(--accent-text)',
+          border: '1px solid var(--blue-border)',
           borderRadius: 999, cursor: 'pointer', fontWeight: 600,
           display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-          boxShadow: '0 4px 14px rgba(59, 130, 246, 0.28)',
+          boxShadow: 'none',
         }}>
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
@@ -1459,8 +1459,8 @@ function RightEmptyState({ onEditor, onUpload, compact }: { onEditor: () => void
         </button>
         <button onClick={onEditor} style={{
           ...SANS, fontSize: 13, padding: '11px 16px', width: '100%',
-          background: 'var(--btn-upload-secondary-bg)', color: 'var(--btn-upload-secondary-text)',
-          border: '1px solid var(--btn-upload-secondary-border)',
+          background: 'var(--bg-hover)', color: 'var(--text-heading)',
+          border: '1px solid var(--border)',
           borderRadius: 999, cursor: 'pointer', fontWeight: 600,
           display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
         }}>
@@ -1598,19 +1598,19 @@ export default function Tools() {
     : byTab
 
   return (
-    <div className="tools-page" style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <div className="tools-page" style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'var(--bg-surface)' }}>
 
       {/* ── Top header ── */}
       <div className="tools-header" style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '16px 24px', borderBottom: '1px solid var(--border)',
-        flexShrink: 0, background: 'var(--topbar-bg)', gap: 12,
+        flexShrink: 0, background: 'var(--bg-surface)', gap: 12,
       }}>
         <div className="tools-header-copy" style={{ minWidth: 0 }}>
           <div style={{ ...MONO, fontSize: 9, fontWeight: 700, letterSpacing: '0.14em', color: 'var(--accent)', marginBottom: 4 }}>
             CONFIGURATION
           </div>
-          <h2 style={{ ...SANS, fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
+          <h2 style={{ ...SANS, fontSize: 18, fontWeight: 700, color: 'var(--text-heading)', margin: 0 }}>
             Tool Management
           </h2>
         </div>
@@ -1620,9 +1620,9 @@ export default function Tools() {
             onClick={() => { setEditTarget(null); setShowAdd(showAdd === 'editor' ? false : 'editor') }}
             style={{
               ...SANS, fontSize: 12, padding: '8px 14px',
-              background: showAdd === 'editor' ? 'var(--btn-upload-secondary-bg)' : 'var(--btn-write-bg)',
-              color: showAdd === 'editor' ? 'var(--btn-upload-secondary-text)' : 'var(--btn-write-text)',
-              border: `1px solid ${showAdd === 'editor' ? 'var(--btn-upload-secondary-border)' : 'var(--btn-write-border)'}`,
+              background: showAdd === 'editor' ? 'var(--accent-soft)' : 'var(--bg-hover)',
+              color: showAdd === 'editor' ? 'var(--accent-text)' : 'var(--text-secondary)',
+              border: `1px solid ${showAdd === 'editor' ? 'var(--blue-border)' : 'var(--border)'}`,
               borderRadius: 10, cursor: 'pointer', fontWeight: 600,
               display: 'inline-flex', alignItems: 'center', gap: 7,
             }}
@@ -1639,12 +1639,12 @@ export default function Tools() {
             onClick={() => { setEditTarget(null); setShowAdd(showAdd === 'upload' ? false : 'upload') }}
             style={{
               ...SANS, fontSize: 12, padding: '8px 14px',
-              background: showAdd === 'upload' ? 'var(--btn-write-bg)' : 'var(--btn-upload-bg)',
-              color: showAdd === 'upload' ? 'var(--btn-write-text)' : 'var(--btn-upload-text)',
-              border: `1px solid ${showAdd === 'upload' ? 'var(--btn-write-border)' : 'var(--btn-upload-border)'}`,
+              background: showAdd === 'upload' ? 'var(--bg-hover)' : 'var(--accent-soft)',
+              color: showAdd === 'upload' ? 'var(--text-secondary)' : 'var(--accent-text)',
+              border: `1px solid ${showAdd === 'upload' ? 'var(--border)' : 'var(--blue-border)'}`,
               borderRadius: 10, cursor: 'pointer', fontWeight: 600,
               display: 'inline-flex', alignItems: 'center', gap: 7,
-              boxShadow: showAdd === 'upload' ? 'none' : '0 4px 14px rgba(59, 130, 246, 0.28)',
+              boxShadow: 'none',
             }}
           >
             {showAdd === 'upload' ? '✕ Cancel' : (
@@ -1669,14 +1669,14 @@ export default function Tools() {
           flex: listCollapsed ? '0 0 0' : '0 0 54%',
           display: 'flex', flexDirection: 'column',
           borderRight: '1px solid var(--border)', overflow: 'hidden',
-          background: 'var(--topbar-bg)',
+          background: 'var(--bg-surface)',
           transition: 'flex 0.2s ease',
         }}>
           {/* Tabs */}
           <div className="tools-tabs" style={{
             display: 'flex', gap: 0, paddingLeft: 20,
             borderBottom: '1px solid var(--border)', flexShrink: 0,
-            background: 'var(--topbar-bg)', overflowX: 'auto',
+            background: 'var(--bg-surface)', overflowX: 'auto',
           }}>
             {TAB_LABELS.map(tab => {
               const active = activeTab === tab.key
@@ -1709,7 +1709,7 @@ export default function Tools() {
           </div>
 
           {/* Search */}
-          <div className="tools-search" style={{ padding: '10px 20px', borderBottom: '1px solid var(--border)', flexShrink: 0, background: 'var(--topbar-bg)' }}>
+          <div className="tools-search" style={{ padding: '10px 20px', borderBottom: '1px solid var(--border)', flexShrink: 0, background: 'var(--bg-surface)' }}>
             <div style={{ position: 'relative' }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
                 style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }}>
@@ -1778,7 +1778,7 @@ export default function Tools() {
         {/* Right: editor / upload / empty — overlay on mobile/tablet */}
         <div
           className={`tools-side-pane${showAdd ? ' is-open' : ''}${panelMode === 'upload' ? ' is-upload' : ''}${panelMode === 'editor' ? ' is-editor' : ''}`}
-          style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'var(--topbar-bg)', position: 'relative' }}
+          style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'var(--bg-surface)', position: 'relative' }}
         >
           {showAdd && (
             <button

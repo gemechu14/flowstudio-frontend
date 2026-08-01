@@ -13,19 +13,19 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const VARIANT_STYLES: Record<Variant, CSSProperties> = {
   primary: {
-    background: 'var(--blue)',
-    color: '#ffffff',
-    border: '1px solid transparent',
+    background: 'var(--accent-soft)',
+    color: 'var(--accent-text)',
+    border: '1px solid var(--blue-border)',
   },
   secondary: {
-    background: 'var(--blue-dim)',
-    color: 'var(--blue)',
-    border: '1px solid var(--blue-border)',
+    background: 'var(--bg-hover)',
+    color: 'var(--text-heading)',
+    border: '1px solid var(--border)',
   },
   ghost: {
     background: 'transparent',
-    color: 'var(--text-body)',
-    border: '1px solid var(--border-light)',
+    color: 'var(--text-heading)',
+    border: '1px solid var(--border)',
   },
   danger: {
     background: 'var(--invalid-dim)',
@@ -72,7 +72,8 @@ export default function Button({
         if (isDisabled) return
         const el = e.currentTarget
         if (variant === 'primary') {
-          el.style.background = 'var(--blue-hover)'
+          el.style.background = 'var(--accent-soft)'
+          el.style.opacity = '0.9'
         } else {
           el.style.opacity = '0.85'
         }

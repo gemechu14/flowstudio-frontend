@@ -239,7 +239,7 @@ function ChannelRow({ config, onUpdated, onDeleted }: {
           <div style={{ opacity: config.enabled ? 1 : 0.35, flexShrink: 0, display: 'flex', alignItems: 'center' }}>
             {meta.icon(20)}
           </div>
-          <span style={{ ...SANS, fontSize: 13, fontWeight: 700, color: config.enabled ? meta.color : 'var(--text-secondary)' }}>
+          <span style={{ ...SANS, fontSize: 13, fontWeight: 600, color: config.enabled ? 'var(--text-heading)' : 'var(--text-secondary)' }}>
             {meta.label}
           </span>
         </div>
@@ -364,7 +364,7 @@ function ChannelRow({ config, onUpdated, onDeleted }: {
               placeholder={CHANNEL_META[config.channel_type].placeholder}
               style={{
                 ...SANS, fontSize: 13, padding: '9px 12px', width: '100%', minHeight: 40,
-                background: 'var(--bg-page)', color: 'var(--text-primary)',
+                background: 'var(--bg-page)', color: 'var(--text-heading)',
                 border: '1px solid var(--border)', borderRadius: 8,
                 boxSizing: 'border-box', outline: 'none', colorScheme: 'dark light',
               }}
@@ -381,7 +381,7 @@ function ChannelRow({ config, onUpdated, onDeleted }: {
                 placeholder="e.g. 123456789012345 — from Meta dashboard"
                 style={{
                   ...SANS, fontSize: 13, padding: '9px 12px', width: '100%', minHeight: 40,
-                  background: 'var(--bg-page)', color: 'var(--text-primary)',
+                  background: 'var(--bg-page)', color: 'var(--text-heading)',
                   border: '1px solid var(--border)', borderRadius: 8,
                   boxSizing: 'border-box', outline: 'none', colorScheme: 'dark light',
                 }}
@@ -400,7 +400,7 @@ function ChannelRow({ config, onUpdated, onDeleted }: {
               onChange={e => setEditModelId(e.target.value)}
               style={{
                 ...SANS, fontSize: 14, padding: '9px 12px', width: '100%', minHeight: 40,
-                background: 'var(--bg-page)', color: 'var(--text-primary)',
+                background: 'var(--bg-page)', color: 'var(--text-heading)',
                 border: '1px solid var(--border)', borderRadius: 6, outline: 'none',
               }}
             >
@@ -422,7 +422,7 @@ function ChannelRow({ config, onUpdated, onDeleted }: {
               onChange={e => setEditTimezone(e.target.value)}
               style={{
                 ...SANS, fontSize: 14, padding: '9px 12px', width: '100%', minHeight: 40,
-                background: 'var(--bg-page)', color: 'var(--text-primary)',
+                background: 'var(--bg-page)', color: 'var(--text-heading)',
                 border: '1px solid var(--border)', borderRadius: 8, outline: 'none',
                 colorScheme: 'dark light',
               }}
@@ -479,8 +479,8 @@ function ChannelRow({ config, onUpdated, onDeleted }: {
               disabled={saving}
               style={{
                 ...SANS, fontSize: 13, padding: '8px 16px',
-                background: 'var(--btn-upload-bg)',
-                color: 'var(--btn-upload-text)', border: 'none', borderRadius: 8,
+                background: 'var(--accent-soft)',
+                color: 'var(--accent-text)', border: '1px solid var(--blue-border)', borderRadius: 8,
                 cursor: saving ? 'wait' : 'pointer', fontWeight: 600,
                 opacity: saving ? 0.7 : 1,
               }}
@@ -529,9 +529,10 @@ function ChannelRow({ config, onUpdated, onDeleted }: {
                 disabled={connecting}
                 style={{
                   ...SANS, fontSize: 13, fontWeight: 600,
-                  padding: '8px 16px', borderRadius: 8, border: 'none',
-                  background: connecting ? `${meta.color}88` : meta.color,
-                  color: '#fff', cursor: connecting ? 'wait' : 'pointer',
+                  padding: '8px 16px', borderRadius: 8,
+                  background: 'var(--accent-soft)',
+                  color: 'var(--accent-text)', cursor: connecting ? 'wait' : 'pointer',
+                  border: '1px solid var(--blue-border)',
                 }}
               >{connecting ? 'Connecting…' : '🔗 Connect to Telegram'}</button>
               {connectResult && (
@@ -553,9 +554,10 @@ function ChannelRow({ config, onUpdated, onDeleted }: {
                 disabled={connecting}
                 style={{
                   ...SANS, fontSize: 13, fontWeight: 600,
-                  padding: '7px 16px', borderRadius: 6, border: 'none',
-                  background: connecting ? `${meta.color}88` : meta.color,
-                  color: '#fff', cursor: connecting ? 'wait' : 'pointer',
+                  padding: '7px 16px', borderRadius: 6,
+                  background: 'var(--accent-soft)',
+                  color: 'var(--accent-text)', cursor: connecting ? 'wait' : 'pointer',
+                  border: '1px solid var(--blue-border)',
                 }}
               >{connecting ? 'Connecting…' : '🔗 Connect to WhatsApp'}</button>
               {connectResult && (
@@ -577,9 +579,10 @@ function ChannelRow({ config, onUpdated, onDeleted }: {
                 disabled={connecting}
                 style={{
                   ...SANS, fontSize: 13, fontWeight: 600,
-                  padding: '7px 16px', borderRadius: 6, border: 'none',
-                  background: connecting ? `${meta.color}88` : meta.color,
-                  color: '#fff', cursor: connecting ? 'wait' : 'pointer',
+                  padding: '7px 16px', borderRadius: 6,
+                  background: 'var(--accent-soft)',
+                  color: 'var(--accent-text)', cursor: connecting ? 'wait' : 'pointer',
+                  border: '1px solid var(--blue-border)',
                 }}
               >{connecting ? 'Registering…' : '🔗 Register /chat Command'}</button>
               {connectResult && (
@@ -629,7 +632,7 @@ function AddChannelForm({ onCreated, onCancel, existingTypes }: {
   const inputStyle: React.CSSProperties = {
     ...SANS, fontSize: 13, padding: '10px 12px',
     minHeight: 40,
-    backgroundColor: 'var(--bg-page)', color: 'var(--text-primary)',
+    backgroundColor: 'var(--bg-page)', color: 'var(--text-heading)',
     border: '1px solid var(--border)', borderRadius: 8,
     boxSizing: 'border-box', outline: 'none',
     colorScheme: 'dark light',
@@ -817,8 +820,8 @@ function AddChannelForm({ onCreated, onCancel, existingTypes }: {
           disabled={saving}
           style={{
             ...SANS, fontSize: 13, padding: '8px 16px',
-            background: 'var(--btn-upload-bg)',
-            color: 'var(--btn-upload-text)', border: 'none', borderRadius: 999,
+            background: 'var(--accent-soft)',
+            color: 'var(--accent-text)', border: '1px solid var(--blue-border)', borderRadius: 999,
             cursor: saving ? 'wait' : 'pointer', fontWeight: 600,
             opacity: saving ? 0.7 : 1,
           }}
@@ -980,7 +983,7 @@ function SetupGuideSection() {
       border: '1px solid var(--border)',
       borderRadius: 12,
       overflow: 'hidden',
-      background: 'var(--bg-page)',
+      background: 'var(--bg-surface)',
     }}>
       {/* Section header */}
       <div
@@ -994,7 +997,7 @@ function SetupGuideSection() {
           <div style={{ ...MONO, fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', color: 'var(--accent)', marginBottom: 3 }}>
             SETUP GUIDES
           </div>
-          <div style={{ ...SANS, fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>
+          <div style={{ ...SANS, fontSize: 14, fontWeight: 700, color: 'var(--text-heading)' }}>
             Step-by-step integration docs
           </div>
         </div>
@@ -1077,7 +1080,7 @@ function SetupGuideSection() {
               <div style={{ ...MONO, fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', color: 'var(--text-tertiary)', marginBottom: 4, textTransform: 'uppercase' }}>
                 Step {i + 1}
               </div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 7, ...SANS }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-heading)', marginBottom: 7, ...SANS }}>
                 {s.title}
               </div>
               <div style={{ ...SANS, fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.7 }}>
@@ -1184,7 +1187,7 @@ export default function Channels() {
       className="ch-page"
       style={{
       padding: '28px 36px', width: '100%', boxSizing: 'border-box',
-      background: 'var(--bg-page)', minHeight: '100%', ...SANS,
+      background: 'var(--bg-surface)', minHeight: '100%', ...SANS,
     }}>
 
       {/* Header */}
@@ -1196,7 +1199,7 @@ export default function Channels() {
           <div style={{ ...SANS, fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', color: 'var(--accent)', marginBottom: 6 }}>
             CHANNELS
           </div>
-          <h2 style={{ ...SANS, fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
+          <h2 style={{ ...SANS, fontSize: 20, fontWeight: 700, color: 'var(--text-heading)', margin: 0 }}>
             Bot Integrations
           </h2>
           <p style={{ ...SANS, fontSize: 13, color: 'var(--text-secondary)', marginTop: 6, marginBottom: 0, maxWidth: 540 }}>
@@ -1208,9 +1211,9 @@ export default function Channels() {
           onClick={() => setShowAddForm(v => !v)}
           style={{
             ...SANS, fontSize: 13, padding: '8px 16px',
-            background: showAddForm ? 'var(--accent-soft)' : 'var(--btn-upload-bg)',
-            color: showAddForm ? 'var(--accent)' : 'var(--btn-upload-text)',
-            border: showAddForm ? '1px solid var(--blue-border)' : 'none',
+            background: 'var(--accent-soft)',
+            color: 'var(--accent-text)',
+            border: '1px solid var(--blue-border)',
             borderRadius: 999,
             cursor: 'pointer', fontWeight: 600, flexShrink: 0, marginTop: 2,
           }}
@@ -1234,7 +1237,7 @@ export default function Channels() {
           background: 'var(--card-bg)', border: '1px solid var(--border)', borderRadius: 12,
         }}>
           <div style={{ fontSize: 36, marginBottom: 14 }}>💬</div>
-          <div style={{ ...SANS, fontSize: 14, color: 'var(--text-primary)', fontWeight: 600, marginBottom: 6 }}>
+          <div style={{ ...SANS, fontSize: 14, color: 'var(--text-heading)', fontWeight: 600, marginBottom: 6 }}>
             No channels connected
           </div>
           <div style={{ ...SANS, fontSize: 13, color: 'var(--text-tertiary)', maxWidth: 340, margin: '0 auto 20px' }}>
@@ -1244,7 +1247,7 @@ export default function Channels() {
             onClick={() => setShowAddForm(true)}
             style={{
               ...SANS, fontSize: 13, padding: '8px 16px',
-              background: 'var(--btn-upload-bg)', color: 'var(--btn-upload-text)', border: 'none',
+              background: 'var(--accent-soft)', color: 'var(--accent-text)', border: '1px solid var(--blue-border)',
               borderRadius: 999, cursor: 'pointer', fontWeight: 600,
             }}
           >+ Add Your First Channel</button>
