@@ -43,7 +43,7 @@ function SectionHeading({ label, title, subtitle }: {
   subtitle: string
 }) {
   return (
-    <div style={{ marginBottom: 20 }}>
+    <div className="settings-heading" style={{ marginBottom: 20 }}>
       <div style={{
         ...MONO, fontSize: 10, fontWeight: 600, letterSpacing: '0.14em',
         color: 'var(--accent)', marginBottom: 6,
@@ -159,7 +159,7 @@ function AuthPicker({
 
       {/* Row 2: type-specific fields, full width */}
       {authType !== 'none' && (
-        <div style={{ display: 'flex', gap: 10 }}>
+        <div className="settings-auth-fields" style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
 
         {authType === 'bearer' && (
           <div style={{ flex: 1 }}>
@@ -292,8 +292,8 @@ function AddServerForm({ onCreated, onCancel }: {
       }}>
         NEW MCP SERVER
       </div>
-      <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
-        <div style={{ flex: '0 0 200px' }}>
+      <div className="settings-add-fields" style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
+        <div className="settings-add-name" style={{ flex: '0 0 200px' }}>
           <div style={{ ...MONO, fontSize: 10, color: 'var(--text-tertiary)', marginBottom: 4 }}>NAME</div>
           <input
             value={name}
@@ -303,7 +303,7 @@ function AddServerForm({ onCreated, onCancel }: {
             autoFocus
           />
         </div>
-        <div style={{ flex: 1 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ ...MONO, fontSize: 10, color: 'var(--text-tertiary)', marginBottom: 4 }}>URL</div>
           <input
             value={url}
@@ -524,12 +524,14 @@ function ServerRow({ server, onDeleted, onSynced }: {
     }}>
       {/* Main row */}
       <div
+        className="settings-server-main"
         style={{
           padding: '14px 18px',
           display: 'flex',
           alignItems: 'center',
           gap: 12,
           cursor: 'pointer',
+          flexWrap: 'wrap',
         }}
         onClick={() => setShowTools(v => !v)}
       >
@@ -556,7 +558,7 @@ function ServerRow({ server, onDeleted, onSynced }: {
         </div>
 
         {/* Last synced */}
-        <div style={{
+        <div className="settings-server-synced" style={{
           ...MONO, fontSize: 10, color: 'var(--text-tertiary)',
           flexShrink: 0, textAlign: 'right', minWidth: 120,
         }}>
@@ -564,6 +566,7 @@ function ServerRow({ server, onDeleted, onSynced }: {
           <div style={{ color: 'var(--text-tertiary)' }}>{fmtDate(server.last_synced_at)}</div>
         </div>
 
+        <div className="settings-server-actions" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
         {/* Enabled toggle */}
         <button
           onClick={async (e) => {
@@ -635,9 +638,10 @@ function ServerRow({ server, onDeleted, onSynced }: {
         </button>
 
         {/* Expand chevron */}
-        <span style={{ ...MONO, fontSize: 11, color: 'var(--text-tertiary)', flexShrink: 0 }}>
+        <span style={{ ...MONO, fontSize: 11, color: 'var(--text-tertiary)', flexShrink: 0, marginLeft: 'auto' }}>
           {showTools ? '▲' : '▼'}
         </span>
+        </div>
       </div>
 
       {/* Sync error */}
@@ -777,8 +781,8 @@ function ApiKeyRow({
   }
 
   return (
-    <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+    <div className="settings-apikey-row" style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
+      <div className="settings-apikey-main" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
         <div>
           <div style={{ ...MONO, fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 3 }}>
             {meta.label}
@@ -790,7 +794,7 @@ function ApiKeyRow({
           )}
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div className="settings-apikey-actions" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           {status.configured ? (
             <>
               <span style={{
@@ -843,8 +847,8 @@ function ApiKeyRow({
 
       {editing && (
         <div style={{ marginTop: 12 }}>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <div style={{ position: 'relative', flex: 1 }}>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            <div style={{ position: 'relative', flex: 1, minWidth: 160 }}>
               <input
                 type={showValue ? 'text' : 'password'}
                 placeholder={`Paste your ${meta.label}…`}
@@ -1628,7 +1632,7 @@ function TriggersSection() {
       />
 
       {/* Workflow selector */}
-      <div style={{ marginBottom: 20 }}>
+      <div className="settings-wf-select" style={{ marginBottom: 20 }}>
         <label style={{ ...MONO, fontSize: 10, color: 'var(--text-tertiary)', display: 'block', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
           Select workflow
         </label>
@@ -1639,7 +1643,8 @@ function TriggersSection() {
             ...SANS, fontSize: 14, padding: '10px 14px',
             backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)',
             border: '1px solid var(--border)', borderRadius: 8,
-            minWidth: 280, cursor: 'pointer', colorScheme: 'dark light',
+            minWidth: 280, width: '100%', maxWidth: 480, cursor: 'pointer', colorScheme: 'dark light',
+            boxSizing: 'border-box',
           }}
         >
           <option value="">— choose a workflow —</option>
@@ -1850,7 +1855,9 @@ export default function Settings() {
   }
 
   return (
-    <div style={{
+    <div
+      className="settings-page"
+      style={{
       padding: '28px 36px',
       width: '100%',
       boxSizing: 'border-box',
@@ -1860,12 +1867,15 @@ export default function Settings() {
     }}>
 
       {/* ── Section 1: MCP Tool Servers ─────────────────────────────────── */}
-      <div style={{ marginBottom: 48 }}>
-        <div style={{
+      <div className="settings-section" style={{ marginBottom: 48 }}>
+        <div
+          className="settings-section-head"
+          style={{
           display: 'flex',
           alignItems: 'flex-start',
           justifyContent: 'space-between',
           marginBottom: 20,
+          gap: 16,
         }}>
           <SectionHeading
             label="CONFIGURATION"
@@ -1873,6 +1883,7 @@ export default function Settings() {
             subtitle="Connect remote Model Context Protocol servers to expose their tools to agents."
           />
           <button
+            className="settings-add-btn"
             onClick={() => setShowAddForm(v => !v)}
             style={{
               ...SANS, fontSize: 13, padding: '8px 16px',

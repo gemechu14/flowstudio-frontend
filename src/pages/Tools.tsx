@@ -673,10 +673,10 @@ function EditorPanel({ onUploaded, editMode, onCancel }: { onUploaded: (t: ToolR
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: IDE.bg, overflow: 'hidden' }}>
+    <div className="tools-editor-panel" style={{ display: 'flex', flexDirection: 'column', height: '100%', background: IDE.bg, overflow: 'hidden' }}>
 
       {/* Title bar */}
-      <div style={{ background: IDE.gutter, padding: '9px 16px', borderBottom: `1px solid ${IDE.border}`, display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
+      <div className="tools-editor-titlebar" style={{ background: IDE.gutter, padding: '9px 16px', borderBottom: `1px solid ${IDE.border}`, display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
         <div style={{ display: 'flex', gap: 6 }}>
           {['#ff5f57','#febc2e','#28c840'].map(c => (
             <span key={c} style={{ width: 12, height: 12, borderRadius: '50%', background: c, display: 'inline-block' }} />
@@ -706,13 +706,13 @@ function EditorPanel({ onUploaded, editMode, onCancel }: { onUploaded: (t: ToolR
       </div>
 
       {/* Filename + requirements */}
-      <div style={{ display: 'flex', gap: 10, padding: '10px 16px', background: IDE.gutter, borderBottom: `1px solid ${IDE.border}`, flexShrink: 0 }}>
-        <div style={{ flex: 1 }}>
+      <div className="tools-editor-meta" style={{ display: 'flex', gap: 10, padding: '10px 16px', background: IDE.gutter, borderBottom: `1px solid ${IDE.border}`, flexShrink: 0 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ ...MONO, fontSize: 9, color: '#6e7191', marginBottom: 3, letterSpacing: '0.1em' }}>FILENAME</div>
           <input value={filename} onChange={e => setFilename(e.target.value)} placeholder="my_tool.py"
             style={{ width: '100%', fontSize: 12, padding: '5px 10px', background: IDE.inputBg, color: IDE.text, border: `1px solid ${IDE.inputBdr}`, borderRadius: 5, ...MONO, boxSizing: 'border-box', outline: 'none' }} />
         </div>
-        <div style={{ flex: 2 }}>
+        <div style={{ flex: 2, minWidth: 0 }}>
           <div style={{ ...MONO, fontSize: 9, color: '#6e7191', marginBottom: 3, letterSpacing: '0.1em' }}>
             REQUIREMENTS <span style={{ color: '#45475a' }}>(optional — pip packages)</span>
           </div>
@@ -737,10 +737,10 @@ function EditorPanel({ onUploaded, editMode, onCancel }: { onUploaded: (t: ToolR
         which is what makes the H scrollbar appear.
       */}
       {/* Editor + AI panel side by side */}
-      <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
+      <div className="tools-editor-body" style={{ display: 'flex', flex: 1, minHeight: 0 }}>
 
         {/* Editor column */}
-        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
+        <div className="tools-editor-main" style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
 
           {/* Code area */}
           <div style={{ flex: 1, overflow: 'auto', minHeight: 0, background: IDE.bg }}>
@@ -808,7 +808,7 @@ function EditorPanel({ onUploaded, editMode, onCancel }: { onUploaded: (t: ToolR
           </div>
 
           {/* Footer */}
-          <div style={{ padding: '10px 16px', background: IDE.gutter, borderTop: `1px solid ${IDE.border}`, flexShrink: 0 }}>
+          <div className="tools-editor-footer" style={{ padding: '10px 16px', background: IDE.gutter, borderTop: `1px solid ${IDE.border}`, flexShrink: 0 }}>
             {error && (
               <div style={{ ...MONO, fontSize: 11, color: '#EF4444', marginBottom: 8, padding: '7px 10px', background: '#EF444420', border: '1px solid #EF444440', borderRadius: 6 }}>
                 {error}
@@ -819,8 +819,9 @@ function EditorPanel({ onUploaded, editMode, onCancel }: { onUploaded: (t: ToolR
                 ⚠ {warnings.join(' · ')}
               </div>
             )}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div className="tools-editor-actions" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <button
+                className="tools-submit-btn"
                 onClick={submit} disabled={!code.trim() || uploading}
                 style={{
                   ...MONO, fontSize: 12, padding: '7px 22px',
@@ -851,7 +852,7 @@ function EditorPanel({ onUploaded, editMode, onCancel }: { onUploaded: (t: ToolR
 
         {/* AI panel */}
         {aiOpen && (
-          <div style={{ width: 400, flexShrink: 0 }}>
+          <div className="tools-editor-ai" style={{ width: 400, flexShrink: 0 }}>
             <AiPanel
               code={code} onCodeUpdate={setCode} onRequirementsUpdate={setRequirements} onFilenameUpdate={setFilename}
               provider={aiProvider} setProvider={setAiProvider}
@@ -899,16 +900,19 @@ function UploadPanel({ onUploaded }: { onUploaded: (t: ToolRecord) => void }) {
   }
 
   return (
-    <div style={{
+    <div
+      className="tools-upload-panel"
+      style={{
       background: 'var(--bg-card)', border: '1px solid var(--border)',
       borderRadius: 10, padding: 20,
     }}>
-      <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-heading)', marginBottom: 14 }}>
+      <div className="tools-upload-title" style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-heading)', marginBottom: 14 }}>
         Upload Custom Tool
       </div>
 
       {/* Drop zone */}
       <div
+        className="tools-upload-drop"
         onDragOver={e => { e.preventDefault(); setDragging(true) }}
         onDragLeave={() => setDragging(false)}
         onDrop={handleDrop}
@@ -973,6 +977,7 @@ function UploadPanel({ onUploaded }: { onUploaded: (t: ToolRecord) => void }) {
       )}
 
       <button
+        className="tools-submit-btn"
         onClick={submit} disabled={!file || uploading}
         style={{
           ...MONO, fontSize: 12, padding: '8px 20px',
@@ -1120,20 +1125,24 @@ function ToolRow({ tool, onApprove, onRejectClick, onDelete, onTest, onViewSourc
   }
 
   return (
-    <div style={{
+    <div
+      className="tools-card"
+      style={{
       background: 'var(--card-bg)', border: '1px solid var(--card-border)',
       borderLeft: `3px solid ${color}`,
       borderRadius: 10, overflow: 'hidden',
       marginBottom: 10,
     }}>
       {/* Main row */}
-      <div style={{
-        padding: '14px 18px', display: 'flex', alignItems: 'flex-start', gap: 12,
+      <div
+        className="tools-card-main"
+        style={{
+        padding: '14px 18px', display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: 12,
         cursor: 'pointer',
       }} onClick={() => setExpanded(v => !v)}>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-            <span style={{
+            <span className="tools-card-title" style={{
               ...MONO, fontSize: 14, fontWeight: 700, color: 'var(--text-primary)',
             }}>
               {tool.name}
@@ -1148,12 +1157,15 @@ function ToolRow({ tool, onApprove, onRejectClick, onDelete, onTest, onViewSourc
           </div>
           <div style={{
             ...MONO, fontSize: 11, color: 'var(--text-tertiary)', marginTop: 6,
-            display: 'inline-block', padding: '2px 8px',
+            display: 'inline-block', padding: '2px 8px', maxWidth: '100%',
             background: 'var(--bg-hover)', borderRadius: 4, border: '1px solid var(--border)',
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', boxSizing: 'border-box',
           }}>
             {tool.name}.py
           </div>
-          <div style={{
+          <div
+            className="tools-card-desc"
+            style={{
             ...SANS, fontSize: 13, color: 'var(--text-secondary)', marginTop: 8,
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             lineHeight: 1.45,
@@ -1161,50 +1173,61 @@ function ToolRow({ tool, onApprove, onRejectClick, onDelete, onTest, onViewSourc
             {tool.description || '—'}
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0, paddingTop: 2 }}>
-          {tool.status === 'pending' && (
-            <>
-              <Btn onClick={e => { e.stopPropagation(); handleApprove() }} variant="approve" disabled={approving}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
-                {approving ? '…' : 'Approve'}
+        <div className="tools-card-footer" style={{ display: 'flex', alignItems: 'flex-end', gap: 8 }}>
+          <div
+            className="tools-card-actions"
+            style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', rowGap: 8, flex: 1, minWidth: 0 }}
+          >
+            {tool.status === 'pending' && (
+              <>
+                <Btn onClick={e => { e.stopPropagation(); handleApprove() }} variant="approve" disabled={approving}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                  {approving ? '…' : 'Approve'}
+                </Btn>
+                <Btn onClick={e => { e.stopPropagation(); onRejectClick() }} variant="danger" iconOnly={false}>
+                  Reject
+                </Btn>
+              </>
+            )}
+            {tool.status === 'approved' && !submitDone && (
+              <Btn onClick={e => { e.stopPropagation(); setShowSubmit(v => !v) }} variant="success">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+                  <path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/>
+                </svg>
+                Contribute
               </Btn>
-              <Btn onClick={e => { e.stopPropagation(); onRejectClick() }} variant="danger" iconOnly={false}>
-                Reject
-              </Btn>
-            </>
-          )}
-          {tool.status === 'approved' && !submitDone && (
-            <Btn onClick={e => { e.stopPropagation(); setShowSubmit(v => !v) }} variant="success">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
-                <path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/>
-              </svg>
-              Contribute
+            )}
+            {submitDone && (
+              <span style={{ ...MONO, fontSize: 10, color: 'var(--text-secondary)' }}>Submitted</span>
+            )}
+            <Btn onClick={e => { e.stopPropagation(); onTest() }} variant="accent">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+              Test
             </Btn>
-          )}
-          {submitDone && (
-            <span style={{ ...MONO, fontSize: 10, color: 'var(--text-secondary)' }}>Submitted</span>
-          )}
-          <Btn onClick={e => { e.stopPropagation(); onTest() }} variant="accent">
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-            Test
-          </Btn>
-          <Btn onClick={e => { e.stopPropagation(); onEdit() }} variant="accent">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>
-            </svg>
-            Edit
-          </Btn>
-          <Btn onClick={e => { e.stopPropagation(); onViewSource() }} variant="neutral" iconOnly>
-            {'</>'}
-          </Btn>
-          <Btn onClick={e => { e.stopPropagation(); onDelete() }} variant="danger" iconOnly>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>
-              <path d="M10 11v6M14 11v6"/>
-            </svg>
-          </Btn>
-          <span style={{ ...MONO, fontSize: 11, color: 'var(--text-tertiary)', marginLeft: 2 }}>
+            <Btn onClick={e => { e.stopPropagation(); onEdit() }} variant="accent">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>
+              </svg>
+              Edit
+            </Btn>
+            <Btn onClick={e => { e.stopPropagation(); onViewSource() }} variant="neutral" iconOnly>
+              {'</>'}
+            </Btn>
+            <Btn onClick={e => { e.stopPropagation(); onDelete() }} variant="danger" iconOnly>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>
+                <path d="M10 11v6M14 11v6"/>
+              </svg>
+            </Btn>
+          </div>
+          <span
+            className="tools-card-expand"
+            style={{
+              ...MONO, fontSize: 11, color: 'var(--text-tertiary)',
+              flexShrink: 0, alignSelf: 'flex-end', lineHeight: 1, paddingBottom: 2,
+            }}
+          >
             {expanded ? '▲' : '▼'}
           </span>
         </div>
@@ -1390,12 +1413,16 @@ function Btn({ children, onClick, variant = 'neutral', disabled, iconOnly }: {
 
 // ─── right-panel empty state ──────────────────────────────────────────────────
 
-function RightEmptyState({ onEditor, onUpload }: { onEditor: () => void; onUpload: () => void }) {
+function RightEmptyState({ onEditor, onUpload, compact }: { onEditor: () => void; onUpload: () => void; compact?: boolean }) {
   return (
-    <div style={{
-      height: '100%', display: 'flex', flexDirection: 'column',
-      alignItems: 'center', justifyContent: 'flex-start', gap: 20, padding: '28px 32px',
-      background: 'var(--topbar-bg)',
+    <div
+      className={`tools-empty-state${compact ? ' is-compact' : ''}`}
+      style={{
+      height: compact ? 'auto' : '100%', display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'flex-start', gap: 20, padding: compact ? '20px 16px' : '28px 32px',
+      background: compact ? 'var(--card-bg)' : 'var(--topbar-bg)',
+      border: compact ? '1px solid var(--card-border)' : undefined,
+      borderRadius: compact ? 14 : undefined,
     }}>
       <div style={{ textAlign: 'center' }}>
         <div style={{
@@ -1494,6 +1521,31 @@ export default function Tools() {
 
   useEffect(() => { reload() }, [reload])
 
+  useEffect(() => {
+    if (!showAdd) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setShowAdd(false)
+        setEditTarget(null)
+      }
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [showAdd])
+
+  const closeAddPanel = () => {
+    setShowAdd(false)
+    setEditTarget(null)
+    setListCollapsed(false)
+  }
+
+  const panelMode = showAdd === 'edit' ? 'editor' : showAdd || false
+  const panelTitle =
+    showAdd === 'upload' ? 'Upload Custom Tool'
+    : showAdd === 'edit' ? 'Edit Tool'
+    : showAdd === 'editor' ? 'Write Code'
+    : ''
+
   const handleApprove = async (tool: ToolRecord) => {
     await approveTool(tool.tool_id)
     reload()
@@ -1546,15 +1598,15 @@ export default function Tools() {
     : byTab
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <div className="tools-page" style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
       {/* ── Top header ── */}
-      <div style={{
+      <div className="tools-header" style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '16px 24px', borderBottom: '1px solid var(--border)',
-        flexShrink: 0, background: 'var(--topbar-bg)',
+        flexShrink: 0, background: 'var(--topbar-bg)', gap: 12,
       }}>
-        <div>
+        <div className="tools-header-copy" style={{ minWidth: 0 }}>
           <div style={{ ...MONO, fontSize: 9, fontWeight: 700, letterSpacing: '0.14em', color: 'var(--accent)', marginBottom: 4 }}>
             CONFIGURATION
           </div>
@@ -1562,8 +1614,9 @@ export default function Tools() {
             Tool Management
           </h2>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div className="tools-header-actions" style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
           <button
+            className="tools-action-btn"
             onClick={() => { setEditTarget(null); setShowAdd(showAdd === 'editor' ? false : 'editor') }}
             style={{
               ...SANS, fontSize: 12, padding: '8px 14px',
@@ -1582,6 +1635,7 @@ export default function Tools() {
             )}
           </button>
           <button
+            className="tools-action-btn tools-action-btn--primary"
             onClick={() => { setEditTarget(null); setShowAdd(showAdd === 'upload' ? false : 'upload') }}
             style={{
               ...SANS, fontSize: 12, padding: '8px 14px',
@@ -1606,10 +1660,12 @@ export default function Tools() {
       </div>
 
       {/* ── Two-column body ── */}
-      <div style={{ flex: 1, display: 'flex', minHeight: 0, overflow: 'hidden', position: 'relative' }}>
+      <div className="tools-split" style={{ flex: 1, display: 'flex', minHeight: 0, overflow: 'hidden', position: 'relative' }}>
 
         {/* Left: tabs + tool list */}
-        <div style={{
+        <div
+          className={`tools-list-pane${listCollapsed ? ' is-collapsed' : ''}`}
+          style={{
           flex: listCollapsed ? '0 0 0' : '0 0 54%',
           display: 'flex', flexDirection: 'column',
           borderRight: '1px solid var(--border)', overflow: 'hidden',
@@ -1617,10 +1673,10 @@ export default function Tools() {
           transition: 'flex 0.2s ease',
         }}>
           {/* Tabs */}
-          <div style={{
+          <div className="tools-tabs" style={{
             display: 'flex', gap: 0, paddingLeft: 20,
             borderBottom: '1px solid var(--border)', flexShrink: 0,
-            background: 'var(--topbar-bg)',
+            background: 'var(--topbar-bg)', overflowX: 'auto',
           }}>
             {TAB_LABELS.map(tab => {
               const active = activeTab === tab.key
@@ -1653,7 +1709,7 @@ export default function Tools() {
           </div>
 
           {/* Search */}
-          <div style={{ padding: '10px 20px', borderBottom: '1px solid var(--border)', flexShrink: 0, background: 'var(--topbar-bg)' }}>
+          <div className="tools-search" style={{ padding: '10px 20px', borderBottom: '1px solid var(--border)', flexShrink: 0, background: 'var(--topbar-bg)' }}>
             <div style={{ position: 'relative' }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
                 style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }}>
@@ -1681,7 +1737,7 @@ export default function Tools() {
           </div>
 
           {/* Tool list (scrollable) */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
+          <div className="tools-list-scroll" style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
             {loading ? (
               <ToolsListSkeleton count={5} />
             ) : filtered.length === 0 ? (
@@ -1706,56 +1762,93 @@ export default function Tools() {
                 />
               ))
             )}
+
+            {!showAdd && (
+              <div className="tools-empty-mobile">
+                <RightEmptyState
+                  compact
+                  onEditor={() => setShowAdd('editor')}
+                  onUpload={() => setShowAdd('upload')}
+                />
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Right: editor / upload / empty state — flex column so children can fill height */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'var(--topbar-bg)', position: 'relative' }}>
-          {/* Collapse/expand toggle */}
-          <button
-            onClick={() => setListCollapsed(c => !c)}
-            title={listCollapsed ? 'Show tool list' : 'Hide tool list'}
-            style={{
-              position: 'absolute', top: '50%', left: 0,
-              transform: 'translateY(-50%)',
-              zIndex: 10, width: 18, height: 48,
-              background: 'var(--bg-card)',
-              border: '1px solid var(--border)',
-              borderLeft: 'none',
-              borderRadius: '0 6px 6px 0',
-              cursor: 'pointer', padding: 0,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: 'var(--text-muted)', fontSize: 10,
-              boxShadow: '2px 0 6px rgba(0,0,0,0.06)',
-            }}
-          >{listCollapsed ? '›' : '‹'}</button>
-          {showAdd === 'editor' && (
-            <EditorPanel onUploaded={_t => {
-              reload(); setShowAdd(false); setActiveTab('pending'); setListCollapsed(false)
-            }} />
-          )}
-          {showAdd === 'edit' && editTarget && (
-            <EditorPanel
-              editMode={editTarget}
-              onUploaded={_t => {
-                reload(); setShowAdd(false); setEditTarget(null); setActiveTab('pending'); setListCollapsed(false)
-              }}
-              onCancel={() => { setShowAdd(false); setEditTarget(null) }}
+        {/* Right: editor / upload / empty — overlay on mobile/tablet */}
+        <div
+          className={`tools-side-pane${showAdd ? ' is-open' : ''}${panelMode === 'upload' ? ' is-upload' : ''}${panelMode === 'editor' ? ' is-editor' : ''}`}
+          style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'var(--topbar-bg)', position: 'relative' }}
+        >
+          {showAdd && (
+            <button
+              type="button"
+              className="tools-side-backdrop"
+              aria-label="Close panel"
+              onClick={closeAddPanel}
             />
           )}
-          {showAdd === 'upload' && (
-            <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
-              <UploadPanel onUploaded={_t => {
-                reload(); setShowAdd(false); setActiveTab('pending')
-              }} />
+
+          <div className="tools-side-sheet">
+            {showAdd && (
+              <div className="tools-side-sheet-header">
+                <h3>{panelTitle}</h3>
+                <button type="button" className="tools-side-close" onClick={closeAddPanel} aria-label="Close">
+                  ×
+                </button>
+              </div>
+            )}
+
+            <div className="tools-side-sheet-body">
+              <button
+                className="tools-collapse-btn"
+                onClick={() => setListCollapsed(c => !c)}
+                title={listCollapsed ? 'Show tool list' : 'Hide tool list'}
+                style={{
+                  position: 'absolute', top: '50%', left: 0,
+                  transform: 'translateY(-50%)',
+                  zIndex: 10, width: 18, height: 48,
+                  background: 'var(--bg-card)',
+                  border: '1px solid var(--border)',
+                  borderLeft: 'none',
+                  borderRadius: '0 6px 6px 0',
+                  cursor: 'pointer', padding: 0,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: 'var(--text-muted)', fontSize: 10,
+                  boxShadow: '2px 0 6px rgba(0,0,0,0.06)',
+                }}
+              >{listCollapsed ? '›' : '‹'}</button>
+              {showAdd === 'editor' && (
+                <EditorPanel onUploaded={_t => {
+                  reload(); setShowAdd(false); setActiveTab('pending'); setListCollapsed(false)
+                }} />
+              )}
+              {showAdd === 'edit' && editTarget && (
+                <EditorPanel
+                  editMode={editTarget}
+                  onUploaded={_t => {
+                    reload(); setShowAdd(false); setEditTarget(null); setActiveTab('pending'); setListCollapsed(false)
+                  }}
+                  onCancel={() => { setShowAdd(false); setEditTarget(null) }}
+                />
+              )}
+              {showAdd === 'upload' && (
+                <div className="tools-upload-wrap" style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
+                  <UploadPanel onUploaded={_t => {
+                    reload(); setShowAdd(false); setActiveTab('pending')
+                  }} />
+                </div>
+              )}
+              {!showAdd && (
+                <div className="tools-empty-desktop">
+                  <RightEmptyState
+                    onEditor={() => setShowAdd('editor')}
+                    onUpload={() => setShowAdd('upload')}
+                  />
+                </div>
+              )}
             </div>
-          )}
-          {!showAdd && (
-            <RightEmptyState
-              onEditor={() => setShowAdd('editor')}
-              onUpload={() => setShowAdd('upload')}
-            />
-          )}
+          </div>
         </div>
       </div>
 

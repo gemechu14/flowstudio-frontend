@@ -214,7 +214,10 @@ function CommunityTestPanel({ tool, onClose }: { tool: CommunityToolCard; onClos
       position: 'fixed', inset: 0, zIndex: 200,
       background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'flex-end', justifyContent: 'flex-end',
     }} onClick={onClose}>
-      <div onClick={e => e.stopPropagation()} style={{
+      <div
+        className="ct-test-panel"
+        onClick={e => e.stopPropagation()}
+        style={{
         width: 460, height: '100%', background: 'var(--bg-surface)',
         borderLeft: '1px solid var(--border)', display: 'flex', flexDirection: 'column',
         boxShadow: 'var(--shadow-panel)', ...SANS,
@@ -378,6 +381,7 @@ function ToolCardItem({
   return (
     <>
     <div
+      className="ct-card"
       style={{
         background: 'var(--card-bg)', border: '1px solid var(--card-border)',
         borderLeft: `3px solid ${accent}`,
@@ -393,15 +397,20 @@ function ToolCardItem({
         e.currentTarget.style.boxShadow = 'none'
       }}
     >
-      <div style={{ padding: '14px 18px', display: 'flex', alignItems: 'flex-start', gap: 14 }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 6 }}>
-            <span style={{ ...MONO, fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>
+      <div
+        className="ct-card-main"
+        style={{ padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: 12 }}
+      >
+        <div className="ct-card-top">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+            <span className="ct-card-title" style={{ ...MONO, fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', wordBreak: 'break-word' }}>
               {tool.display_name || tool.name}
             </span>
             {tool.display_name && tool.display_name !== tool.name && (
               <span style={{ ...MONO, fontSize: 11, color: 'var(--text-tertiary)' }}>{tool.name}</span>
             )}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
             <Chip label={tool.category || 'other'} tone="accent" />
             {!isSubmission && tool.is_enabled && <Chip label="Enabled" tone="accent" />}
             {!isSubmission && (
@@ -412,50 +421,29 @@ function ToolCardItem({
             )}
             {isSubmission && <Chip label="Pending" tone="muted" />}
           </div>
-          <div style={{ ...SANS, fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.45 }}>
-            {tool.description || 'No description.'}
-          </div>
-          {tool.requirements && (
-            <div style={{
-              ...MONO, fontSize: 11, color: 'var(--text-tertiary)', marginTop: 8,
-              display: 'inline-block', padding: '2px 8px',
-              background: 'var(--bg-hover)', borderRadius: 4, border: '1px solid var(--border)',
-            }}>
-              requires: {tool.requirements}
-            </div>
-          )}
-          {tool.submission_note && (
-            <div style={{
-              marginTop: 8, ...SANS, fontSize: 12, color: 'var(--text-tertiary)',
-              padding: '6px 10px', background: 'var(--bg-hover)', borderRadius: 6,
-              border: '1px solid var(--border)',
-            }}>
-              Note: {tool.submission_note}
-            </div>
-          )}
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
+        <div className="ct-card-actions" style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
           {isSuperAdmin && isSubmission && (
-            <div style={{ display: 'flex', gap: 6 }}>
+            <>
               <ActionBtn onClick={handleApprove} disabled={loading} variant="primary">
                 {loading ? '…' : 'Approve'}
               </ActionBtn>
               <ActionBtn onClick={() => setShowReject(v => !v)} disabled={loading} variant="danger">
                 Reject
               </ActionBtn>
-            </div>
+            </>
           )}
           {!isSubmission && (
             tool.is_enabled ? (
-              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+              <>
                 <ActionBtn onClick={() => setExpanded(v => !v)} variant="accent">
                   {expanded ? 'Hide config' : 'Configure'}
                 </ActionBtn>
                 <ActionBtn onClick={handleDisable} disabled={loading} variant="danger">
                   {loading ? '…' : 'Disable'}
                 </ActionBtn>
-              </div>
+              </>
             ) : (
               <ActionBtn onClick={handleEnable} disabled={loading} variant="primary">
                 {loading ? '…' : 'Enable'}
@@ -471,26 +459,49 @@ function ToolCardItem({
           )}
 
           {isSuperAdmin && !isSubmission && (
-            <div style={{ display: 'flex', gap: 6 }}>
+            <>
               <ActionBtn onClick={() => setShowEdit(v => !v)} disabled={loading} variant="neutral">
                 {showEdit ? 'Cancel' : 'Edit'}
               </ActionBtn>
               <ActionBtn onClick={handleRemove} disabled={loading} variant="danger">
                 Remove
               </ActionBtn>
-            </div>
+            </>
           )}
         </div>
+
+        <div className="ct-card-desc" style={{ ...SANS, fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.55 }}>
+          {tool.description || 'No description.'}
+        </div>
+
+        {tool.requirements && (
+          <div style={{
+            ...MONO, fontSize: 11, color: 'var(--text-tertiary)',
+            display: 'inline-block', padding: '2px 8px', alignSelf: 'flex-start',
+            background: 'var(--bg-hover)', borderRadius: 4, border: '1px solid var(--border)',
+          }}>
+            requires: {tool.requirements}
+          </div>
+        )}
+        {tool.submission_note && (
+          <div className="ct-card-note" style={{
+            ...SANS, fontSize: 12, color: 'var(--text-tertiary)',
+            padding: '8px 12px', background: 'var(--bg-hover)', borderRadius: 8,
+            border: '1px solid var(--border)', lineHeight: 1.5,
+          }}>
+            <strong style={{ color: 'var(--text-secondary)' }}>Note:</strong> {tool.submission_note}
+          </div>
+        )}
       </div>
 
       {showReject && (
-        <div style={{ padding: '0 18px 14px', display: 'flex', gap: 8 }}>
+        <div style={{ padding: '0 18px 14px', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <input
             value={rejectReason}
             onChange={e => setRejectReason(e.target.value)}
             placeholder="Reason for rejection..."
             style={{
-              flex: 1, ...MONO, fontSize: 12, padding: '8px 12px',
+              flex: 1, minWidth: 160, ...MONO, fontSize: 12, padding: '8px 12px',
               backgroundColor: 'var(--bg-page)', color: 'var(--text-primary)',
               border: '1px solid var(--border)', borderRadius: 8, outline: 'none',
             }}
@@ -581,11 +592,15 @@ export default function CommunityTools() {
   })
 
   return (
-    <div style={{
+    <div
+      className="ct-page"
+      style={{
       display: 'flex', flexDirection: 'column', height: '100%',
       background: 'var(--bg-page)', ...SANS,
     }}>
-      <div style={{
+      <div
+        className="ct-header"
+        style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '20px 28px 16px', borderBottom: '1px solid var(--border)',
         flexShrink: 0, background: 'var(--topbar-bg)',
@@ -603,10 +618,12 @@ export default function CommunityTools() {
         </div>
       </div>
 
-      <div style={{ flex: 1, overflowY: 'auto', padding: '16px 28px 32px' }}>
-        <div style={{
+      <div className="ct-body" style={{ flex: 1, overflowY: 'auto', padding: '16px 28px 32px' }}>
+        <div
+          className="ct-tabs"
+          style={{
           display: 'flex', gap: 0, marginBottom: 16,
-          borderBottom: '1px solid var(--border)',
+          borderBottom: '1px solid var(--border)', overflowX: 'auto',
         }}>
           {(['catalog', ...(isSuperAdmin ? ['submissions'] as const : [])] as const).map(t => {
             const active = tab === t
@@ -636,8 +653,8 @@ export default function CommunityTools() {
           })}
         </div>
 
-        <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
-          <div style={{ position: 'relative', flex: '1 1 240px', minWidth: 200 }}>
+        <div className="ct-filters" style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+          <div className="ct-search" style={{ position: 'relative', flex: '1 1 240px', minWidth: 200 }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
               strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
               style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)', pointerEvents: 'none' }}>
@@ -653,6 +670,7 @@ export default function CommunityTools() {
             />
           </div>
           <select
+            className="ct-category"
             value={filterCategory}
             onChange={e => setFilterCategory(e.target.value)}
             style={{ ...SELECT, minHeight: 42 }}

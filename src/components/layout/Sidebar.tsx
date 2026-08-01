@@ -101,7 +101,10 @@ export default function Sidebar() {
   const location = useLocation()
   const navigate = useNavigate()
   const { user } = useAuth()
-  const { collapsed, toggleCollapsed } = useTheme()
+  const { collapsed, toggleCollapsed, mobileNavOpen, setMobileNavOpen } = useTheme()
+  const isDrawer = mobileNavOpen
+  // In the mobile drawer, always show expanded chrome
+  const railCollapsed = collapsed && !isDrawer
   const [orgOpen, setOrgOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
   const [tenants, setTenants] = useState<Tenant[]>([])
@@ -188,7 +191,7 @@ export default function Sidebar() {
 
   return (
     <aside
-      className={`sidebar-dark app-sidebar${collapsed ? ' is-collapsed' : ''}`}
+      className={`sidebar-dark app-sidebar${railCollapsed ? ' is-collapsed' : ''}${mobileNavOpen ? ' is-mobile-open' : ''}`}
       style={{
         width: 'var(--sidebar-width)',
         minWidth: 'var(--sidebar-width)',
@@ -198,27 +201,26 @@ export default function Sidebar() {
         flexDirection: 'column',
         borderRight: '1px solid var(--sidebar-border)',
         overflow: 'hidden',
-        position: 'relative',
         flexShrink: 0,
       }}
     >
       {/* Logo — FLOWSTUDIO branding + collapse */}
       <div style={{
-        padding: collapsed ? '16px 0 14px' : '18px 14px 16px 20px',
+        padding: railCollapsed ? '16px 0 14px' : '18px 14px 16px 20px',
         display: 'flex',
         flexDirection: 'column',
-        alignItems: collapsed ? 'center' : 'stretch',
-        minHeight: collapsed ? 56 : 76,
-        gap: collapsed ? 0 : 4,
+        alignItems: railCollapsed ? 'center' : 'stretch',
+        minHeight: railCollapsed ? 56 : 76,
+        gap: railCollapsed ? 0 : 4,
       }}>
         <div style={{
           display: 'flex',
           alignItems: 'center',
-          justifyContent: collapsed ? 'center' : 'space-between',
+          justifyContent: railCollapsed ? 'center' : 'space-between',
           width: '100%',
           gap: 8,
         }}>
-          {!collapsed && (
+          {!railCollapsed && (
             <div style={{
               fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: 13,
               letterSpacing: '0.12em', color: 'var(--sidebar-text)',
@@ -233,9 +235,10 @@ export default function Sidebar() {
             </div>
           )}
           <button
+            className="sidebar-collapse-desktop"
             onClick={toggleCollapsed}
-            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            title={railCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            aria-label={railCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -263,7 +266,7 @@ export default function Sidebar() {
             <svg
               width="16" height="16" viewBox="0 0 16 16" fill="none"
               style={{
-                transform: collapsed ? 'rotate(180deg)' : 'none',
+                transform: railCollapsed ? 'rotate(180deg)' : 'none',
                 transition: 'transform 0.28s cubic-bezier(0.4, 0, 0.2, 1)',
               }}
             >
@@ -272,8 +275,24 @@ export default function Sidebar() {
               <path d="M9.5 6L7.5 8l2 2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </button>
+          {mobileNavOpen && (
+            <button
+              onClick={() => setMobileNavOpen(false)}
+              aria-label="Close menu"
+              style={{
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                width: 32, height: 32, padding: 0, borderRadius: 8, border: 'none',
+                background: 'transparent', color: 'var(--sidebar-text-muted)', cursor: 'pointer',
+                marginLeft: 'auto',
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path d="M4 4l8 8M12 4L4 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              </svg>
+            </button>
+          )}
         </div>
-        {!collapsed && (
+        {!railCollapsed && (
           <div
             className="sidebar-brand-text"
             style={{
@@ -288,7 +307,7 @@ export default function Sidebar() {
 
       {/* Navigation */}
       <nav style={{ flex: 1, padding: '1px 0', overflowY: 'auto', overflowX: 'hidden' }}>
-        {!collapsed && (
+        {!railCollapsed && (
           <div
             className="sidebar-section-label"
             style={{
@@ -305,13 +324,14 @@ export default function Sidebar() {
             <NavLink
               key={item.path}
               to={item.path}
-              title={collapsed ? item.label : undefined}
+              title={railCollapsed ? item.label : undefined}
+              onClick={() => setMobileNavOpen(false)}
               style={{
                 display: 'flex', alignItems: 'center',
-                gap: collapsed ? 0 : 10,
-                justifyContent: collapsed ? 'center' : 'flex-start',
-                padding: collapsed ? '11px 0' : '9px 14px 9px 12px',
-                margin: collapsed ? '2px 10px' : '2px 10px',
+                gap: railCollapsed ? 0 : 10,
+                justifyContent: railCollapsed ? 'center' : 'flex-start',
+                padding: railCollapsed ? '11px 0' : '9px 14px 9px 12px',
+                margin: railCollapsed ? '2px 10px' : '2px 10px',
                 borderRadius: 10,
                 textDecoration: 'none',
                 color: isActive ? 'var(--accent)' : 'var(--sidebar-text-muted)',
@@ -336,8 +356,8 @@ export default function Sidebar() {
               }}
             >
               <span style={{ opacity: isActive ? 1 : 0.75, display: 'flex', flexShrink: 0, color: 'inherit' }}>{item.icon}</span>
-              {!collapsed && <span className="sidebar-label">{item.label}</span>}
-              {isActive && !collapsed && (
+              {!railCollapsed && <span className="sidebar-label">{item.label}</span>}
+              {isActive && !railCollapsed && (
                 <span style={{
                   marginLeft: 'auto', width: 6, height: 6, borderRadius: '50%',
                   background: 'var(--accent)', flexShrink: 0,
@@ -354,11 +374,11 @@ export default function Sidebar() {
           <div ref={orgRef} style={{ position: 'relative', borderBottom: '1px solid var(--sidebar-border)' }}>
             <button
               onClick={() => setOrgOpen(o => !o)}
-              title={collapsed ? currentOrgName : undefined}
+              title={railCollapsed ? currentOrgName : undefined}
               style={{
                 display: 'flex', alignItems: 'center', gap: 10,
-                width: '100%', padding: collapsed ? '13px 0' : '13px 16px',
-                justifyContent: collapsed ? 'center' : 'flex-start',
+                width: '100%', padding: railCollapsed ? '13px 0' : '13px 16px',
+                justifyContent: railCollapsed ? 'center' : 'flex-start',
                 background: 'none', border: 'none',
                 cursor: 'pointer', color: 'var(--sidebar-text)',
               }}
@@ -373,7 +393,7 @@ export default function Sidebar() {
                   <path d="M5 5V3.5A2.5 2.5 0 0 1 11 3.5V5" stroke="currentColor" strokeWidth="1.5" />
                 </svg>
               </div>
-              {!collapsed && (
+              {!railCollapsed && (
                 <>
                   <div className="sidebar-user-meta" style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
                     <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--sidebar-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -392,8 +412,8 @@ export default function Sidebar() {
 
             {orgOpen && (
               <div style={{
-                position: 'absolute', bottom: '100%', left: collapsed ? 8 : 0, right: collapsed ? 'auto' : 0,
-                width: collapsed ? 220 : 'auto',
+                position: 'absolute', bottom: '100%', left: railCollapsed ? 8 : 0, right: railCollapsed ? 'auto' : 0,
+                width: railCollapsed ? 220 : 'auto',
                 background: '#1a1d23', border: '1px solid rgba(255,255,255,0.1)',
                 borderRadius: 8, padding: '6px 0', boxShadow: '0 -8px 24px rgba(0,0,0,0.4)',
                 maxHeight: 280, overflowY: 'auto', zIndex: 100,
@@ -439,11 +459,11 @@ export default function Sidebar() {
         <div ref={profileRef} style={{ position: 'relative' }}>
           <button
             onClick={() => setProfileOpen(o => !o)}
-            title={collapsed ? displayName : undefined}
+            title={railCollapsed ? displayName : undefined}
             style={{
               display: 'flex', alignItems: 'center', gap: 10,
-              width: '100%', padding: collapsed ? '13px 0' : '13px 16px',
-              justifyContent: collapsed ? 'center' : 'flex-start',
+              width: '100%', padding: railCollapsed ? '13px 0' : '13px 16px',
+              justifyContent: railCollapsed ? 'center' : 'flex-start',
               background: 'none', border: 'none', cursor: 'pointer',
             }}
             onMouseEnter={e => (e.currentTarget.style.background = 'var(--sidebar-hover-bg)')}
@@ -458,7 +478,7 @@ export default function Sidebar() {
             }}>
               {initials}
             </div>
-            {!collapsed && (
+            {!railCollapsed && (
               <>
                 <div className="sidebar-user-meta" style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
                   <div style={{ fontSize: 12, color: 'var(--sidebar-text)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -476,7 +496,7 @@ export default function Sidebar() {
           </button>
 
           {profileOpen && (
-            <div style={collapsed ? {
+            <div style={railCollapsed ? {
               position: 'fixed',
               bottom: 16,
               left: 'calc(var(--sidebar-width) + 8px)',

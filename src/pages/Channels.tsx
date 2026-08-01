@@ -220,7 +220,9 @@ function ChannelRow({ config, onUpdated, onDeleted }: {
   const steps = SETUP_STEPS[config.channel_type]
 
   return (
-    <div style={{
+    <div
+      className="ch-card"
+      style={{
       background: 'var(--card-bg)',
       border: '1px solid var(--border)',
       borderRadius: 10,
@@ -228,9 +230,12 @@ function ChannelRow({ config, onUpdated, onDeleted }: {
       marginBottom: 12,
     }}>
       {/* Header row */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '16px 20px' }}>
+      <div
+        className="ch-card-main"
+        style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '16px 20px', flexWrap: 'wrap' }}
+      >
         {/* Icon + name */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: '0 0 130px' }}>
+        <div className="ch-card-brand" style={{ display: 'flex', alignItems: 'center', gap: 8, flex: '0 0 130px' }}>
           <div style={{ opacity: config.enabled ? 1 : 0.35, flexShrink: 0, display: 'flex', alignItems: 'center' }}>
             {meta.icon(20)}
           </div>
@@ -240,17 +245,18 @@ function ChannelRow({ config, onUpdated, onDeleted }: {
         </div>
 
         {/* Webhook URL */}
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div className="ch-card-webhook" style={{ flex: 1, minWidth: 0 }}>
           <div style={{ ...SANS, fontSize: 10, color: 'var(--text-tertiary)', marginBottom: 3, letterSpacing: '0.06em', fontWeight: 600 }}>WEBHOOK URL</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <code style={{
-              ...MONO, fontSize: 10, flex: 1,
+              ...MONO, fontSize: 10, flex: 1, minWidth: 0,
               background: 'var(--bg-surface)', color: 'var(--text-secondary)',
               border: '1px solid var(--border)',
               padding: '4px 8px', borderRadius: 5,
               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             }}>{wUrl}</code>
             <button
+              className="ch-copy-btn"
               onClick={copy}
               style={{
                 ...SANS, fontSize: 11, padding: '4px 10px', flexShrink: 0,
@@ -261,59 +267,80 @@ function ChannelRow({ config, onUpdated, onDeleted }: {
               }}
             >{copied ? 'Copied!' : 'Copy'}</button>
           </div>
-          <div style={{ ...SANS, fontSize: 10, color: 'var(--text-tertiary)', marginTop: 2 }}>
+          <div className="ch-card-token" style={{ ...SANS, fontSize: 10, color: 'var(--text-tertiary)', marginTop: 2 }}>
             Token: <span style={MONO}>{config.bot_token}</span>
           </div>
         </div>
 
-        {/* Enable toggle */}
-        <button
-          onClick={toggleEnabled}
-          disabled={toggling}
-          title={config.enabled ? 'Click to disable' : 'Click to enable'}
-          style={{
-            ...SANS, fontSize: 11, fontWeight: 600, flexShrink: 0,
-            padding: '4px 10px', borderRadius: 12,
-            background: config.enabled ? 'var(--accent-soft)' : 'var(--bg-hover)',
-            color: config.enabled ? 'var(--accent)' : 'var(--text-tertiary)',
-            border: `1px solid ${config.enabled ? 'var(--blue-border)' : 'var(--border)'}`,
-            cursor: 'pointer',
-          }}
-        >{config.enabled ? 'ENABLED' : 'DISABLED'}</button>
+        <div className="ch-card-actions" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          {/* Enable toggle */}
+          <button
+            onClick={toggleEnabled}
+            disabled={toggling}
+            title={config.enabled ? 'Click to disable' : 'Click to enable'}
+            style={{
+              ...SANS, fontSize: 11, fontWeight: 600, flexShrink: 0,
+              padding: '4px 10px', borderRadius: 12,
+              background: config.enabled ? 'var(--accent-soft)' : 'var(--bg-hover)',
+              color: config.enabled ? 'var(--accent)' : 'var(--text-tertiary)',
+              border: `1px solid ${config.enabled ? 'var(--blue-border)' : 'var(--border)'}`,
+              cursor: 'pointer',
+            }}
+          >{config.enabled ? 'ENABLED' : 'DISABLED'}</button>
 
-        {/* Setup guide toggle */}
-        <button
-          onClick={() => { setShowSetup(v => !v); setShowEdit(false) }}
-          style={{
-            ...SANS, fontSize: 11, padding: '4px 10px', flexShrink: 0,
-            background: showSetup ? 'var(--accent-soft)' : 'transparent',
-            border: '1px solid var(--border)',
-            color: showSetup ? 'var(--accent)' : 'var(--text-tertiary)',
-            borderRadius: 5, cursor: 'pointer', fontWeight: 500,
-          }}
-        >{showSetup ? '▲ Setup' : '▼ Setup'}</button>
+          {/* Setup guide toggle */}
+          <button
+            onClick={() => { setShowSetup(v => !v); setShowEdit(false) }}
+            style={{
+              ...SANS, fontSize: 11, padding: '4px 10px', flexShrink: 0,
+              background: showSetup ? 'var(--accent-soft)' : 'transparent',
+              border: '1px solid var(--border)',
+              color: showSetup ? 'var(--accent)' : 'var(--text-tertiary)',
+              borderRadius: 5, cursor: 'pointer', fontWeight: 500,
+              display: 'inline-flex', alignItems: 'center', gap: 5,
+            }}
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+            </svg>
+            Setup
+          </button>
 
-        {/* Edit */}
-        <button
-          onClick={() => { setShowEdit(v => !v); setShowSetup(false) }}
-          style={{
-            ...SANS, fontSize: 11, padding: '4px 10px', flexShrink: 0,
-            background: showEdit ? '#F59E0B15' : 'transparent',
-            border: `1px solid ${showEdit ? '#F59E0B50' : 'var(--border)'}`,
-            color: showEdit ? '#F59E0B' : 'var(--text-tertiary)',
-            borderRadius: 5, cursor: 'pointer',
-          }}
-        >Edit</button>
+          {/* Edit */}
+          <button
+            onClick={() => { setShowEdit(v => !v); setShowSetup(false) }}
+            style={{
+              ...SANS, fontSize: 11, padding: '4px 10px', flexShrink: 0,
+              background: showEdit ? '#F59E0B15' : 'transparent',
+              border: `1px solid ${showEdit ? '#F59E0B50' : 'var(--border)'}`,
+              color: showEdit ? '#F59E0B' : 'var(--text-tertiary)',
+              borderRadius: 5, cursor: 'pointer',
+              display: 'inline-flex', alignItems: 'center', gap: 5,
+            }}
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>
+            </svg>
+            Edit
+          </button>
 
-        {/* Remove */}
-        <button
-          onClick={() => setShowDeleteConfirm(true)}
-          style={{
-            ...SANS, fontSize: 11, padding: '4px 10px', flexShrink: 0, fontWeight: 500,
-            background: 'var(--invalid-dim)', border: '1px solid rgba(239,68,68,0.35)',
-            color: 'var(--invalid)', borderRadius: 5, cursor: 'pointer',
-          }}
-        >Remove</button>
+          {/* Remove */}
+          <button
+            className="ch-remove-btn"
+            onClick={() => setShowDeleteConfirm(true)}
+            style={{
+              ...SANS, fontSize: 11, padding: '4px 10px', flexShrink: 0, fontWeight: 500,
+              background: 'var(--invalid-dim)', border: '1px solid rgba(239,68,68,0.35)',
+              color: 'var(--invalid)', borderRadius: 5, cursor: 'pointer',
+              display: 'inline-flex', alignItems: 'center', gap: 5,
+            }}
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/>
+            </svg>
+            Remove
+          </button>
+        </div>
       </div>
 
       {/* Edit panel */}
@@ -946,7 +973,9 @@ function SetupGuideSection() {
   }
 
   return (
-    <div style={{
+    <div
+      className="ch-guides"
+      style={{
       marginTop: 40,
       border: '1px solid var(--border)',
       borderRadius: 12,
@@ -954,10 +983,12 @@ function SetupGuideSection() {
       background: 'var(--bg-page)',
     }}>
       {/* Section header */}
-      <div style={{
+      <div
+        className="ch-guides-header"
+        style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '16px 20px', borderBottom: '1px solid var(--border)',
-        background: 'var(--bg-surface)',
+        background: 'var(--bg-surface)', gap: 12, flexWrap: 'wrap',
       }}>
         <div>
           <div style={{ ...MONO, fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', color: 'var(--accent)', marginBottom: 3 }}>
@@ -968,6 +999,7 @@ function SetupGuideSection() {
           </div>
         </div>
         <a
+          className="ch-guides-portal"
           href={PLATFORM_LINKS[activeTab].href}
           target="_blank"
           rel="noopener"
@@ -988,7 +1020,7 @@ function SetupGuideSection() {
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', background: 'var(--bg-surface)' }}>
+      <div className="ch-guides-tabs" style={{ display: 'flex', borderBottom: '1px solid var(--border)', background: 'var(--bg-surface)', overflowX: 'auto' }}>
         {CHANNEL_TYPES.map(type => (
           <button
             key={type}
@@ -1148,14 +1180,19 @@ export default function Channels() {
   const existingTypes = new Set(channels.map(c => c.channel_type))
 
   return (
-    <div style={{
+    <div
+      className="ch-page"
+      style={{
       padding: '28px 36px', width: '100%', boxSizing: 'border-box',
       background: 'var(--bg-page)', minHeight: '100%', ...SANS,
     }}>
 
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 24 }}>
-        <div>
+      <div
+        className="ch-header"
+        style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 24, gap: 16 }}
+      >
+        <div className="ch-header-copy">
           <div style={{ ...SANS, fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', color: 'var(--accent)', marginBottom: 6 }}>
             CHANNELS
           </div>
@@ -1167,6 +1204,7 @@ export default function Channels() {
           </p>
         </div>
         <button
+          className="ch-add-btn"
           onClick={() => setShowAddForm(v => !v)}
           style={{
             ...SANS, fontSize: 13, padding: '8px 16px',
@@ -1224,7 +1262,9 @@ export default function Channels() {
 
       {/* Info box */}
       {!loading && channels.length > 0 && (
-        <div style={{
+        <div
+          className="ch-howto"
+          style={{
           ...SANS, fontSize: 12, color: 'var(--text-tertiary)',
           padding: '12px 16px', background: 'var(--bg-surface)',
           border: '1px solid var(--border)', borderRadius: 8,

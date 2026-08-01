@@ -9,6 +9,9 @@ interface ThemeContextValue {
   collapsed: boolean
   toggleCollapsed: () => void
   setCollapsed: (v: boolean) => void
+  mobileNavOpen: boolean
+  setMobileNavOpen: (v: boolean) => void
+  toggleMobileNav: () => void
 }
 
 const ThemeContext = createContext<ThemeContextValue>({
@@ -18,6 +21,9 @@ const ThemeContext = createContext<ThemeContextValue>({
   collapsed: false,
   toggleCollapsed: () => {},
   setCollapsed: () => {},
+  mobileNavOpen: false,
+  setMobileNavOpen: () => {},
+  toggleMobileNav: () => {},
 })
 
 const THEME_KEY = 'cl_theme'
@@ -41,6 +47,7 @@ function readCollapsed(): boolean {
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<ThemeMode>(() => readTheme())
   const [collapsed, setCollapsedState] = useState(() => readCollapsed())
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
@@ -59,6 +66,20 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     } catch {}
   }, [collapsed])
 
+  useEffect(() => {
+    if (!mobileNavOpen) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMobileNavOpen(false)
+    }
+    document.addEventListener('keydown', onKey)
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      document.body.style.overflow = prev
+    }
+  }, [mobileNavOpen])
+
   function setTheme(mode: ThemeMode) {
     setThemeState(mode)
   }
@@ -75,9 +96,17 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     setCollapsedState(c => !c)
   }
 
+  function toggleMobileNav() {
+    setMobileNavOpen(o => !o)
+  }
+
   return (
     <ThemeContext.Provider
-      value={{ theme, toggleTheme, setTheme, collapsed, toggleCollapsed, setCollapsed }}
+      value={{
+        theme, toggleTheme, setTheme,
+        collapsed, toggleCollapsed, setCollapsed,
+        mobileNavOpen, setMobileNavOpen, toggleMobileNav,
+      }}
     >
       {children}
     </ThemeContext.Provider>

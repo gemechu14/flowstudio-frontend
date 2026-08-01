@@ -1433,9 +1433,9 @@ function SectionCard({ title, children }: { title: string; children: React.React
 
 function Metric({ label, value, color }: { label: string; value: string | number; color: string }) {
   return (
-    <div style={{
+    <div className="ds-metric" style={{
       padding: '10px 16px', borderRadius: 8, background: 'var(--card-bg)',
-      border: '1px solid var(--border)', minWidth: 88,
+      border: '1px solid var(--border)', minWidth: 88, flex: 1,
       boxShadow: '0 1px 3px rgba(11,16,32,0.05)',
     }}>
       <div style={{ fontSize: 22, fontWeight: 700, color, ...MONO, lineHeight: 1, marginBottom: 4 }}>{value}</div>
@@ -1461,7 +1461,14 @@ function Notice({ ok, msg, onDismiss }: { ok: boolean; msg: string; onDismiss: (
 
 // ─── detail panel ─────────────────────────────────────────────────────────────
 
-function SourceDetail({ source, onDeleted, onUpdated }: { source: DataSourceRecord; onDeleted: () => void; onUpdated: (updated: DataSourceRecord) => void }) {
+function SourceDetail({
+  source, onDeleted, onUpdated, onBack,
+}: {
+  source: DataSourceRecord
+  onDeleted: () => void
+  onUpdated: (updated: DataSourceRecord) => void
+  onBack?: () => void
+}) {
   const [files, setFiles] = useState<FileInfo[]>([])
   const [schemaTables, setSchemaTables] = useState<TableInfo[] | null>(null)
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null)
@@ -1549,11 +1556,27 @@ function SourceDetail({ source, onDeleted, onUpdated }: { source: DataSourceReco
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
+    <div className="ds-detail" style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
+
+      {onBack && (
+        <button
+          type="button"
+          className="ds-back"
+          onClick={onBack}
+          style={{
+            alignSelf: 'flex-start',
+            background: 'none', border: 'none', padding: 0,
+            ...SANS, fontSize: 13, fontWeight: 600, color: 'var(--accent)',
+            cursor: 'pointer', alignItems: 'center', gap: 4,
+          }}
+        >
+          <span aria-hidden>‹</span> All sources
+        </button>
+      )}
 
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16 }}>
+      <div className="ds-detail-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16 }}>
+        <div className="ds-detail-identity" style={{ display: 'flex', alignItems: 'flex-start', gap: 16, minWidth: 0, flex: 1 }}>
           <div style={{
             width: 52, height: 52, borderRadius: 12, flexShrink: 0,
             background: t.dim, border: `1.5px solid ${t.border}`,
@@ -1561,14 +1584,14 @@ function SourceDetail({ source, onDeleted, onUpdated }: { source: DataSourceReco
           }}>
             {source.source_type === 'document' ? <Ic.Doc s={24} /> : source.source_type === 'database' ? <Ic.DB s={24} /> : <Ic.Web s={24} />}
           </div>
-          <div>
+          <div style={{ minWidth: 0 }}>
             <div style={{ marginBottom: 6 }}><TypeBadge type={source.source_type} /></div>
-            <h2 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: 0, lineHeight: 1.2 }}>{source.name}</h2>
+            <h2 className="ds-detail-title" style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: 0, lineHeight: 1.2, wordBreak: 'break-word' }}>{source.name}</h2>
             {source.description && <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 4, margin: 0 }}>{source.description}</p>}
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={() => setShowEdit(true)} style={{
+        <div className="ds-detail-actions" style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+          <button className="ds-btn-edit" onClick={() => setShowEdit(true)} style={{
             ...btnBase, background: t.dim, color: t.color,
             border: `1px solid ${t.border}`, fontSize: 12.5,
           }}>
@@ -1577,7 +1600,7 @@ function SourceDetail({ source, onDeleted, onUpdated }: { source: DataSourceReco
             </svg>
             Edit
           </button>
-          <button onClick={handleDelete} disabled={deleting} style={{
+          <button className="ds-btn-delete" onClick={handleDelete} disabled={deleting} style={{
             ...btnBase,
             background: 'var(--invalid-dim)', color: 'var(--invalid)',
             border: '1px solid rgba(239,68,68,0.15)', fontSize: 12.5,
@@ -1588,12 +1611,10 @@ function SourceDetail({ source, onDeleted, onUpdated }: { source: DataSourceReco
       </div>
 
       {/* Metrics */}
-      {source.source_type !== 'database' && (
-        <div style={{ display: 'flex', gap: 10 }}>
-          <Metric label="Files" value={files.length} color={t.color} />
-          <Metric label="Chunks" value={totalChunks} color="var(--text-primary)" />
-        </div>
-      )}
+      <div className="ds-metrics" style={{ display: 'flex', gap: 10 }}>
+        <Metric label="Files" value={files.length} color={t.color} />
+        <Metric label="Chunks" value={totalChunks} color="var(--text-primary)" />
+      </div>
 
       {/* Notice */}
       {notice && <Notice ok={notice.ok} msg={notice.msg} onDismiss={() => setNotice(null)} />}
@@ -1848,7 +1869,10 @@ function SourceDetail({ source, onDeleted, onUpdated }: { source: DataSourceReco
 function SourceItem({ source, active, onClick }: { source: DataSourceRecord; active: boolean; onClick: () => void }) {
   const t = TYPE_META[source.source_type]
   return (
-    <button onClick={onClick} style={{
+    <button
+      className={`ds-source-item${active ? ' is-active' : ''}`}
+      onClick={onClick}
+      style={{
       display: 'flex', alignItems: 'center', gap: 11, width: '100%', textAlign: 'left',
       padding: '10px 16px', cursor: 'pointer',
       borderLeft: `2px solid ${active ? t.color : 'transparent'}`,
@@ -2041,6 +2065,7 @@ export default function DataSources() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [filterType, setFilterType] = useState<SourceType | 'all'>('all')
+  const [mobileShowDetail, setMobileShowDetail] = useState(false)
 
   useEffect(() => {
     listDataSources()
@@ -2052,6 +2077,7 @@ export default function DataSources() {
   const handleCreated = (src: DataSourceRecord) => {
     setSources(prev => [src, ...prev])
     setSelected(src)
+    setMobileShowDetail(true)
     setShowCreate(false)
   }
 
@@ -2059,6 +2085,7 @@ export default function DataSources() {
     setSources(prev => {
       const next = prev.filter(s => s.source_id !== selected?.source_id)
       setSelected(next[0] ?? null)
+      setMobileShowDetail(false)
       return next
     })
   }
@@ -2066,6 +2093,11 @@ export default function DataSources() {
   const handleUpdated = (updated: DataSourceRecord) => {
     setSources(prev => prev.map(s => s.source_id === updated.source_id ? updated : s))
     setSelected(updated)
+  }
+
+  const openSource = (src: DataSourceRecord) => {
+    setSelected(src)
+    setMobileShowDetail(true)
   }
 
   const filtered = sources.filter(s => {
@@ -2078,23 +2110,28 @@ export default function DataSources() {
   })
 
   return (
-    <div style={{ display: 'flex', height: '100%', overflow: 'hidden', background: 'var(--bg-page)', ...SANS }}>
+    <div
+      className={`ds-page${mobileShowDetail ? ' is-detail-open' : ''}`}
+      style={{ display: 'flex', height: '100%', overflow: 'hidden', background: 'var(--bg-page)', ...SANS }}
+    >
 
       {/* Left panel — header fixed, list scrolls */}
-      <div style={{
+      <div
+        className="ds-list-pane"
+        style={{
         width: 268, minWidth: 268, borderRight: '1px solid var(--border)',
         display: 'flex', flexDirection: 'column', overflow: 'hidden',
         background: 'var(--card-bg)',
       }}>
         {/* Header: title + button + search + filter — never scrolls */}
-        <div style={{ flexShrink: 0, borderBottom: '1px solid var(--border)' }}>
+        <div className="ds-list-chrome" style={{ flexShrink: 0, borderBottom: '1px solid var(--border)' }}>
           {/* Title row */}
-          <div style={{ padding: '20px 16px 12px' }}>
+          <div className="ds-list-header" style={{ padding: '20px 16px 12px' }}>
             <div style={{ fontSize: 10, ...MONO, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: 6 }}>
               Data Sources
             </div>
             <h2 style={{ ...SANS, fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 10px' }}>Sources</h2>
-            <button onClick={() => setShowCreate(true)} style={{
+            <button className="ds-new-btn" onClick={() => setShowCreate(true)} style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
               width: '100%', padding: '9px', borderRadius: 999,
               background: 'var(--btn-upload-bg)', border: 'none', color: 'var(--btn-upload-text)',
@@ -2106,7 +2143,7 @@ export default function DataSources() {
           </div>
 
           {/* Search */}
-          <div style={{ padding: '0 12px 10px', position: 'relative' }}>
+          <div className="ds-list-search" style={{ padding: '0 12px 10px', position: 'relative' }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
               strokeLinecap="round" strokeLinejoin="round"
               style={{ position: 'absolute', left: 22, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)', pointerEvents: 'none' }}>
@@ -2135,7 +2172,7 @@ export default function DataSources() {
           </div>
 
           {/* Type filter dropdown */}
-          <div style={{ padding: '0 12px 12px' }}>
+          <div className="ds-list-filter" style={{ padding: '0 12px 12px' }}>
             <select
               value={filterType}
               onChange={e => setFilterType(e.target.value as SourceType | 'all')}
@@ -2157,7 +2194,7 @@ export default function DataSources() {
         </div>
 
         {/* Source list — only this part scrolls */}
-        <div style={{ flex: 1, overflowY: 'auto' }}>
+        <div className="ds-source-list" style={{ flex: 1, overflowY: 'auto' }}>
           {loading ? (
             <SourceListSkeleton />
           ) : sources.length === 0 ? (
@@ -2175,17 +2212,31 @@ export default function DataSources() {
               No sources match.
             </div>
           ) : filtered.map(src => (
-            <SourceItem key={src.source_id} source={src} active={selected?.source_id === src.source_id} onClick={() => setSelected(src)} />
+            <SourceItem
+              key={src.source_id}
+              source={src}
+              active={selected?.source_id === src.source_id}
+              onClick={() => openSource(src)}
+            />
           ))}
         </div>
       </div>
 
       {/* Right panel */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '36px 48px', background: 'var(--bg-page)' }}>
+      <div
+        className="ds-detail-pane"
+        style={{ flex: 1, overflowY: 'auto', padding: '36px 48px', background: 'var(--bg-page)' }}
+      >
         {loading ? (
           <SourceDetailSkeleton />
         ) : selected ? (
-          <SourceDetail key={selected.source_id} source={selected} onDeleted={handleDeleted} onUpdated={handleUpdated} />
+          <SourceDetail
+            key={selected.source_id}
+            source={selected}
+            onDeleted={handleDeleted}
+            onUpdated={handleUpdated}
+            onBack={() => setMobileShowDetail(false)}
+          />
         ) : (
           <EmptyState onNew={() => setShowCreate(true)} />
         )}

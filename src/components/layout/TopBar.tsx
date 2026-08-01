@@ -18,7 +18,7 @@ export default function TopBar() {
   const location = useLocation()
   const navigate = useNavigate()
   const { user } = useAuth()
-  const { theme, toggleTheme } = useTheme()
+  const { theme, toggleTheme, toggleMobileNav } = useTheme()
   const info = PAGE_TITLES[location.pathname] ?? { title: 'Platform', subtitle: '' }
 
   const initials = user
@@ -44,6 +44,7 @@ export default function TopBar() {
 
   return (
     <header
+      className="app-topbar"
       style={{
         minHeight: 72,
         background: 'var(--topbar-bg)',
@@ -57,70 +58,54 @@ export default function TopBar() {
         transition: 'background-color 0.25s ease, border-color 0.25s ease',
       }}
     >
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0, justifyContent: 'center' }}>
-        <h1
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, flex: 1 }}>
+        <button
+          type="button"
+          className="topbar-menu-btn"
+          onClick={toggleMobileNav}
+          aria-label="Open navigation"
           style={{
-            fontFamily: 'var(--font-sans)',
-            fontSize: 20,
-            fontWeight: 650,
-            color: 'var(--text-primary)',
-            letterSpacing: '-0.02em',
-            lineHeight: 1.15,
-            margin: 0,
+            ...iconBtn,
+            display: 'none',
           }}
         >
-          {info.title}
-        </h1>
-        {info.subtitle && (
-          <span
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M2.5 4h11M2.5 8h11M2.5 12h11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+          </svg>
+        </button>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0, justifyContent: 'center' }}>
+          <h1
+            className="app-topbar-title"
             style={{
-              fontSize: 12.5,
-              color: 'var(--text-secondary)',
               fontFamily: 'var(--font-sans)',
-              lineHeight: 1.3,
+              fontSize: 20,
+              fontWeight: 650,
+              color: 'var(--text-primary)',
+              letterSpacing: '-0.02em',
+              lineHeight: 1.15,
+              margin: 0,
             }}
           >
-            {info.subtitle}
-          </span>
-        )}
+            {info.title}
+          </h1>
+          {info.subtitle && (
+            <span
+              className="topbar-subtitle"
+              style={{
+                fontSize: 12.5,
+                color: 'var(--text-secondary)',
+                fontFamily: 'var(--font-sans)',
+                lineHeight: 1.3,
+              }}
+            >
+              {info.subtitle}
+            </span>
+          )}
+        </div>
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, alignSelf: 'center' }}>
-        {/* <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 7,
-            padding: '5px 12px',
-            borderRadius: 999,
-            background: 'var(--verified-dim)',
-            border: '1px solid transparent',
-          }}
-        >
-          <span
-            style={{
-              width: 6,
-              height: 6,
-              borderRadius: '50%',
-              background: 'var(--verified)',
-              display: 'inline-block',
-            }}
-          />
-          <span
-            style={{
-              fontFamily: 'var(--font-sans)',
-              fontSize: 11,
-              fontWeight: 600,
-              color: 'var(--verified)',
-              letterSpacing: '0.04em',
-            }}
-          >
-            SYSTEM ONLINEss
-          </span>
-        </div> */}
-
-        {/* <div style={{ width: 1, height: 16, background: 'var(--border)', margin: '0 2px' }} /> */}
-
         <button
           onClick={toggleTheme}
           title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}

@@ -66,14 +66,16 @@ const LABEL: React.CSSProperties = {
   letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-tertiary)',
 }
 
-function Card({ children, style, onClick, ...rest }: {
+function Card({ children, style, onClick, className, ...rest }: {
   children: React.ReactNode
   style?: React.CSSProperties
   onClick?: () => void
+  className?: string
 } & React.HTMLAttributes<HTMLDivElement>) {
   const [hovered, setHovered] = useState(false)
   return (
     <div
+      className={className}
       onClick={onClick}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
@@ -308,16 +310,21 @@ function ActivityChart({ data }: { data: { date: string; count: number }[] }) {
             )}
           </div>
           <div style={{ display: 'flex', gap: 8, marginTop: 10, flexShrink: 0 }}>
-            {data.map((d) => (
-              <div key={d.date} style={{ flex: 1, textAlign: 'center' }}>
-                <span style={{
-                  fontFamily: 'var(--font-mono)', fontSize: 10,
-                  color: 'var(--text-tertiary)',
-                }}>
-                  {parseLocalDate(d.date).toLocaleDateString('en', { weekday: 'short' })}
-                </span>
-              </div>
-            ))}
+            {data.map((d) => {
+              const full = parseLocalDate(d.date).toLocaleDateString('en', { weekday: 'short' })
+              const short = full.charAt(0)
+              return (
+                <div key={d.date} style={{ flex: 1, textAlign: 'center' }}>
+                  <span style={{
+                    fontFamily: 'var(--font-mono)', fontSize: 10,
+                    color: 'var(--text-tertiary)',
+                  }}>
+                    <span className="chart-day-full">{full}</span>
+                    <span className="chart-day-short">{short}</span>
+                  </span>
+                </div>
+              )
+            })}
           </div>
         </div>
       </div>
@@ -578,7 +585,9 @@ export default function Dashboard() {
     : providerEntries.map(([p, c]) => `${p} · ${c}`).join('  ')
 
   return (
-    <div style={{
+    <div
+      className="dashboard-page"
+      style={{
       height: '100%', width: '100%',
       display: 'flex', flexDirection: 'column',
       boxSizing: 'border-box', overflow: 'hidden',
@@ -587,13 +596,14 @@ export default function Dashboard() {
     }}>
 
       {/* Top: overview metrics */}
-      <div style={{
-        padding: '20px 24px 18px',
+      <div
+        className="dashboard-top"
+        style={{
         display: 'flex', flexDirection: 'column', gap: 14,
         flexShrink: 0,
         background: 'var(--topbar-bg)',
       }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
+        <div className="dashboard-stats">
           <StatCard
             label="Agents"
             value={stats.agent_count}
@@ -646,12 +656,12 @@ export default function Dashboard() {
           />
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: 14, minHeight: 240 }}>
-          <Card style={{ padding: '18px 20px', height: 240, overflow: 'visible' }} data-activity-chart>
+        <div className="dashboard-mid">
+          <Card className="dashboard-activity-card" style={{ padding: '18px 20px', height: 240, overflow: 'visible' }} data-activity-chart>
             <ActivityChart data={stats.runs_by_day} />
           </Card>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14, minHeight: 0 }}>
+          <div className="dashboard-mid-side">
             <Card style={{ padding: '18px 20px', flex: 1, overflow: 'visible' }}>
               <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                 <span style={{ ...LABEL, marginBottom: 16 }}>By Status</span>
@@ -693,13 +703,14 @@ export default function Dashboard() {
       </div>
 
       {/* Divider between top overview and recent runs */}
-      <div style={{ height: 1, background: 'var(--border)', flexShrink: 0, width: '100%' }} />
+      <div className="dashboard-divider" style={{ height: 1, background: 'var(--border)', flexShrink: 0, width: '100%' }} />
 
       {/* Bottom: recent runs */}
-      <div style={{
+      <div
+        className="dashboard-runs"
+        style={{
         flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column',
         background: 'var(--topbar-bg)',
-        padding: '0 24px 16px',
       }}>
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -709,7 +720,7 @@ export default function Dashboard() {
           <button
             onClick={() => navigate('/workflows')}
             style={{
-              fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--accent-text)',
+              fontFamily: 'var(--font-sans)', fontSize: 13, color: 'var(--accent-text)',
               cursor: 'pointer', background: 'none', border: 'none', fontWeight: 600, padding: 0,
             }}
           >
@@ -718,11 +729,12 @@ export default function Dashboard() {
         </div>
 
         {stats.recent_runs.length === 0 ? (
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)', fontSize: 12 }}>
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-tertiary)', fontFamily: 'var(--font-sans)', fontSize: 13, padding: '24px 0' }}>
             No runs yet — run a workflow to see activity here.
           </div>
         ) : (
-          <div style={{
+          <>
+          <div className="dashboard-runs-table" style={{
             flex: 1, minHeight: 0, overflowY: 'auto',
             border: '1px solid var(--card-border)',
             borderRadius: 12,
@@ -777,14 +789,86 @@ export default function Dashboard() {
                 <ModeBadge mode={run.execution_mode} />
                 <StatusChip status={run.status} />
                 <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--text-primary)', fontWeight: 500 }}>
-                  {fmt(run.total_output_tokens)}
+                  {fmt(run.total_input_tokens + run.total_output_tokens)}
                 </span>
-                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-secondary)' }}>
+                <span style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: 'var(--text-secondary)' }}>
                   {timeAgo(run.started_at)}
                 </span>
               </div>
             ))}
           </div>
+
+          <div className="dashboard-runs-cards">
+            {stats.recent_runs.map(run => (
+              <div
+                key={`m-${run.run_id}`}
+                style={{
+                  background: 'var(--card-bg)',
+                  border: '1px solid var(--card-border)',
+                  borderRadius: 16,
+                  overflow: 'hidden',
+                  boxShadow: 'var(--card-shadow)',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '14px 16px' }}>
+                  <div style={{
+                    width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+                    background: 'var(--accent-soft)', border: '1px solid var(--blue-border)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: 'var(--accent-text)',
+                  }}>
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                      <circle cx="3" cy="8" r="2" stroke="currentColor" strokeWidth="1.5"/>
+                      <circle cx="13" cy="4" r="2" stroke="currentColor" strokeWidth="1.5"/>
+                      <circle cx="13" cy="12" r="2" stroke="currentColor" strokeWidth="1.5"/>
+                      <path d="M5 8H8.5M8.5 8L11 4M8.5 8L11 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                    </svg>
+                  </div>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{
+                      fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 650,
+                      color: 'var(--text-primary)', lineHeight: 1.3,
+                    }}>
+                      {run.workflow_name}
+                    </div>
+                    <div style={{
+                      fontFamily: 'var(--font-mono)', fontSize: 11,
+                      color: 'var(--text-tertiary)', marginTop: 4,
+                    }}>
+                      run_{run.run_id.replace(/^run_/, '').slice(0, 8)}
+                    </div>
+                  </div>
+                </div>
+                <div style={{ height: 1, background: 'var(--border)' }} />
+                <div style={{
+                  display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px 16px',
+                  padding: '14px 16px 16px',
+                }}>
+                  <div>
+                    <div style={{ ...LABEL, marginBottom: 6 }}>Mode</div>
+                    <ModeBadge mode={run.execution_mode} />
+                  </div>
+                  <div>
+                    <div style={{ ...LABEL, marginBottom: 6 }}>Status</div>
+                    <StatusChip status={run.status} />
+                  </div>
+                  <div>
+                    <div style={{ ...LABEL, marginBottom: 6 }}>Tokens</div>
+                    <div style={{ fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>
+                      {fmt(run.total_input_tokens + run.total_output_tokens)}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ ...LABEL, marginBottom: 6 }}>When</div>
+                    <div style={{ fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 500, color: 'var(--text-primary)' }}>
+                      {timeAgo(run.started_at)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          </>
         )}
       </div>
     </div>

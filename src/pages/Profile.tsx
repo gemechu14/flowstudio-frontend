@@ -95,21 +95,21 @@ function Field({
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div style={{
+    <div className="profile-card" style={{
       background: 'var(--card-bg)',
       border: '1px solid var(--border)',
       borderRadius: 12,
       overflow: 'hidden',
       marginBottom: 24,
     }}>
-      <div style={{
+      <div className="profile-card-header" style={{
         padding: '16px 24px',
         borderBottom: '1px solid var(--border)',
         ...SANS, fontSize: 14, fontWeight: 600, color: 'var(--text-primary)',
       }}>
         {title}
       </div>
-      <div style={{ padding: 24 }}>
+      <div className="profile-card-body" style={{ padding: 24 }}>
         {children}
       </div>
     </div>
@@ -194,14 +194,16 @@ export default function Profile() {
     : user?.email ?? ''
 
   return (
-    <div style={{
+    <div
+      className="profile-page"
+      style={{
       padding: '32px 36px',
       background: 'var(--bg-page)',
       minHeight: '100%',
       boxSizing: 'border-box',
       ...SANS,
     }}>
-      <div style={{ marginBottom: 32, display: 'flex', alignItems: 'center', gap: 20 }}>
+      <div className="profile-hero" style={{ marginBottom: 32, display: 'flex', alignItems: 'center', gap: 20 }}>
         <div style={{
           width: 64, height: 64, borderRadius: '50%',
           background: 'var(--accent-soft)', border: '2px solid var(--blue-border)',
@@ -210,8 +212,8 @@ export default function Profile() {
         }}>
           {initials}
         </div>
-        <div>
-          <div style={{ ...SANS, fontSize: 22, fontWeight: 700, color: 'var(--text-primary)' }}>
+        <div style={{ minWidth: 0 }}>
+          <div className="profile-hero-name" style={{ ...SANS, fontSize: 22, fontWeight: 700, color: 'var(--text-primary)', wordBreak: 'break-word' }}>
             {displayName}
           </div>
           <div style={{ ...SANS, fontSize: 13, color: 'var(--text-secondary)', marginTop: 2 }}>
@@ -222,7 +224,7 @@ export default function Profile() {
 
       <Card title="Personal information">
         <form onSubmit={handleInfoSave} style={{ maxWidth: 680 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 24px' }}>
+          <div className="profile-name-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 24px' }}>
             <Field label="First name" value={firstName} onChange={setFirstName} placeholder="First name" />
             <Field label="Last name" value={lastName} onChange={setLastName} placeholder="Last name" />
           </div>
@@ -230,7 +232,7 @@ export default function Profile() {
           <div style={{ ...SANS, fontSize: 12, color: 'var(--text-tertiary)', marginTop: -10, marginBottom: 20 }}>
             Email cannot be changed. Contact your administrator if needed.
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div className="profile-form-actions" style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
             <SaveButton saving={infoSaving} />
             {infoMsg && (
               <span style={{
@@ -245,11 +247,11 @@ export default function Profile() {
       </Card>
 
       <Card title="Change password">
-        <form onSubmit={handlePwSave} style={{ maxWidth: 480 }}>
+        <form onSubmit={handlePwSave} style={{ maxWidth: 480, width: '100%' }}>
           <Field label="Current password" value={currentPw} onChange={setCurrentPw} type="password" placeholder="Enter current password" />
           <Field label="New password" value={newPw} onChange={setNewPw} type="password" placeholder="Minimum 8 characters" />
           <Field label="Confirm new password" value={confirmPw} onChange={setConfirmPw} type="password" placeholder="Repeat new password" />
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div className="profile-form-actions" style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
             <SaveButton saving={pwSaving} label="Change password" />
             {pwMsg && (
               <span style={{

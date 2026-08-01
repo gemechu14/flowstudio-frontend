@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
-import { ThemeProvider } from './contexts/ThemeContext'
+import { ThemeProvider, useTheme } from './contexts/ThemeContext'
 import Sidebar from './components/layout/Sidebar'
 import TopBar from './components/layout/TopBar'
 import AppShellSkeleton from './components/layout/AppShellSkeleton'
@@ -20,6 +20,7 @@ import BackendErrorScreen from './components/BackendErrorScreen'
 
 function AppShell() {
   const { user, isLoading } = useAuth()
+  const { mobileNavOpen, setMobileNavOpen } = useTheme()
   const [backendUnreachable, setBackendUnreachable] = useState(false)
 
   useEffect(() => {
@@ -52,7 +53,18 @@ function AppShell() {
   }
 
   return (
-    <div style={{ display: 'flex', height: '100vh', width: '100vw', overflow: 'hidden' }}>
+    <div
+      className="app-shell"
+      style={{ display: 'flex', height: '100vh', width: '100vw', overflow: 'hidden', background: 'var(--bg-page)' }}
+    >
+      {mobileNavOpen && (
+        <button
+          type="button"
+          className="app-shell-backdrop"
+          aria-label="Close navigation"
+          onClick={() => setMobileNavOpen(false)}
+        />
+      )}
       <Sidebar />
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <TopBar />

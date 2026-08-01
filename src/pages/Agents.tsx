@@ -335,19 +335,23 @@ export default function Agents() {
   const clearFilters = () => { setSearch(''); setFilterProvider(''); setFilterModel(''); setFilterWorkflow('') }
 
   return (
-    <div style={{
+    <div
+      className="agents-page"
+      style={{
       height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden',
       background: 'var(--bg-page)', ...SANS,
     }}>
 
       {/* ── Header ── */}
-      <div style={{
+      <div
+        className="agents-header"
+        style={{
         display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
         gap: 20, padding: '20px 28px 16px', flexShrink: 0, flexWrap: 'wrap',
         borderBottom: '1px solid var(--border)',
         background: 'var(--topbar-bg)',
       }}>
-        <div>
+        <div className="agents-header-copy">
           <div style={{
             ...MONO, fontSize: 10, fontWeight: 600,
             letterSpacing: '0.14em', textTransform: 'uppercase',
@@ -365,6 +369,7 @@ export default function Agents() {
           </p>
         </div>
         <button
+          className="agents-new-btn"
           onClick={() => setPanel({ open: true, mode: 'create' })}
           style={{
             ...SANS, fontSize: 13, fontWeight: 600, marginTop: 4, flexShrink: 0,
@@ -384,12 +389,14 @@ export default function Agents() {
 
       {/* ── Search + Filters ── */}
       {!loading && agents.length > 0 && (
-        <div style={{
+        <div
+          className="agents-filters"
+          style={{
           padding: '12px 28px', borderBottom: '1px solid var(--border)',
           display: 'flex', gap: 10, alignItems: 'center', flexShrink: 0, flexWrap: 'wrap',
           background: 'var(--topbar-bg)',
         }}>
-          <div style={{ position: 'relative', flex: '1 1 220px', minWidth: 180 }}>
+          <div className="agents-search" style={{ position: 'relative', flex: '1 1 220px', minWidth: 180 }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
               strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
               style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)', pointerEvents: 'none' }}>
@@ -419,6 +426,7 @@ export default function Agents() {
           </div>
 
           <select
+            className="agents-filter-select"
             value={filterProvider}
             onChange={e => setFilterProvider(e.target.value)}
             style={SELECT}
@@ -438,6 +446,7 @@ export default function Agents() {
           </select>
 
           <select
+            className="agents-filter-select"
             value={filterModel}
             onChange={e => setFilterModel(e.target.value)}
             style={SELECT}
@@ -457,6 +466,7 @@ export default function Agents() {
           </select>
 
           <select
+            className="agents-filter-select"
             value={filterWorkflow}
             onChange={e => setFilterWorkflow(e.target.value)}
             style={{ ...SELECT, minWidth: 168 }}
@@ -476,7 +486,7 @@ export default function Agents() {
           </select>
 
           {hasFilters && (
-            <>
+            <div className="agents-filter-meta" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <span style={{ ...MONO, fontSize: 11, color: 'var(--text-tertiary)', whiteSpace: 'nowrap' }}>
                 {filtered.length} of {agents.length}
               </span>
@@ -487,13 +497,13 @@ export default function Agents() {
               }}>
                 Clear
               </button>
-            </>
+            </div>
           )}
         </div>
       )}
 
       {/* ── Scrollable list ── */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '16px 28px 32px', background: 'var(--bg-page)' }}>
+      <div className="agents-list" style={{ flex: 1, overflowY: 'auto', padding: '16px 28px 32px', background: 'var(--bg-page)' }}>
 
         {loading ? (
           <AgentsListSkeleton count={5} />
@@ -551,6 +561,7 @@ export default function Agents() {
               return (
                 <div
                   key={agent.agent_id}
+                  className="agents-card"
                   style={{
                     background: 'var(--card-bg)',
                     border: '1px solid var(--card-border)',
@@ -568,18 +579,24 @@ export default function Agents() {
                     e.currentTarget.style.boxShadow = 'none'
                   }}
                 >
-                  <div style={{
+                  <div
+                    className="agents-card-main"
+                    style={{
                     padding: '14px 18px',
-                    display: 'flex', alignItems: 'flex-start', gap: 16,
+                    display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: 14,
                   }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                        <span style={{
+                        <span className="agents-card-title" style={{
                           ...MONO, fontSize: 14, fontWeight: 700, color: 'var(--text-primary)',
+                          wordBreak: 'break-word',
                         }}>
                           {agent.name}
                         </span>
                         <Chip label={modelLabel} tone="accent" />
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
                         <Chip
                           label={PROVIDER_LABELS[agent.provider] ?? agent.provider}
                           tone="muted"
@@ -590,17 +607,18 @@ export default function Agents() {
                       </div>
 
                       {agent.description && (
-                        <div style={{
-                          ...SANS, fontSize: 13, color: 'var(--text-secondary)', marginTop: 8,
-                          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                          lineHeight: 1.45,
+                        <div
+                          className="agents-card-desc"
+                          style={{
+                          ...SANS, fontSize: 13, color: 'var(--text-secondary)', marginTop: 10,
+                          lineHeight: 1.55,
                         }}>
                           {agent.description}
                         </div>
                       )}
 
                       {(agent.tool_names.length > 0 || (agent.mcp_tools ?? []).length > 0) ? (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginTop: 10 }}>
+                        <div className="agents-card-tools" style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginTop: 12 }}>
                           {agent.tool_names.map((t) => (
                             <Tag key={t}>{t}</Tag>
                           ))}
@@ -609,13 +627,13 @@ export default function Agents() {
                           ))}
                         </div>
                       ) : (
-                        <div style={{ ...MONO, fontSize: 11, color: 'var(--text-tertiary)', marginTop: 10 }}>
+                        <div style={{ ...MONO, fontSize: 11, color: 'var(--text-tertiary)', marginTop: 12 }}>
                           No tools assigned
                         </div>
                       )}
 
                       {agentWorkflows.length > 0 && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
+                        <div className="agents-card-workflows" style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginTop: 10 }}>
                           <span style={{
                             ...MONO, fontSize: 9, fontWeight: 600, letterSpacing: '0.1em',
                             textTransform: 'uppercase', color: 'var(--text-tertiary)',
@@ -629,8 +647,8 @@ export default function Agents() {
                       )}
                     </div>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 10, flexShrink: 0 }}>
-                      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                    <div className="agents-card-footer">
+                      <div className="agents-card-actions" style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
                         <ActionBtn variant="primary" onClick={() => setChatAgent(agent)}>
                           <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
                           Test
@@ -648,7 +666,7 @@ export default function Agents() {
                           {isDeleting ? '…' : 'Delete'}
                         </ActionBtn>
                       </div>
-                      <div style={{ textAlign: 'right' }}>
+                      <div className="agents-card-meta">
                         <div style={{ ...SANS, fontSize: 11, color: 'var(--text-tertiary)' }}>
                           Created {formatDate(agent.created_at)}
                         </div>
