@@ -1002,18 +1002,31 @@ function AgentInspector({
             }}>
               {lineCount} lines
             </span>
-            <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+            <div style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
               <button
                 type="button"
                 onClick={copy}
                 title={copied ? 'Copied' : 'Copy'}
+                aria-label={copied ? 'Copied' : 'Copy'}
                 style={{
-                  ...SANS, fontSize: 12, padding: '5px 10px',
-                  background: 'var(--bg-hover)', border: '1px solid var(--border)', borderRadius: 8,
-                  color: copied ? 'var(--verified)' : 'var(--text-secondary)', cursor: 'pointer',
+                  width: 32, height: 32, padding: 0,
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  background: copied ? 'var(--accent-soft)' : 'var(--bg-hover)',
+                  border: `1px solid ${copied ? 'var(--blue-border)' : 'var(--border)'}`,
+                  borderRadius: 8, cursor: 'pointer',
+                  color: copied ? 'var(--accent-text)' : 'var(--text-secondary)',
                 }}
               >
-                {copied ? 'Copied' : 'Copy'}
+                {copied ? (
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden>
+                    <path d="M5 12l5 5L20 7" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                ) : (
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+                    <rect x="9" y="9" width="11" height="11" rx="2" />
+                    <path d="M5 15V5a2 2 0 0 1 2-2h10" strokeLinecap="round" />
+                  </svg>
+                )}
               </button>
               <button
                 type="button"
@@ -1022,13 +1035,19 @@ function AgentInspector({
                   content,
                 )}
                 title="Expand"
+                aria-label="Expand"
                 style={{
-                  ...SANS, fontSize: 12, padding: '5px 10px',
-                  background: 'var(--bg-hover)', border: '1px solid var(--border)', borderRadius: 8,
-                  color: 'var(--text-secondary)', cursor: 'pointer',
+                  width: 32, height: 32, padding: 0,
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  background: 'var(--bg-hover)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 8, cursor: 'pointer',
+                  color: 'var(--text-secondary)',
                 }}
               >
-                Expand
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+                  <path d="M8 3H3v5M16 3h5v5M8 21H3v-5M21 16v5h-5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
               </button>
             </div>
           </div>
@@ -1070,6 +1089,7 @@ function RunResultPanel({
   const [submitting, setSubmitting] = useState(false)
   const [resumeError, setResumeError] = useState('')
   const [runnerExpand, setRunnerExpand] = useState<{ label: string; value: string } | null>(null)
+  const [expandCopied, setExpandCopied] = useState(false)
   const [showEmptyConfirm, setShowEmptyConfirm] = useState(false)
   const [inspect, setInspect] = useState<{ nodeId: string; tab: 'system' | 'input' | 'output' } | null>(null)
 
@@ -1115,40 +1135,136 @@ function RunResultPanel({
     ? run.node_results.find(n => n.node_id === inspect.nodeId) ?? null
     : null
 
+  const expandLineCount = runnerExpand?.value ? runnerExpand.value.split('\n').length : 0
+
+  const copyExpanded = async () => {
+    if (!runnerExpand) return
+    try {
+      await navigator.clipboard.writeText(runnerExpand.value)
+      setExpandCopied(true)
+      setTimeout(() => setExpandCopied(false), 1200)
+    } catch { /* ignore */ }
+  }
+
+  const closeExpand = () => {
+    setRunnerExpand(null)
+    setExpandCopied(false)
+  }
+
   const expandModal = runnerExpand ? (
     <div
-      onClick={() => setRunnerExpand(null)}
+      onClick={closeExpand}
       style={{
-        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
+        position: 'fixed', inset: 0,
+        background: 'rgba(8,12,24,0.45)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        zIndex: 9999,
+        zIndex: 9999, padding: 24,
+        ...SANS,
       }}
     >
       <div
         onClick={e => e.stopPropagation()}
+        role="dialog"
+        aria-label={runnerExpand.label}
         style={{
-          background: 'var(--bg-card)', border: '1px solid var(--border)',
-          borderRadius: 10, padding: 20, width: 700, maxWidth: '90vw',
-          maxHeight: '80vh', display: 'flex', flexDirection: 'column', gap: 10,
+          background: 'var(--bg-surface)',
+          border: '1px solid var(--border)',
+          borderRadius: 14,
+          width: 820, maxWidth: '100%',
+          maxHeight: 'min(88vh, 900px)',
+          display: 'flex', flexDirection: 'column',
+          boxShadow: '0 24px 64px rgba(0,0,0,0.28)',
+          overflow: 'hidden',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ ...MONO, fontSize: 11, fontWeight: 700, color: 'var(--text-heading)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-            {runnerExpand.label}
-          </span>
-          <button onClick={() => setRunnerExpand(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 18, lineHeight: 1 }}>×</button>
+        <div style={{
+          padding: '18px 22px',
+          borderBottom: '1px solid var(--border)',
+          background: 'var(--bg-page)',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+          flexShrink: 0,
+        }}>
+          <div style={{ minWidth: 0 }}>
+            <div style={{
+              ...MONO, fontSize: 10, fontWeight: 600,
+              letterSpacing: '0.12em', textTransform: 'uppercase',
+              color: 'var(--text-tertiary)', marginBottom: 4,
+            }}>
+              Expanded view
+            </div>
+            <div style={{
+              ...MONO, fontSize: 14, fontWeight: 700, color: 'var(--text-heading)',
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            }}>
+              {runnerExpand.label}
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+            <button
+              type="button"
+              onClick={copyExpanded}
+              title={expandCopied ? 'Copied' : 'Copy'}
+              aria-label={expandCopied ? 'Copied' : 'Copy'}
+              style={{
+                width: 34, height: 34, padding: 0,
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                background: expandCopied ? 'var(--accent-soft)' : 'var(--bg-hover)',
+                border: `1px solid ${expandCopied ? 'var(--blue-border)' : 'var(--border)'}`,
+                borderRadius: 8, cursor: 'pointer',
+                color: expandCopied ? 'var(--accent-text)' : 'var(--text-secondary)',
+              }}
+            >
+              {expandCopied ? (
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden>
+                  <path d="M5 12l5 5L20 7" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              ) : (
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+                  <rect x="9" y="9" width="11" height="11" rx="2" />
+                  <path d="M5 15V5a2 2 0 0 1 2-2h10" strokeLinecap="round" />
+                </svg>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={closeExpand}
+              style={{
+                ...SANS,
+                background: 'var(--bg-hover)',
+                border: '1px solid var(--border)',
+                borderRadius: 8, color: 'var(--text-secondary)',
+                cursor: 'pointer', padding: '6px 10px', fontSize: 12,
+              }}
+            >
+              ✕ Close
+            </button>
+          </div>
         </div>
-        <textarea
-          readOnly
-          value={runnerExpand.value}
-          style={{
-            ...MONO, fontSize: 12, color: 'var(--text-body)',
+
+        <div style={{
+          padding: '10px 22px',
+          display: 'flex', alignItems: 'center',
+          borderBottom: '1px solid var(--border)',
+          flexShrink: 0,
+        }}>
+          <span style={{
+            ...MONO, fontSize: 10, fontWeight: 600, color: 'var(--text-tertiary)',
+            letterSpacing: '0.08em', textTransform: 'uppercase',
+          }}>
+            {expandLineCount} lines
+          </span>
+        </div>
+
+        <div style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: '18px 22px 22px' }}>
+          <pre style={{
+            ...MONO, fontSize: 13, lineHeight: 1.6, color: 'var(--text-primary)',
+            margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word',
             background: 'var(--bg-page)', border: '1px solid var(--border)',
-            borderRadius: 6, padding: '10px 12px',
-            resize: 'vertical', minHeight: 300, flex: 1,
-            outline: 'none',
-          }}
-        />
+            borderRadius: 10, padding: '16px 18px', minHeight: '100%',
+          }}>
+            {runnerExpand.value || '—'}
+          </pre>
+        </div>
       </div>
     </div>
   ) : null
@@ -1409,18 +1525,32 @@ function RunResultPanel({
       {/* Shared Blackboard — only rendered when agents have written to it */}
       {run.blackboard && Object.keys(run.blackboard).length > 0 && (
         <div style={{ padding: '12px 20px', borderTop: '1px solid var(--border)' }}>
-          <div style={{ ...MONO, fontSize: 10, color: 'var(--text-muted)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+          <div style={{
+            ...MONO, fontSize: 10, fontWeight: 600, color: 'var(--text-tertiary)',
+            marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.08em',
+          }}>
             Shared Blackboard
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {Object.entries(run.blackboard).map(([k, v]) => (
               <div key={k} style={{
-                display: 'flex', gap: 8, alignItems: 'flex-start',
-                background: `${TEAL}10`, border: `1px solid ${TEAL}30`,
-                borderRadius: 5, padding: '5px 8px',
+                display: 'flex', gap: 10, alignItems: 'flex-start',
+                background: 'var(--accent-soft)',
+                border: '1px solid var(--blue-border)',
+                borderRadius: 8, padding: '8px 12px',
               }}>
-                <span style={{ ...MONO, fontSize: 10, color: TEAL, fontWeight: 700, flexShrink: 0 }}>{k}</span>
-                <span style={{ ...MONO, fontSize: 10, color: 'var(--text-body)', flex: 1, wordBreak: 'break-all' }}>{typeof v === 'string' ? v : JSON.stringify(v)}</span>
+                <span style={{
+                  ...MONO, fontSize: 11, color: 'var(--accent-text)',
+                  fontWeight: 700, flexShrink: 0,
+                }}>
+                  {k}
+                </span>
+                <span style={{
+                  ...MONO, fontSize: 11, color: 'var(--text-primary)',
+                  flex: 1, wordBreak: 'break-word', lineHeight: 1.45,
+                }}>
+                  {typeof v === 'string' ? v : JSON.stringify(v)}
+                </span>
               </div>
             ))}
           </div>
@@ -1455,14 +1585,42 @@ function RunResultPanel({
 
 // ─── run history panel ────────────────────────────────────────────────────────
 
+function RunHistorySkeleton({ count = 3 }: { count?: number }) {
+  return (
+    <div aria-busy="true" aria-label="Loading run history" style={{ padding: '0 8px 10px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+      {Array.from({ length: count }).map((_, i) => {
+        const base = i * 0.06
+        return (
+          <div
+            key={i}
+            style={{
+              padding: '10px 12px',
+              borderRadius: 10,
+              background: 'var(--skeleton-card)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+              <Bone h={16} w={84} r={999} delay={base} />
+              <Bone h={11} w={56} delay={base + 0.04} style={{ marginLeft: 'auto' }} />
+            </div>
+            <Bone h={13} w="90%" delay={base + 0.06} style={{ marginBottom: 8 }} />
+            <Bone h={11} w="70%" delay={base + 0.1} />
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 function RunHistoryPanel({
-  runs, onSelectRun, selectedRunId, workflowId, onRunsChanged,
+  runs, onSelectRun, selectedRunId, workflowId, onRunsChanged, loading = false,
 }: {
   runs: WorkflowRun[]
   onSelectRun: (r: WorkflowRun) => void
   selectedRunId?: string
   workflowId: string
   onRunsChanged: () => void
+  loading?: boolean
 }) {
   const [showClearConfirm, setShowClearConfirm] = useState(false)
   const [deleteRunId, setDeleteRunId] = useState<string | null>(null)
@@ -1505,7 +1663,7 @@ function RunHistoryPanel({
         }}>
           Run History
         </span>
-        {runs.length > 0 && (
+        {!loading && runs.length > 0 && (
           <button
             type="button"
             onClick={() => setShowClearConfirm(true)}
@@ -1520,15 +1678,16 @@ function RunHistoryPanel({
         )}
       </div>
 
-      {runs.length === 0 && (
+      {loading ? (
+        <RunHistorySkeleton />
+      ) : runs.length === 0 ? (
         <div style={{
           padding: '16px 14px', color: 'var(--text-muted)', fontSize: 12,
           textAlign: 'center', ...SANS,
         }}>
           No runs yet
         </div>
-      )}
-
+      ) : (
       <div style={{ padding: '0 8px 10px', display: 'flex', flexDirection: 'column', gap: 6 }}>
         {runs.map(run => {
           const active = selectedRunId === run.run_id
@@ -1613,6 +1772,7 @@ function RunHistoryPanel({
           )
         })}
       </div>
+      )}
 
       {showClearConfirm && (
         <ConfirmModal
@@ -1973,9 +2133,9 @@ function WorkflowsCanvasSkeleton() {
       </div>
       <div style={{
         flex: 1,
-        background: 'var(--bg-page)',
-        backgroundImage: 'radial-gradient(var(--border) 1px, transparent 1px)',
-        backgroundSize: '24px 24px',
+        backgroundColor: 'var(--canvas-bg)',
+        backgroundImage: 'radial-gradient(circle, var(--canvas-dot) 1px, transparent 1.5px)',
+        backgroundSize: '20px 20px',
         padding: 40,
         display: 'flex',
         gap: 24,
@@ -2080,11 +2240,13 @@ export default function WorkflowsPage() {
 
   const selectedId = selected?.workflow_id ?? ''
 
-  const { data: runs = [] } = useQuery({
+  const { data: runs = [], isLoading: runsLoading, isFetching: runsFetching } = useQuery({
     queryKey: queryKeys.workflowRuns(selectedId),
     queryFn: () => listRuns(selectedId).catch(() => [] as WorkflowRun[]),
     enabled: !!selectedId,
   })
+
+  const runsBusy = !!selectedId && (runsLoading || (runsFetching && runs.length === 0))
 
   const loading = workflowsLoading
 
@@ -2909,6 +3071,7 @@ export default function WorkflowsPage() {
           }}>
             <RunHistoryPanel
               runs={runs}
+              loading={runsBusy}
               onSelectRun={r => {
                 setSelectedHistoryRun(r)
                 setCurrentRun(null)
@@ -3232,7 +3395,13 @@ export default function WorkflowsPage() {
         {/* Canvas */}
         <div
           className="wf-canvas-wrap"
-          style={{ flex: 1, overflow: 'auto', position: 'relative', minHeight: 0 }}
+          style={{
+            flex: 1, overflow: 'auto', position: 'relative', minHeight: 0,
+            backgroundColor: 'var(--canvas-bg)',
+            backgroundImage: 'radial-gradient(circle, var(--canvas-dot) 1px, transparent 1.5px)',
+            backgroundSize: '20px 20px',
+            backgroundPosition: '0 0',
+          }}
           onWheel={e => {
             if (!e.ctrlKey && !e.metaKey) return
             e.preventDefault()
@@ -3249,9 +3418,7 @@ export default function WorkflowsPage() {
             style={{
               position: 'relative',
               width: canvasW, height: canvasH,
-              background: 'var(--bg-page)',
-              backgroundImage: 'radial-gradient(var(--border) 1px, transparent 1px)',
-              backgroundSize: `${24 * zoom}px ${24 * zoom}px`,
+              background: 'transparent',
               cursor: connectingFrom ? 'crosshair' : 'default',
               transform: `scale(${zoom})`,
               transformOrigin: 'top left',

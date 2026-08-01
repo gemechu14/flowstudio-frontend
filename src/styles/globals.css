@@ -125,6 +125,10 @@
   --btn-upload-secondary-bg: #161B22;
   --btn-upload-secondary-border: rgba(240, 243, 246, 0.22);
   --btn-upload-secondary-text: #F0F3F6;
+
+  /* Workflow canvas */
+  --canvas-bg: var(--bg-page);
+  --canvas-dot: rgba(255, 255, 255, 0.14);
 }
 
 [data-theme="light"] {
@@ -221,6 +225,10 @@
   --btn-upload-secondary-bg: #FFFFFF;
   --btn-upload-secondary-border: rgba(11, 16, 32, 0.10);
   --btn-upload-secondary-text: #111827;
+
+  /* Workflow canvas — soft gray dotted paper */
+  --canvas-bg: #F7F8FA;
+  --canvas-dot: #C5CAD3;
 }
 
 [data-theme="dark"] {
@@ -318,6 +326,10 @@
   --btn-upload-secondary-bg: #161B22;
   --btn-upload-secondary-border: rgba(240, 243, 246, 0.22);
   --btn-upload-secondary-text: #F0F3F6;
+
+  /* Workflow canvas */
+  --canvas-bg: var(--bg-page);
+  --canvas-dot: rgba(255, 255, 255, 0.14);
 }
 
 /* Apply theme before React hydrates if script sets data-theme */
