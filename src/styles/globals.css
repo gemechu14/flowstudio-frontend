@@ -382,6 +382,85 @@ body {
   text-transform: uppercase;
 }
 
+/* ─── App toast (viewport-fixed via body portal) ─────────────── */
+.app-toast {
+  position: fixed !important;
+  top: 16px !important;
+  right: 16px !important;
+  left: auto !important;
+  bottom: auto !important;
+  z-index: 99999 !important;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  max-width: min(360px, calc(100vw - 32px));
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-primary, var(--text-dark));
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.14);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  pointer-events: auto;
+  animation: app-toast-in 0.22s ease-out;
+}
+
+[data-theme='dark'] .app-toast {
+  color: var(--text-light);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+}
+
+.app-toast[data-type='success'] {
+  border-color: var(--blue-border);
+}
+
+.app-toast[data-type='error'] {
+  border-color: rgba(239, 68, 68, 0.35);
+}
+
+.app-toast-icon {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.app-toast-close {
+  flex-shrink: 0;
+  margin: -4px -6px -4px 0;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary, var(--text-body));
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  padding: 4px 6px;
+  border-radius: 6px;
+}
+
+.app-toast-close:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary, var(--text-dark));
+}
+
+@keyframes app-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* ─── Scrollbar ─────────────────────────────────────────────── */
 ::-webkit-scrollbar {
   width: 6px;
@@ -1803,6 +1882,14 @@ optgroup {
     order: 2;
     justify-content: center;
     border-radius: 10px !important;
+  }
+
+  .wf-toolbar-actions > .wf-delete-btn.is-placeholder {
+    display: none !important;
+  }
+
+  .wf-toolbar-actions:not(:has(.wf-delete-btn:not(.is-placeholder))) > .wf-save-btn {
+    flex: 1 1 100% !important;
   }
 
   .wf-canvas-wrap:not(.wf-mobile-hide) {

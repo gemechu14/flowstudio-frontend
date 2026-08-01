@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { BASE_URL } from '../api/client'
 import ConfirmModal from '../components/ui/ConfirmModal'
+import { useToast } from '../components/ui/Toast'
 import { AgentRecord, listAgents } from '../api/agents'
 import {
   WorkflowRecord, WorkflowNode, WorkflowEdge, WorkflowRun, NodeRunResult, ExecutionMode,
@@ -2179,8 +2180,8 @@ export default function WorkflowsPage() {
   const [wfDesc, setWfDesc] = useState('')
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
   const [connectingFrom, setConnectingFrom] = useState<string | null>(null)
+  const { show: showToast } = useToast()
   const [saving, setSaving] = useState(false)
-  const [saveMsg, setSaveMsg] = useState('')
 
   // Port-drag state
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null)
@@ -2619,7 +2620,7 @@ export default function WorkflowsPage() {
   // ── save ─────────────────────────────────────────────────────────────────
 
   const saveWorkflow = async () => {
-    setSaving(true); setSaveMsg('')
+    setSaving(true)
     try {
       const body = {
         name: wfName || 'Untitled Workflow',
@@ -2642,10 +2643,9 @@ export default function WorkflowsPage() {
         return idx >= 0 ? prev.map((w, i) => i === idx ? wf : w) : [wf, ...prev]
       })
       invalidateDashboardStats()
-      setSaveMsg('Saved')
-      setTimeout(() => setSaveMsg(''), 2000)
+      showToast('success', 'Workflow saved successfully')
     } catch (e) {
-      setSaveMsg(`Error: ${e}`)
+      showToast('error', e instanceof Error ? e.message : String(e))
     } finally {
       setSaving(false)
     }
@@ -3203,7 +3203,7 @@ export default function WorkflowsPage() {
             <div className="wf-toolbar-actions" style={{
               display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, marginLeft: 'auto',
             }}>
-              <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+              <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', flexShrink: 0 }}>
                 <span style={{
                   position: 'absolute', left: 10, pointerEvents: 'none',
                   color: 'var(--accent-text)', fontSize: 13, lineHeight: 1,
@@ -3220,7 +3220,7 @@ export default function WorkflowsPage() {
                     background: 'var(--bg-card)', color: 'var(--text-primary)',
                     border: '1px solid var(--border)', borderRadius: 8,
                     cursor: 'pointer', outline: 'none', appearance: 'none',
-                    WebkitAppearance: 'none', minWidth: 200, maxWidth: 280,
+                    WebkitAppearance: 'none', width: 248,
                     backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2371717A' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
                     backgroundRepeat: 'no-repeat',
                     backgroundPosition: 'right 10px center',
@@ -3232,25 +3232,28 @@ export default function WorkflowsPage() {
                 </select>
               </div>
 
-              {selected && (
-                <button
-                  type="button"
-                  className="wf-delete-btn"
-                  onClick={() => doDeleteWorkflow(selected.workflow_id)}
-                  style={{
-                    ...SANS, fontSize: 13, fontWeight: 500,
-                    padding: '7px 14px', display: 'inline-flex', alignItems: 'center', gap: 7,
-                    background: 'var(--invalid-dim)', color: 'var(--invalid)',
-                    border: '1px solid rgba(239, 68, 68, 0.28)', borderRadius: 10, cursor: 'pointer',
-                  }}
-                >
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
-                    <path d="M9 4h6M10 4V3h4v1M5 7h14M8 7l.8 12.5a1.5 1.5 0 0 0 1.5 1.5h3.4a1.5 1.5 0 0 0 1.5-1.5L16 7" strokeLinecap="round" strokeLinejoin="round" />
-                    <path d="M10.5 11v5.5M13.5 11v5.5" strokeLinecap="round" />
-                  </svg>
-                  Delete
-                </button>
-              )}
+              <button
+                type="button"
+                className={`wf-delete-btn${!selected ? ' is-placeholder' : ''}`}
+                disabled={!selected}
+                onClick={() => { if (selected) doDeleteWorkflow(selected.workflow_id) }}
+                style={{
+                  ...SANS, fontSize: 13, fontWeight: 500,
+                  padding: '7px 14px', display: 'inline-flex', alignItems: 'center', gap: 7,
+                  background: 'var(--invalid-dim)', color: 'var(--invalid)',
+                  border: '1px solid rgba(239, 68, 68, 0.28)', borderRadius: 10,
+                  cursor: selected ? 'pointer' : 'default',
+                  visibility: selected ? 'visible' : 'hidden',
+                  pointerEvents: selected ? 'auto' : 'none',
+                  flexShrink: 0,
+                }}
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+                  <path d="M9 4h6M10 4V3h4v1M5 7h14M8 7l.8 12.5a1.5 1.5 0 0 0 1.5 1.5h3.4a1.5 1.5 0 0 0 1.5-1.5L16 7" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M10.5 11v5.5M13.5 11v5.5" strokeLinecap="round" />
+                </svg>
+                Delete
+              </button>
 
               <button
                 type="button"
@@ -3259,10 +3262,11 @@ export default function WorkflowsPage() {
                 disabled={saving}
                 style={{
                   ...SANS, fontSize: 13, fontWeight: 600,
-                  padding: '7px 14px', display: 'inline-flex', alignItems: 'center', gap: 6,
+                  padding: '7px 14px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                   background: 'var(--accent)', color: '#FFFFFF',
                   border: 'none', borderRadius: 8, cursor: saving ? 'wait' : 'pointer',
                   opacity: saving ? 0.7 : 1,
+                  minWidth: 108, flexShrink: 0,
                 }}
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
@@ -3271,10 +3275,6 @@ export default function WorkflowsPage() {
                 </svg>
                 {saving ? 'Saving…' : 'Save'}
               </button>
-
-              {saveMsg && (
-                <span style={{ ...SANS, fontSize: 12, color: 'var(--verified)' }}>{saveMsg}</span>
-              )}
             </div>
           </div>
 

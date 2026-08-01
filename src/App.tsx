@@ -19,6 +19,7 @@ import Profile from './pages/Profile'
 import Login from './pages/Login'
 import ErrorBoundary from './components/ErrorBoundary'
 import BackendErrorScreen from './components/BackendErrorScreen'
+import { ToastProvider } from './components/ui/Toast'
 
 function AppShell() {
   const { user, isLoading } = useAuth()
@@ -96,7 +97,9 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <AuthProvider>
-          <AppShell />
+          <ToastProvider>
+            <AppShell />
+          </ToastProvider>
         </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>
