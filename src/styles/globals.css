@@ -1555,6 +1555,22 @@ optgroup {
   display: none;
 }
 
+.wf-list-item:not(.is-active):hover,
+.wf-run-item:not(.is-active):hover {
+  background: var(--bg-hover) !important;
+}
+
+.wf-run-item:hover .wf-run-delete {
+  opacity: 1 !important;
+}
+
+@media (max-width: 900px) {
+  .wf-agent-inspector {
+    width: min(100vw, 520px) !important;
+    max-width: 94vw !important;
+  }
+}
+
 @media (max-width: 1100px) {
   .wf-page {
     flex-direction: column !important;
@@ -1614,22 +1630,33 @@ optgroup {
   }
 
   .wf-list-item {
-    padding: 14px 16px !important;
+    padding: 14px 14px !important;
   }
 
   .wf-run-history {
-    max-height: 180px !important;
+    max-height: 38% !important;
+    min-height: 180px !important;
   }
 
   .wf-toolbar {
-    padding: 12px 16px !important;
-    gap: 8px !important;
+    padding: 0 !important;
+    gap: 0 !important;
+  }
+
+  .wf-toolbar-top {
+    padding: 14px 16px !important;
+    gap: 12px !important;
+  }
+
+  .wf-toolbar-bottom {
+    padding: 10px 16px !important;
+    gap: 10px !important;
   }
 
   .wf-name-input {
     min-width: 0 !important;
-    width: 100% !important;
-    flex: 1 1 100% !important;
+    width: auto !important;
+    flex: 1 1 auto !important;
     font-size: 16px !important;
   }
 
@@ -1640,23 +1667,31 @@ optgroup {
   .wf-desc-input {
     min-width: 0 !important;
     width: 100% !important;
-    flex: 1 1 100% !important;
+    flex: 1 1 auto !important;
   }
 
   .wf-toolbar-actions {
     display: flex !important;
     width: 100%;
+    margin-left: 0 !important;
     gap: 8px;
+    flex-wrap: wrap;
   }
 
   .wf-toolbar-actions > button,
+  .wf-toolbar-actions > div,
   .wf-save-btn,
   .wf-delete-btn {
-    flex: 1 1 0;
+    flex: 1 1 auto;
     min-height: 40px;
     justify-content: center;
     border-radius: 10px !important;
-    padding: 8px 12px !important;
+  }
+
+  .wf-toolbar-view {
+    width: 100%;
+    margin-left: 0 !important;
+    justify-content: space-between;
   }
 
   .wf-canvas-wrap {

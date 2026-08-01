@@ -71,12 +71,38 @@ const fmt = (iso: string | null | undefined) => {
   } catch { return '—' }
 }
 
+const relativeTime = (iso: string | null | undefined) => {
+  if (!iso) return ''
+  try {
+    const sec = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 1000))
+    if (sec < 60) return `${sec}s ago`
+    const min = Math.floor(sec / 60)
+    if (min < 60) return `${min}m ago`
+    const hr = Math.floor(min / 60)
+    if (hr < 24) return `${hr}h ago`
+    const day = Math.floor(hr / 24)
+    if (day < 30) return `${day}d ago`
+    return fmt(iso)
+  } catch { return '' }
+}
+
 const elapsed = (start: string | null, end: string | null): string => {
   if (!start || !end) return ''
   const ms = new Date(end).getTime() - new Date(start).getTime()
   if (ms < 1000) return `${ms}ms`
-  return `${(ms / 1000).toFixed(1)}s`
+  const totalSec = Math.floor(ms / 1000)
+  if (totalSec < 60) return `${totalSec}s`
+  const m = Math.floor(totalSec / 60)
+  const s = totalSec % 60
+  if (m < 60) return s > 0 ? `${m}m ${s}s` : `${m}m`
+  const h = Math.floor(m / 60)
+  const remM = m % 60
+  return remM > 0 ? `${h}h ${remM}m` : `${h}h`
 }
+
+const formatTokens = (n: number) => n.toLocaleString('en-US')
+
+const modeShort = (mode: string) => (mode || '').replace(/_/g, ' ')
 
 // ─── sub-components ──────────────────────────────────────────────────────────
 
@@ -764,6 +790,273 @@ function CanvasNodeCard({
 
 // ─── run result panel ─────────────────────────────────────────────────────────
 
+const elapsedSec = (start: string | null, end: string | null): string => {
+  if (!start || !end) return '—'
+  const ms = new Date(end).getTime() - new Date(start).getTime()
+  if (ms < 0) return '—'
+  const s = ms / 1000
+  if (s < 60) return `${s.toFixed(1)}s`
+  return elapsed(start, end)
+}
+
+function StatusPill({ status }: { status: string }) {
+  const meta =
+    status === 'completed' ? { color: 'var(--accent-text)', bg: 'transparent', icon: '✓', label: 'COMPLETED', bare: true }
+    : status === 'running' ? { color: 'var(--accent-text)', bg: 'var(--accent-soft)', icon: '◌', label: 'RUNNING', bare: false }
+    : status === 'awaiting_checkpoint' || status === 'pending' ? {
+        color: status === 'pending' ? 'var(--text-tertiary)' : '#7C3AED',
+        bg: status === 'pending' ? 'var(--bg-hover)' : 'rgba(124, 58, 237, 0.12)',
+        icon: status === 'pending' ? '○' : '⏸',
+        label: status === 'pending' ? 'PENDING' : 'CHECKPOINT',
+        bare: false,
+      }
+    : status === 'skipped' ? { color: 'var(--text-tertiary)', bg: 'var(--bg-hover)', icon: '–', label: 'SKIPPED', bare: false }
+    : { color: 'var(--invalid)', bg: 'var(--invalid-dim)', icon: '✗', label: 'FAILED', bare: false }
+
+  return (
+    <span style={{
+      ...SANS, fontSize: 10, fontWeight: 700, letterSpacing: '0.04em',
+      padding: meta.bare ? 0 : '3px 8px', borderRadius: meta.bare ? 0 : 999,
+      background: meta.bg, color: meta.color,
+      display: 'inline-flex', alignItems: 'center', gap: 4,
+      animation: status === 'running' ? 'pulse 1s infinite' : undefined,
+      whiteSpace: 'nowrap',
+    }}>
+      <span aria-hidden>{meta.icon}</span>
+      {meta.label}
+    </span>
+  )
+}
+
+function AgentInspector({
+  nr, tab, onTabChange, onClose, onExpand,
+}: {
+  nr: NodeRunResult
+  tab: 'system' | 'input' | 'output'
+  onTabChange: (t: 'system' | 'input' | 'output') => void
+  onClose: () => void
+  onExpand: (label: string, value: string) => void
+}) {
+  const [copied, setCopied] = useState(false)
+  const [visible, setVisible] = useState(false)
+
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setVisible(true))
+    return () => cancelAnimationFrame(id)
+  }, [])
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setVisible(false)
+        setTimeout(onClose, 220)
+      }
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+    // intentionally only bind once; onClose clears inspect state
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const handleClose = () => {
+    setVisible(false)
+    setTimeout(onClose, 220)
+  }
+
+  const content =
+    tab === 'system' ? (nr.system_prompt_used || '')
+    : tab === 'input' ? (nr.input_text || '')
+    : (nr.output_text || '')
+  const lineCount = content ? content.split('\n').length : 0
+  const duration = elapsedSec(nr.started_at, nr.completed_at)
+  const tokens = nr.input_tokens + nr.output_tokens
+
+  const tabs: Array<{ id: 'system' | 'input' | 'output'; label: string }> = [
+    { id: 'system', label: 'System' },
+    { id: 'input', label: 'Input' },
+    { id: 'output', label: 'Output' },
+  ]
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(content)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1200)
+    } catch { /* ignore */ }
+  }
+
+  return (
+    <>
+      <div
+        className="wf-agent-inspector-backdrop"
+        onClick={handleClose}
+        style={{
+          position: 'fixed', inset: 0,
+          background: 'rgba(8,12,24,0.35)',
+          zIndex: 100,
+          opacity: visible ? 1 : 0,
+          transition: 'opacity 0.22s ease',
+        }}
+      />
+
+      <div
+        className="wf-agent-inspector"
+        role="dialog"
+        aria-label="Agent Inspector"
+        style={{
+          position: 'fixed', top: 0, right: 0, bottom: 0,
+          width: 520, maxWidth: '94vw',
+          background: 'var(--bg-surface)',
+          zIndex: 101,
+          boxShadow: 'var(--shadow-panel)',
+          display: 'flex', flexDirection: 'column',
+          transform: visible ? 'translateX(0)' : 'translateX(100%)',
+          transition: 'transform 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
+          ...SANS,
+        }}
+      >
+        {/* Header — matches New Agent panel */}
+        <div style={{
+          padding: '20px 24px',
+          borderBottom: '1px solid var(--border)',
+          background: 'var(--bg-page)',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+          flexShrink: 0,
+        }}>
+          <div style={{ minWidth: 0 }}>
+            <div style={{
+              ...MONO, fontSize: 10, fontWeight: 600,
+              letterSpacing: '0.12em', textTransform: 'uppercase',
+              color: 'var(--text-tertiary)', marginBottom: 4,
+            }}>
+              Agent Inspector
+            </div>
+            <div style={{
+              ...MONO, fontSize: 15, fontWeight: 700, color: 'var(--text-heading)',
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            }}>
+              {nr.node_label || nr.node_id}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 10, flexWrap: 'wrap' }}>
+              <StatusPill status={nr.status} />
+              <span style={{ ...SANS, fontSize: 12, color: 'var(--text-tertiary)' }}>{duration}</span>
+              <span style={{ ...SANS, fontSize: 12, color: 'var(--text-tertiary)' }}>
+                {formatTokens(tokens)} tok
+              </span>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={handleClose}
+            style={{
+              ...SANS,
+              background: 'var(--bg-hover)',
+              border: '1px solid var(--border)',
+              borderRadius: 8, color: 'var(--text-secondary)',
+              cursor: 'pointer', padding: '5px 10px', fontSize: 12, flexShrink: 0,
+            }}
+          >
+            ✕ Close
+          </button>
+        </div>
+
+        {/* Tabs */}
+        <div style={{
+          padding: '0 24px', display: 'flex', gap: 0, flexShrink: 0,
+          borderBottom: '1px solid var(--border)',
+          background: 'var(--bg-page)',
+        }}>
+          {tabs.map(t => {
+            const active = tab === t.id
+            return (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => onTabChange(t.id)}
+                style={{
+                  ...SANS, fontSize: 13, fontWeight: active ? 600 : 500,
+                  padding: '12px 14px', cursor: 'pointer',
+                  border: 'none',
+                  borderBottom: active ? '2px solid var(--accent)' : '2px solid transparent',
+                  marginBottom: -1,
+                  background: 'transparent',
+                  color: active ? 'var(--accent-text)' : 'var(--text-tertiary)',
+                }}
+              >
+                {t.label}
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Body */}
+        <div style={{
+          flex: 1, minHeight: 0, overflow: 'auto',
+          padding: '20px 24px 24px',
+          display: 'flex', flexDirection: 'column', gap: 12,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{
+              ...MONO, fontSize: 10, fontWeight: 600, color: 'var(--text-tertiary)',
+              letterSpacing: '0.08em', textTransform: 'uppercase',
+            }}>
+              {lineCount} lines
+            </span>
+            <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+              <button
+                type="button"
+                onClick={copy}
+                title={copied ? 'Copied' : 'Copy'}
+                style={{
+                  ...SANS, fontSize: 12, padding: '5px 10px',
+                  background: 'var(--bg-hover)', border: '1px solid var(--border)', borderRadius: 8,
+                  color: copied ? 'var(--verified)' : 'var(--text-secondary)', cursor: 'pointer',
+                }}
+              >
+                {copied ? 'Copied' : 'Copy'}
+              </button>
+              <button
+                type="button"
+                onClick={() => onExpand(
+                  `${nr.node_label || nr.node_id} — ${tab[0].toUpperCase()}${tab.slice(1)}`,
+                  content,
+                )}
+                title="Expand"
+                style={{
+                  ...SANS, fontSize: 12, padding: '5px 10px',
+                  background: 'var(--bg-hover)', border: '1px solid var(--border)', borderRadius: 8,
+                  color: 'var(--text-secondary)', cursor: 'pointer',
+                }}
+              >
+                Expand
+              </button>
+            </div>
+          </div>
+
+          {nr.error_message && tab === 'output' && (
+            <div style={{
+              padding: '8px 10px',
+              background: 'var(--invalid-dim)', border: '1px solid rgba(239, 68, 68, 0.3)',
+              borderRadius: 8, color: 'var(--invalid)', fontSize: 12, ...SANS,
+            }}>
+              {nr.error_message}
+            </div>
+          )}
+
+          <pre style={{
+            ...MONO, fontSize: 12, lineHeight: 1.55, color: 'var(--text-primary)',
+            margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+            background: 'var(--bg-page)', border: '1px solid var(--border)',
+            borderRadius: 8, padding: '14px 16px', flex: 1,
+          }}>
+            {content || '—'}
+          </pre>
+        </div>
+      </div>
+    </>
+  )
+}
+
 function RunResultPanel({
   run, workflowId, onClose, onResumed,
 }: {
@@ -772,15 +1065,14 @@ function RunResultPanel({
   onClose: () => void
   onResumed: (updated: WorkflowRun) => void
 }) {
-  const [expanded, setExpanded] = useState<string | null>(null)
   const [checkpoint, setCheckpoint] = useState<CheckpointInfo | null>(null)
   const [humanInput, setHumanInput] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [resumeError, setResumeError] = useState('')
   const [runnerExpand, setRunnerExpand] = useState<{ label: string; value: string } | null>(null)
   const [showEmptyConfirm, setShowEmptyConfirm] = useState(false)
+  const [inspect, setInspect] = useState<{ nodeId: string; tab: 'system' | 'input' | 'output' } | null>(null)
 
-  // Fetch checkpoint detail when status changes to awaiting
   useEffect(() => {
     if (run.status === 'awaiting_checkpoint') {
       getCheckpoint(workflowId, run.run_id)
@@ -790,6 +1082,10 @@ function RunResultPanel({
       setCheckpoint(null)
     }
   }, [run.status, run.run_id, workflowId])
+
+  useEffect(() => {
+    setInspect(null)
+  }, [run.run_id])
 
   const doResume = async () => {
     setShowEmptyConfirm(false)
@@ -811,17 +1107,13 @@ function RunResultPanel({
     doResume()
   }
 
-  const statusColor =
-    run.status === 'completed' ? '#10B981'
-    : run.status === 'awaiting_checkpoint' ? '#7C3AED'
-    : run.status === 'running' ? '#3B82F6'
-    : '#EF4444'
+  const openInspect = (nr: NodeRunResult, tab: 'system' | 'input' | 'output') => {
+    setInspect({ nodeId: nr.node_id, tab })
+  }
 
-  const statusIcon =
-    run.status === 'completed' ? '✓'
-    : run.status === 'awaiting_checkpoint' ? '⏸'
-    : run.status === 'running' ? '◌'
-    : '✗'
+  const inspectingNr = inspect
+    ? run.node_results.find(n => n.node_id === inspect.nodeId) ?? null
+    : null
 
   const expandModal = runnerExpand ? (
     <div
@@ -861,6 +1153,9 @@ function RunResultPanel({
     </div>
   ) : null
 
+  const totalTokens = run.total_input_tokens + run.total_output_tokens
+  const runDuration = elapsed(run.started_at, run.completed_at)
+
   return (
     <>
     <div style={{
@@ -871,28 +1166,49 @@ function RunResultPanel({
     }}>
       <div style={{
         padding: '12px 20px',
-        display: 'flex', alignItems: 'center', gap: 10,
+        display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
         position: 'sticky', top: 0, background: 'var(--bg-card)',
         borderBottom: '1px solid var(--border)', zIndex: 1,
       }}>
-        <span style={{
-          fontSize: 12, fontWeight: 700, color: 'var(--text-heading)', flex: 1,
-        }}>
-          Run result — {run.execution_mode}
-          <span style={{ ...MONO, fontSize: 10, marginLeft: 8, color: statusColor }}>
-            {statusIcon} {run.status}
-          </span>
+        <span style={{ ...SANS, fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>
+          Run result
         </span>
-        <span style={{ ...MONO, fontSize: 10, color: 'var(--text-muted)' }}>
-          {run.total_input_tokens + run.total_output_tokens} tokens
+        <StatusPill status={run.status} />
+        {runDuration && (
+          <span style={{
+            ...SANS, fontSize: 12, color: 'var(--text-tertiary)',
+            display: 'inline-flex', alignItems: 'center', gap: 5,
+          }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+              <circle cx="12" cy="12" r="9" />
+              <path d="M12 7v5l3 2" strokeLinecap="round" />
+            </svg>
+            {runDuration}
+          </span>
+        )}
+        <span style={{
+          ...SANS, fontSize: 12, color: 'var(--text-tertiary)',
+          display: 'inline-flex', alignItems: 'center', gap: 5,
+        }}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+            <path d="M12 3l2.2 4.5L19 8.2l-3.5 3.4.8 4.9L12 14.8 7.7 16.5l.8-4.9L5 8.2l4.8-.7L12 3z" strokeLinejoin="round" />
+          </svg>
+          {formatTokens(totalTokens)} tok
         </span>
         <button
+          type="button"
           onClick={onClose}
           style={{
-            background: 'none', border: 'none', color: 'var(--text-muted)',
-            cursor: 'pointer', fontSize: 14,
+            ...SANS, fontSize: 12, fontWeight: 500, marginLeft: 'auto',
+            background: 'none', border: 'none', color: 'var(--text-secondary)',
+            cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 2px',
           }}
-        >×</button>
+        >
+          Collapse
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden>
+            <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
       </div>
 
       {/* HITL checkpoint panel */}
@@ -953,99 +1269,124 @@ function RunResultPanel({
         </div>
       )}
 
-      {/* Node results */}
-      {run.node_results.map(nr => (
-        <div key={nr.result_id || nr.node_id} style={{
-          borderBottom: '1px solid var(--border)',
-        }}>
-          <div
-            onClick={() => setExpanded(expanded === nr.node_id ? null : nr.node_id)}
-            style={{
-              padding: '10px 20px', display: 'flex', alignItems: 'center',
-              gap: 8, cursor: 'pointer',
-              background: expanded === nr.node_id ? 'var(--bg-page)' : 'transparent',
-            }}
-          >
-            <StatusBadge status={nr.status as NodeStatus} />
-            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-heading)', flex: 1 }}>
-              {nr.node_label || nr.node_id}
-            </span>
-            {nr.started_at && nr.completed_at && (
-              <span style={{ ...MONO, fontSize: 10, color: 'var(--text-muted)' }}>
-                {elapsed(nr.started_at, nr.completed_at)}
-              </span>
-            )}
-            <span style={{ ...MONO, fontSize: 10, color: 'var(--text-muted)' }}>
-              {nr.input_tokens + nr.output_tokens} tok
-            </span>
-            <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>
-              {expanded === nr.node_id ? '▲' : '▼'}
-            </span>
-          </div>
-
-          {expanded === nr.node_id && (
-            <div style={{ padding: '0 20px 14px', background: 'var(--bg-page)' }}>
-              {nr.error_message && (
-                <div style={{
-                  marginBottom: 8, padding: '8px 10px',
-                  background: '#EF444420', border: '1px solid #EF444440',
-                  borderRadius: 6, color: '#EF4444', fontSize: 12,
-                }}>
-                  {nr.error_message}
-                </div>
-              )}
-              {nr.system_prompt_used && (
-                <div style={{ marginBottom: 8 }}>
-                  <div style={{ ...MONO, fontSize: 10, color: '#7C3AED', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
-                    SYSTEM
-                    <button onClick={() => setRunnerExpand({ label: `${nr.node_label || nr.node_id} — System Prompt`, value: nr.system_prompt_used! })} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#7C3AED', fontSize: 11, padding: 0, lineHeight: 1 }}>↗</button>
-                  </div>
-                  <div style={{
-                    ...MONO, fontSize: 11, color: 'var(--text-body)',
-                    background: '#7C3AED08', padding: '8px 10px',
-                    borderRadius: 6, border: '1px solid #7C3AED30',
-                    whiteSpace: 'pre-wrap', maxHeight: 80, overflow: 'auto',
-                  }}>
-                    {nr.system_prompt_used}
-                  </div>
-                </div>
-              )}
-              {nr.input_text && (
-                <div style={{ marginBottom: 8 }}>
-                  <div style={{ ...MONO, fontSize: 10, color: 'var(--text-muted)', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
-                    INPUT
-                    <button onClick={() => setRunnerExpand({ label: `${nr.node_label || nr.node_id} — Input`, value: nr.input_text })} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 11, padding: 0, lineHeight: 1 }}>↗</button>
-                  </div>
-                  <div style={{
-                    ...MONO, fontSize: 11, color: 'var(--text-body)',
-                    background: 'var(--bg-card)', padding: '8px 10px',
-                    borderRadius: 6, border: '1px solid var(--border)',
-                    whiteSpace: 'pre-wrap', maxHeight: 100, overflow: 'auto',
-                  }}>
-                    {nr.input_text}
-                  </div>
-                </div>
-              )}
-              {nr.output_text && (
-                <div>
-                  <div style={{ ...MONO, fontSize: 10, color: 'var(--text-muted)', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
-                    OUTPUT
-                    <button onClick={() => setRunnerExpand({ label: `${nr.node_label || nr.node_id} — Output`, value: nr.output_text })} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 11, padding: 0, lineHeight: 1 }}>↗</button>
-                  </div>
-                  <div style={{
-                    ...MONO, fontSize: 11, color: 'var(--text-body)',
-                    background: 'var(--bg-card)', padding: '8px 10px',
-                    borderRadius: 6, border: '1px solid var(--border)',
-                    whiteSpace: 'pre-wrap', maxHeight: 160, overflow: 'auto',
-                  }}>
-                    {nr.output_text}
-                  </div>
-                </div>
-              )}
+      {/* Node results table */}
+      <div style={{ overflowX: 'auto' }}>
+        <div
+          className="wf-run-result-table"
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'minmax(160px, 1.6fr) 120px 72px 88px 110px',
+            minWidth: 560,
+            ...SANS,
+          }}
+        >
+          {['AGENT', 'STATUS', 'TIME', 'TOKENS', 'VIEW'].map(h => (
+            <div
+              key={h}
+              style={{
+                padding: '10px 16px',
+                fontSize: 10,
+                fontWeight: 600,
+                letterSpacing: '0.08em',
+                color: 'var(--text-tertiary)',
+                borderBottom: '1px solid var(--border)',
+                textAlign: h === 'VIEW' ? 'right' : 'left',
+              }}
+            >
+              {h}
             </div>
-          )}
+          ))}
+
+          {run.node_results.map(nr => {
+            const active = inspect?.nodeId === nr.node_id
+            return (
+              <div
+                key={nr.result_id || nr.node_id}
+                style={{ display: 'contents' }}
+              >
+                <div
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => openInspect(nr, 'system')}
+                  onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openInspect(nr, 'system') } }}
+                  title="Open system prompt"
+                  style={{
+                    padding: '12px 16px',
+                    borderBottom: '1px solid var(--border)',
+                    display: 'flex', alignItems: 'center', gap: 8, minWidth: 0,
+                    background: active ? 'var(--accent-soft)' : 'transparent',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--accent)" aria-hidden style={{ flexShrink: 0 }}>
+                    <path d="M12 2l1.8 5.6L20 9.4l-4.6 3.4L16.8 19 12 15.8 7.2 19l1.4-6.2L4 9.4l6.2-1.8L12 2z" />
+                  </svg>
+                  <span style={{
+                    ...MONO, fontSize: 12,
+                    color: active && inspect?.tab === 'system' ? 'var(--accent-text)' : 'var(--text-primary)',
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  }}>
+                    {nr.node_label || nr.node_id}
+                  </span>
+                </div>
+                <div style={{
+                  padding: '12px 16px', borderBottom: '1px solid var(--border)',
+                  display: 'flex', alignItems: 'center',
+                  background: active ? 'var(--accent-soft)' : 'transparent',
+                }}>
+                  <StatusPill status={nr.status} />
+                </div>
+                <div style={{
+                  padding: '12px 16px', borderBottom: '1px solid var(--border)',
+                  ...MONO, fontSize: 12, color: 'var(--text-secondary)',
+                  display: 'flex', alignItems: 'center',
+                  background: active ? 'var(--accent-soft)' : 'transparent',
+                }}>
+                  {elapsedSec(nr.started_at, nr.completed_at)}
+                </div>
+                <div style={{
+                  padding: '12px 16px', borderBottom: '1px solid var(--border)',
+                  ...MONO, fontSize: 12, color: 'var(--text-secondary)',
+                  display: 'flex', alignItems: 'center',
+                  background: active ? 'var(--accent-soft)' : 'transparent',
+                }}>
+                  {formatTokens(nr.input_tokens + nr.output_tokens)}
+                </div>
+                <div style={{
+                  padding: '12px 16px', borderBottom: '1px solid var(--border)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 12,
+                  background: active ? 'var(--accent-soft)' : 'transparent',
+                }}>
+                  <button
+                    type="button"
+                    onClick={() => openInspect(nr, 'input')}
+                    style={{
+                      ...SANS, fontSize: 12, fontWeight: 500, padding: 0,
+                      background: 'none', border: 'none', cursor: 'pointer',
+                      color: inspect?.nodeId === nr.node_id && inspect.tab === 'input'
+                        ? 'var(--accent-text)' : 'var(--text-secondary)',
+                    }}
+                  >
+                    input
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => openInspect(nr, 'output')}
+                    style={{
+                      ...SANS, fontSize: 12, fontWeight: 500, padding: 0,
+                      background: 'none', border: 'none', cursor: 'pointer',
+                      color: inspect?.nodeId === nr.node_id && inspect.tab === 'output'
+                        ? 'var(--accent-text)' : 'var(--text-secondary)',
+                    }}
+                  >
+                    output
+                  </button>
+                </div>
+              </div>
+            )
+          })}
         </div>
-      ))}
+      </div>
 
       {/* Final output */}
       {run.final_output && (
@@ -1087,6 +1428,16 @@ function RunResultPanel({
       )}
     </div>
 
+      {inspectingNr && inspect && (
+        <AgentInspector
+          nr={inspectingNr}
+          tab={inspect.tab}
+          onTabChange={tab => setInspect({ nodeId: inspect.nodeId, tab })}
+          onClose={() => setInspect(null)}
+          onExpand={(label, value) => setRunnerExpand({ label, value })}
+        />
+      )}
+
       {expandModal}
 
       {showEmptyConfirm && (
@@ -1114,19 +1465,27 @@ function RunHistoryPanel({
   onRunsChanged: () => void
 }) {
   const [showClearConfirm, setShowClearConfirm] = useState(false)
+  const [deleteRunId, setDeleteRunId] = useState<string | null>(null)
 
-  const statusColor = (s: string) =>
-    s === 'completed' ? '#10B981' : s === 'running' ? '#3B82F6' : s === 'awaiting_checkpoint' ? '#7C3AED' : '#EF4444'
-  const statusIcon = (s: string) =>
-    s === 'completed' ? '✓' : s === 'running' ? '◌' : s === 'awaiting_checkpoint' ? '⏸' : '✗'
+  const statusMeta = (s: string) => {
+    if (s === 'completed') return { color: 'var(--accent-text)', bg: 'transparent', icon: '✓', label: 'COMPLETED', bare: true }
+    if (s === 'running') return { color: 'var(--accent-text)', bg: 'var(--accent-soft)', icon: '◌', label: 'RUNNING', bare: false }
+    if (s === 'awaiting_checkpoint') return { color: '#7C3AED', bg: 'rgba(124, 58, 237, 0.12)', icon: '⏸', label: 'CHECKPOINT', bare: false }
+    return { color: 'var(--invalid)', bg: 'var(--invalid-dim)', icon: '✗', label: 'FAILED', bare: false }
+  }
 
-  const handleDeleteRun = async (e: React.MouseEvent, runId: string) => {
+  const requestDeleteRun = (e: React.MouseEvent, runId: string) => {
     e.stopPropagation()
+    setDeleteRunId(runId)
+  }
+
+  const confirmDeleteRun = async () => {
+    if (!deleteRunId) return
+    const runId = deleteRunId
+    setDeleteRunId(null)
     await deleteRun(workflowId, runId)
     onRunsChanged()
   }
-
-  const handleClearAll = () => setShowClearConfirm(true)
 
   const confirmClearAll = async () => {
     setShowClearConfirm(false)
@@ -1135,73 +1494,141 @@ function RunHistoryPanel({
   }
 
   return (
-    <div>
-      {runs.length > 0 && (
-        <div style={{ padding: '6px 14px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end' }}>
+    <div className="wf-run-history-inner">
+      <div style={{
+        padding: '10px 14px 8px',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      }}>
+        <span style={{
+          ...SANS, fontSize: 11, fontWeight: 600, color: 'var(--text-tertiary)',
+          letterSpacing: '0.08em', textTransform: 'uppercase',
+        }}>
+          Run History
+        </span>
+        {runs.length > 0 && (
           <button
-            onClick={handleClearAll}
+            type="button"
+            onClick={() => setShowClearConfirm(true)}
             style={{
-              ...MONO, fontSize: 10, padding: '2px 8px',
-              background: 'none', border: '1px solid #EF4444',
-              color: '#EF4444', borderRadius: 4, cursor: 'pointer',
+              ...SANS, fontSize: 12, fontWeight: 500, padding: 0,
+              background: 'none', border: 'none',
+              color: 'var(--invalid)', cursor: 'pointer',
             }}
           >
-            Clear all + memory
+            Clear
           </button>
-        </div>
-      )}
+        )}
+      </div>
+
       {runs.length === 0 && (
-        <div style={{ padding: 16, color: 'var(--text-muted)', fontSize: 12, textAlign: 'center' }}>
+        <div style={{
+          padding: '16px 14px', color: 'var(--text-muted)', fontSize: 12,
+          textAlign: 'center', ...SANS,
+        }}>
           No runs yet
         </div>
       )}
-      {runs.map(run => (
-        <div
-          key={run.run_id}
-          onClick={() => onSelectRun(run)}
-          style={{
-            padding: '10px 14px',
-            borderBottom: '1px solid var(--border)',
-            cursor: 'pointer',
-            background: selectedRunId === run.run_id ? 'var(--bg-page)' : 'transparent',
-            position: 'relative',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
-            <span style={{ ...MONO, fontSize: 11, fontWeight: 700, color: statusColor(run.status) }}>
-              {statusIcon(run.status)}
-            </span>
-            <Chip label={run.execution_mode} color={statusColor(run.status)} />
-            <button
-              onClick={e => handleDeleteRun(e, run.run_id)}
-              title="Delete this run"
+
+      <div style={{ padding: '0 8px 10px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {runs.map(run => {
+          const active = selectedRunId === run.run_id
+          const meta = statusMeta(run.status)
+          const duration = elapsed(run.started_at, run.completed_at)
+          const tokens = run.total_input_tokens + run.total_output_tokens
+          return (
+            <div
+              key={run.run_id}
+              className={`wf-run-item${active ? ' is-active' : ''}`}
+              onClick={() => onSelectRun(run)}
               style={{
-                marginLeft: 'auto', background: 'none', border: 'none',
-                color: 'var(--text-muted)', cursor: 'pointer', fontSize: 14,
-                lineHeight: 1, padding: '0 2px',
+                padding: '10px 12px',
+                cursor: 'pointer',
+                borderRadius: 10,
+                border: active ? '1px solid var(--blue-border)' : '1px solid transparent',
+                background: active ? 'var(--accent-soft)' : 'transparent',
+                position: 'relative',
               }}
-            >×</button>
-          </div>
-          <div style={{ ...MONO, fontSize: 10, color: 'var(--text-muted)' }}>
-            {fmt(run.started_at)} · {run.total_input_tokens + run.total_output_tokens} tok
-          </div>
-          {run.initial_input && (
-            <div style={{
-              fontSize: 11, color: 'var(--text-body)', marginTop: 3,
-              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-            }}>
-              {run.initial_input.slice(0, 60)}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                <span style={{
+                  ...SANS, fontSize: 10, fontWeight: 700, letterSpacing: '0.04em',
+                  padding: meta.bare ? 0 : '3px 8px', borderRadius: meta.bare ? 0 : 999,
+                  background: meta.bg, color: meta.color,
+                  display: 'inline-flex', alignItems: 'center', gap: 4,
+                }}>
+                  <span aria-hidden>{meta.icon}</span>
+                  {meta.label}
+                </span>
+                <span style={{
+                  ...SANS, fontSize: 11, color: 'var(--text-tertiary)', marginLeft: 'auto',
+                  fontVariantNumeric: 'tabular-nums',
+                }}>
+                  {formatTokens(tokens)} tok
+                </span>
+                <button
+                  type="button"
+                  onClick={e => requestDeleteRun(e, run.run_id)}
+                  title="Delete this run"
+                  className="wf-run-delete"
+                  style={{
+                    background: 'none', border: 'none',
+                    color: 'var(--text-muted)', cursor: 'pointer', fontSize: 14,
+                    lineHeight: 1, padding: '0 2px', opacity: 0.55,
+                  }}
+                >×</button>
+              </div>
+
+              {run.initial_input ? (
+                <div style={{
+                  ...SANS, fontSize: 13, fontWeight: 500, color: 'var(--text-primary)',
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  marginBottom: 6, lineHeight: 1.35,
+                }}>
+                  {run.initial_input}
+                </div>
+              ) : (
+                <div style={{
+                  ...SANS, fontSize: 13, fontWeight: 500, color: 'var(--text-tertiary)',
+                  marginBottom: 6, fontStyle: 'italic',
+                }}>
+                  (no input)
+                </div>
+              )}
+
+              <div style={{
+                ...SANS, fontSize: 11, color: 'var(--text-tertiary)',
+                display: 'flex', flexWrap: 'wrap', gap: 0, alignItems: 'center',
+              }}>
+                <span>{fmt(run.started_at)}</span>
+                {duration && (
+                  <>
+                    <span style={{ margin: '0 6px', opacity: 0.55 }}>·</span>
+                    <span>{duration}</span>
+                  </>
+                )}
+                <span style={{ margin: '0 6px', opacity: 0.55 }}>·</span>
+                <span>{modeShort(run.execution_mode)}</span>
+              </div>
             </div>
-          )}
-        </div>
-      ))}
+          )
+        })}
+      </div>
 
       {showClearConfirm && (
         <ConfirmModal
-          message="Delete all run history and clear agent memory for this workflow? This cannot be undone."
+          message="Are you sure you want to clear all run history and agent memory for this workflow? This action cannot be undone."
           confirmLabel="Clear All"
           onConfirm={confirmClearAll}
           onClose={() => setShowClearConfirm(false)}
+        />
+      )}
+
+      {deleteRunId && (
+        <ConfirmModal
+          message="Are you sure you want to delete this run? This action cannot be undone."
+          confirmLabel="Delete Run"
+          onConfirm={confirmDeleteRun}
+          onClose={() => setDeleteRunId(null)}
         />
       )}
     </div>
@@ -1488,23 +1915,25 @@ function Bone({
 function WorkflowsListSkeleton({ count = 6 }: { count?: number }) {
   const widths = [130, 150, 110, 140, 120, 155]
   return (
-    <div aria-busy="true" aria-label="Loading workflows">
+    <div aria-busy="true" aria-label="Loading workflows" style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
       {Array.from({ length: count }).map((_, i) => {
         const base = i * 0.06
         return (
           <div
             key={i}
             style={{
-              padding: '10px 14px',
-              borderBottom: '1px solid var(--skeleton-border)',
-              borderLeft: '3px solid var(--skeleton-accent)',
+              padding: '12px',
+              borderRadius: 10,
+              border: '1px solid transparent',
               background: 'var(--skeleton-card)',
             }}
           >
             <Bone h={13} w={widths[i % widths.length]} delay={base} style={{ marginBottom: 8 }} />
-            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-              <Bone h={16} w={72} r={4} delay={base + 0.04} />
+            <Bone h={11} w={Math.round(widths[i % widths.length] * 1.4)} delay={base + 0.03} style={{ marginBottom: 10 }} />
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <Bone h={18} w={64} r={999} delay={base + 0.04} />
               <Bone h={10} w={48} delay={base + 0.08} />
+              <Bone h={10} w={40} delay={base + 0.1} style={{ marginLeft: 'auto' }} />
             </div>
           </div>
         )
@@ -2334,49 +2763,59 @@ export default function WorkflowsPage() {
       <div
         className="wf-list-pane"
         style={{
-        width: 220, flexShrink: 0,
+        width: 260, flexShrink: 0,
         borderRight: '1px solid var(--border)',
         display: 'flex', flexDirection: 'column',
         background: 'var(--bg-card)',
       }}>
         <div className="wf-list-header" style={{
-          padding: '14px 14px 8px',
-          borderBottom: '1px solid var(--border)',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '16px 16px 12px',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
         }}>
-          <span style={{ ...SANS, fontSize: 12, fontWeight: 700, color: 'var(--text-heading)' }}>Workflows</span>
+          <span style={{ ...SANS, fontSize: 16, fontWeight: 600, color: 'var(--text-primary)' }}>Workflows</span>
           <button
             className="wf-new-btn"
             onClick={newWorkflow}
             style={{
-              ...SANS, fontSize: 11, padding: '3px 8px', fontWeight: 600,
-              background: 'var(--accent-soft)', border: '1px solid var(--blue-border)',
-              color: 'var(--accent-text)', borderRadius: 5, cursor: 'pointer',
+              ...SANS, fontSize: 12, padding: '6px 12px', fontWeight: 600,
+              background: 'var(--accent)', border: 'none',
+              color: '#FFFFFF', borderRadius: 8, cursor: 'pointer',
             }}
-          >+ New</button>
+          >New</button>
         </div>
 
         {/* Search + mode filter */}
-        <div className="wf-list-filters" style={{ padding: '8px 10px', borderBottom: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <input
-            value={wfSearch}
-            onChange={e => setWfSearch(e.target.value)}
-            placeholder="Search workflows…"
-            style={{
-              width: '100%', boxSizing: 'border-box',
-              padding: '5px 8px', fontSize: 11, ...SANS,
-              background: 'var(--bg-page)', color: 'var(--text-body)',
-              border: '1px solid var(--border)', borderRadius: 5, outline: 'none',
-            }}
-          />
+        <div className="wf-list-filters" style={{ padding: '0 12px 12px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ position: 'relative' }}>
+            <svg
+              width="14" height="14" viewBox="0 0 24 24" fill="none"
+              stroke="var(--text-tertiary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+              style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}
+              aria-hidden
+            >
+              <circle cx="11" cy="11" r="7" />
+              <path d="M20 20l-3.5-3.5" />
+            </svg>
+            <input
+              value={wfSearch}
+              onChange={e => setWfSearch(e.target.value)}
+              placeholder="Search workflows…"
+              style={{
+                width: '100%', boxSizing: 'border-box',
+                padding: '8px 10px 8px 32px', fontSize: 12, ...SANS,
+                background: 'var(--bg-page)', color: 'var(--text-primary)',
+                border: '1px solid var(--border)', borderRadius: 8, outline: 'none',
+              }}
+            />
+          </div>
           <select
             value={wfModeFilter}
             onChange={e => setWfModeFilter(e.target.value as ExecutionMode | '')}
             style={{
               width: '100%', boxSizing: 'border-box',
-              padding: '5px 8px', fontSize: 11, ...SANS,
-              background: 'var(--bg-page)', color: 'var(--text-body)',
-              border: '1px solid var(--border)', borderRadius: 5, outline: 'none', cursor: 'pointer',
+              padding: '7px 10px', fontSize: 12, ...SANS,
+              background: 'var(--bg-page)', color: 'var(--text-secondary)',
+              border: '1px solid var(--border)', borderRadius: 8, outline: 'none', cursor: 'pointer',
             }}
           >
             <option value="">All modes</option>
@@ -2389,7 +2828,7 @@ export default function WorkflowsPage() {
           </select>
         </div>
 
-        <div className="wf-list-scroll" style={{ flex: 1, overflow: 'auto' }}>
+        <div className="wf-list-scroll" style={{ flex: 1, overflow: 'auto', minHeight: 0, padding: '0 8px 8px' }}>
           {loading ? (
             <WorkflowsListSkeleton />
           ) : (
@@ -2398,41 +2837,76 @@ export default function WorkflowsPage() {
                 (!wfSearch || wf.name.toLowerCase().includes(wfSearch.toLowerCase())) &&
                 (!wfModeFilter || wf.execution_mode === wfModeFilter)
               )
-              .map(wf => (
+              .map(wf => {
+                const active = selected?.workflow_id === wf.workflow_id
+                const nodeCount = wf.nodes?.length || wf.steps?.length || 0
+                return (
               <div
                 key={wf.workflow_id}
-                className={`wf-list-item${selected?.workflow_id === wf.workflow_id ? ' is-active' : ''}`}
+                className={`wf-list-item${active ? ' is-active' : ''}`}
                 onClick={() => { loadWorkflow(wf); setMobileShowDetail(true) }}
                 style={{
-                  padding: '10px 14px',
+                  padding: '12px 12px',
                   cursor: 'pointer',
-                  background: selected?.workflow_id === wf.workflow_id ? 'var(--bg-page)' : 'transparent',
-                  borderBottom: '1px solid var(--border)',
-                  borderLeft: selected?.workflow_id === wf.workflow_id ? '3px solid var(--accent)' : '3px solid transparent',
+                  marginBottom: 4,
+                  borderRadius: 10,
+                  border: active ? '1px solid var(--blue-border)' : '1px solid transparent',
+                  background: active ? 'var(--accent-soft)' : 'transparent',
+                  boxShadow: active ? 'none' : undefined,
                 }}
               >
-                <div style={{ ...SANS, fontSize: 13, fontWeight: 600, color: 'var(--text-heading)', marginBottom: 3 }}>
+                <div style={{
+                  ...SANS, fontSize: 13, fontWeight: 600, color: 'var(--text-primary)',
+                  marginBottom: wf.description ? 4 : 8, lineHeight: 1.35,
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                }}>
                   {wf.name}
                 </div>
-                <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                  <Chip label={wf.execution_mode} />
-                  <span style={{ ...MONO, fontSize: 10, color: 'var(--text-muted)' }}>
-                    {wf.nodes?.length || wf.steps?.length || 0} nodes
+                {wf.description ? (
+                  <div style={{
+                    ...SANS, fontSize: 12, color: 'var(--text-secondary)',
+                    marginBottom: 8, lineHeight: 1.4,
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  }}>
+                    {wf.description}
+                  </div>
+                ) : null}
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', minWidth: 0 }}>
+                  <span style={{
+                    ...SANS, fontSize: 11, fontWeight: 500,
+                    padding: '2px 8px', borderRadius: 999,
+                    background: 'var(--bg-hover)',
+                    color: 'var(--text-secondary)',
+                    border: '1px solid var(--border)',
+                    flexShrink: 0,
+                  }}>
+                    {modeShort(wf.execution_mode)}
+                  </span>
+                  <span style={{ ...SANS, fontSize: 11, color: 'var(--text-tertiary)', flexShrink: 0 }}>
+                    {nodeCount} nodes
+                  </span>
+                  <span style={{
+                    ...SANS, fontSize: 11, color: 'var(--text-tertiary)',
+                    marginLeft: 'auto', flexShrink: 0,
+                  }}>
+                    {relativeTime(wf.updated_at || wf.created_at)}
                   </span>
                 </div>
               </div>
-            ))
+                )
+              })
           )}
         </div>
 
         {/* Run history in left panel */}
         {selected && (
-          <div className="wf-run-history" style={{ borderTop: '1px solid var(--border)', maxHeight: 220, overflow: 'auto' }}>
-            <div style={{
-              padding: '8px 14px', fontSize: 11, fontWeight: 700,
-              color: 'var(--text-muted)', ...MONO, letterSpacing: '0.1em',
-              textTransform: 'uppercase',
-            }}>Run History</div>
+          <div className="wf-run-history" style={{
+            borderTop: '1px solid var(--border)',
+            maxHeight: '42%',
+            minHeight: 160,
+            overflow: 'auto',
+            background: 'var(--bg-card)',
+          }}>
             <RunHistoryPanel
               runs={runs}
               onSelectRun={r => {
@@ -2469,175 +2943,290 @@ export default function WorkflowsPage() {
 
         {/* Toolbar */}
         <div className="wf-toolbar" style={{
-          padding: '10px 20px',
+          padding: 0,
           borderBottom: '1px solid var(--border)',
-          display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
+          display: 'flex', flexDirection: 'column',
           background: 'var(--bg-card)',
           flexShrink: 0,
         }}>
-          <button
-            type="button"
-            className="wf-back"
-            onClick={() => setMobileShowDetail(false)}
-            style={{
-              display: 'none',
-              alignItems: 'center',
-              gap: 6,
-              ...SANS,
-              fontSize: 13,
-              fontWeight: 600,
-              color: 'var(--accent-text)',
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              padding: '4px 0',
-              width: '100%',
-              flexBasis: '100%',
-            }}
-          >
-            <span aria-hidden>‹</span> All workflows
-          </button>
-          <input
-            className="wf-name-input"
-            value={wfName}
-            onChange={e => setWfName(e.target.value)}
-            placeholder="Workflow name"
-            style={{
-              ...SANS, fontSize: 15, fontWeight: 700, color: 'var(--text-heading)',
-              background: 'transparent', border: 'none', outline: 'none',
-              minWidth: 160,
-            }}
-          />
-          <span className="wf-toolbar-sep" style={{ color: 'var(--border)', fontSize: 16 }}>|</span>
-          <input
-            className="wf-desc-input"
-            value={wfDesc}
-            onChange={e => setWfDesc(e.target.value)}
-            placeholder="Description (optional)"
-            style={{
-              ...SANS, fontSize: 12, color: 'var(--text-muted)',
-              background: 'transparent', border: 'none', outline: 'none',
-              minWidth: 200, flex: 1,
-            }}
-          />
-          <button
-            onClick={() => { setExpandPageValue(wfDesc); setExpandPage({ field: 'wfDesc', label: 'Workflow Description' }) }}
-            title="Edit in full view"
-            style={{
-              ...MONO, fontSize: 10, padding: '2px 6px', flexShrink: 0,
-              background: 'var(--bg-page)', border: '1px solid var(--border)',
-              color: 'var(--text-muted)', borderRadius: 4, cursor: 'pointer',
-            }}
-          >↗</button>
-
-          <select
-            value={execMode}
-            onChange={e => setExecMode(e.target.value as ExecutionMode)}
-            style={{
-              ...MONO, fontSize: 11, padding: '4px 8px',
-              background: 'var(--bg-page)', color: 'var(--text-body)',
-              border: '1px solid var(--border)', borderRadius: 5,
-            }}
-          >
-            {(Object.entries(MODE_LABELS) as [ExecutionMode, string][]).map(([k, v]) => (
-              <option key={k} value={k}>{v}</option>
-            ))}
-          </select>
-
-          <button
-            onClick={execMode === 'hybrid' ? undefined : autoLayout}
-            disabled={execMode === 'hybrid'}
-            title={execMode === 'hybrid' ? 'Auto Layout is disabled in hybrid mode to preserve manual edges' : undefined}
-            style={{ ...toolBtn, opacity: execMode === 'hybrid' ? 0.4 : 1, cursor: execMode === 'hybrid' ? 'not-allowed' : 'pointer' }}
-          >Auto Layout</button>
-
-          {/* Zoom controls */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 2, marginLeft: 4 }}>
-            <button onClick={zoomOut} style={{ ...toolBtn, padding: '3px 9px', fontSize: 15, lineHeight: 1 }} title="Zoom out (Ctrl+scroll)">−</button>
-            <button onClick={zoomReset} style={{ ...toolBtn, minWidth: 46, textAlign: 'center', fontSize: 10 }} title="Reset zoom">
-              {Math.round(zoom * 100)}%
-            </button>
-            <button onClick={zoomIn} style={{ ...toolBtn, padding: '3px 9px', fontSize: 15, lineHeight: 1 }} title="Zoom in (Ctrl+scroll)">+</button>
-          </div>
-          <button onClick={() => addNode('agent')} style={{ ...toolBtn, color: 'var(--accent-text)' }}>
-            + Agent Node
-          </button>
-          {(execMode === 'hierarchical' || execMode === 'hybrid') && (
-            <button onClick={() => addNode('orchestrator')} style={{ ...toolBtn, color: '#7C3AED' }}>
-              + Orchestrator
-            </button>
-          )}
-          {execMode === 'hybrid' && (
-            <button onClick={() => addNode('fan_out')} style={{ ...toolBtn, color: '#F59E0B' }}>
-              + Fan-out
-            </button>
-          )}
-          {execMode === 'hybrid' && (
-            <button onClick={() => addNode('loop')} style={{ ...toolBtn, color: '#06B6D4' }}>
-              + Loop
-            </button>
-          )}
-          {execMode === 'hybrid' && (
-            <button onClick={() => addNode('condition')} style={{ ...toolBtn, color: '#EF4444' }}>
-              + Condition
-            </button>
-          )}
-          {execMode === 'hybrid' && (
-            <button onClick={() => addNode('switch')} style={{ ...toolBtn, color: '#F97316' }}>
-              + Switch
-            </button>
-          )}
-          {execMode === 'hybrid' && (
-            <>
-              <button onClick={() => addNode('subworkflow')} style={{ ...toolBtn, color: '#7C3AED' }}>
-                + Sub-workflow
-              </button>
-              <button onClick={() => addNode('collaborative_node')} style={{ ...toolBtn, color: '#EC4899' }}>
-                + Collab Node
-              </button>
-            </>
-          )}
-
-          {connectingFrom && (
-            <span style={{
-              ...MONO, fontSize: 11, color: '#F59E0B',
-              padding: '4px 10px', background: '#F59E0B20',
-              border: '1px solid #F59E0B40', borderRadius: 5,
-            }}>
-              Click target node — Esc to cancel
-            </span>
-          )}
-
-          <div style={{ flex: 1 }} />
-
-          <div className="wf-toolbar-actions" style={{ display: 'contents' }}>
-          {selected && (
+          {/* Row 1 — identity + mode / delete / save */}
+          <div className="wf-toolbar-top" style={{
+            padding: '14px 20px',
+            display: 'flex', alignItems: 'center', gap: 16,
+            borderBottom: '1px solid var(--border)',
+            flexWrap: 'wrap',
+          }}>
             <button
-              className="wf-delete-btn"
-              onClick={() => doDeleteWorkflow(selected.workflow_id)}
-              style={{ ...toolBtn, color: '#EF4444' }}
-            >Delete</button>
-          )}
+              type="button"
+              className="wf-back"
+              onClick={() => setMobileShowDetail(false)}
+              style={{
+                display: 'none',
+                alignItems: 'center',
+                gap: 6,
+                ...SANS,
+                fontSize: 13,
+                fontWeight: 600,
+                color: 'var(--accent-text)',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '4px 0',
+                width: '100%',
+                flexBasis: '100%',
+              }}
+            >
+              <span aria-hidden>‹</span> All workflows
+            </button>
 
-          <button
-            className="wf-save-btn"
-            onClick={saveWorkflow}
-            disabled={saving}
-            style={{
-              ...MONO, fontSize: 11, padding: '4px 14px',
-              background: 'var(--accent)', color: 'var(--btn-upload-text)',
-              border: 'none', borderRadius: 5, cursor: 'pointer',
-              opacity: saving ? 0.6 : 1,
-            }}
-          >
-            {saving ? 'Saving…' : 'Save'}
-          </button>
+            <div style={{
+              flex: 1, minWidth: 180,
+              display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
+            }}>
+              <input
+                className="wf-name-input"
+                value={wfName}
+                onChange={e => setWfName(e.target.value)}
+                placeholder="Workflow name"
+                style={{
+                  ...SANS, fontSize: 16, fontWeight: 700, color: 'var(--text-primary)',
+                  background: 'transparent', border: 'none', outline: 'none',
+                  minWidth: 140, flex: '0 1 auto', padding: 0,
+                }}
+              />
+              <span style={{
+                ...SANS, fontSize: 11, fontWeight: 500, flexShrink: 0,
+                padding: '2px 8px', borderRadius: 999,
+                background: 'var(--bg-hover)', color: 'var(--text-tertiary)',
+                border: '1px solid var(--border)',
+              }}>
+                {nodes.length} nodes
+              </span>
+              <span style={{ color: 'var(--border)', fontSize: 16, flexShrink: 0 }} aria-hidden>|</span>
+              <input
+                className="wf-desc-input"
+                value={wfDesc}
+                onChange={e => setWfDesc(e.target.value)}
+                placeholder="Description (optional)"
+                style={{
+                  ...SANS, fontSize: 13, color: 'var(--text-secondary)',
+                  background: 'transparent', border: 'none', outline: 'none',
+                  minWidth: 140, flex: 1, padding: 0,
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => { setExpandPageValue(wfDesc); setExpandPage({ field: 'wfDesc', label: 'Workflow Description' }) }}
+                title="Edit in full view"
+                style={{
+                  ...SANS, fontSize: 11, padding: '2px 6px', flexShrink: 0,
+                  background: 'var(--bg-hover)', border: '1px solid var(--border)',
+                  color: 'var(--text-muted)', borderRadius: 6, cursor: 'pointer',
+                }}
+              >↗</button>
+            </div>
+
+            <div className="wf-toolbar-actions" style={{
+              display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, marginLeft: 'auto',
+            }}>
+              <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+                <span style={{
+                  position: 'absolute', left: 10, pointerEvents: 'none',
+                  color: 'var(--accent-text)', fontSize: 13, lineHeight: 1,
+                }}>
+                  {modeIcons[execMode]}
+                </span>
+                <select
+                  value={execMode}
+                  onChange={e => setExecMode(e.target.value as ExecutionMode)}
+                  title={MODE_LABELS[execMode]}
+                  style={{
+                    ...SANS, fontSize: 12, fontWeight: 500,
+                    padding: '7px 28px 7px 28px',
+                    background: 'var(--bg-card)', color: 'var(--text-primary)',
+                    border: '1px solid var(--border)', borderRadius: 8,
+                    cursor: 'pointer', outline: 'none', appearance: 'none',
+                    WebkitAppearance: 'none', minWidth: 200, maxWidth: 280,
+                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2371717A' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
+                    backgroundRepeat: 'no-repeat',
+                    backgroundPosition: 'right 10px center',
+                  }}
+                >
+                  {(Object.entries(MODE_LABELS) as [ExecutionMode, string][]).map(([k, v]) => (
+                    <option key={k} value={k}>{v}</option>
+                  ))}
+                </select>
+              </div>
+
+              {selected && (
+                <button
+                  type="button"
+                  className="wf-delete-btn"
+                  onClick={() => doDeleteWorkflow(selected.workflow_id)}
+                  style={{
+                    ...SANS, fontSize: 13, fontWeight: 500,
+                    padding: '7px 14px', display: 'inline-flex', alignItems: 'center', gap: 7,
+                    background: 'var(--invalid-dim)', color: 'var(--invalid)',
+                    border: '1px solid rgba(239, 68, 68, 0.28)', borderRadius: 10, cursor: 'pointer',
+                  }}
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+                    <path d="M9 4h6M10 4V3h4v1M5 7h14M8 7l.8 12.5a1.5 1.5 0 0 0 1.5 1.5h3.4a1.5 1.5 0 0 0 1.5-1.5L16 7" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M10.5 11v5.5M13.5 11v5.5" strokeLinecap="round" />
+                  </svg>
+                  Delete
+                </button>
+              )}
+
+              <button
+                type="button"
+                className="wf-save-btn"
+                onClick={saveWorkflow}
+                disabled={saving}
+                style={{
+                  ...SANS, fontSize: 13, fontWeight: 600,
+                  padding: '7px 14px', display: 'inline-flex', alignItems: 'center', gap: 6,
+                  background: 'var(--accent)', color: '#FFFFFF',
+                  border: 'none', borderRadius: 8, cursor: saving ? 'wait' : 'pointer',
+                  opacity: saving ? 0.7 : 1,
+                }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                  <path d="M5 3h11l3 3v15H5V3z" strokeLinejoin="round" />
+                  <path d="M8 3v6h8V3M8 21v-7h8v7" strokeLinejoin="round" />
+                </svg>
+                {saving ? 'Saving…' : 'Save'}
+              </button>
+
+              {saveMsg && (
+                <span style={{ ...SANS, fontSize: 12, color: 'var(--verified)' }}>{saveMsg}</span>
+              )}
+            </div>
           </div>
 
+          {/* Row 2 — ADD tools left, auto layout + zoom right */}
+          <div className="wf-toolbar-bottom" style={{
+            padding: '10px 20px',
+            display: 'flex', alignItems: 'center', gap: 12,
+            flexWrap: 'wrap',
+          }}>
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 6, flex: 1, minWidth: 0, flexWrap: 'wrap',
+            }}>
+              <span style={{
+                ...SANS, fontSize: 10, fontWeight: 600, color: 'var(--text-tertiary)',
+                letterSpacing: '0.08em', textTransform: 'uppercase', marginRight: 2,
+              }}>
+                Add
+              </span>
+              {([
+                { type: 'agent', label: 'Agent', show: true },
+                { type: 'orchestrator', label: 'Orchestrator', show: execMode === 'hierarchical' || execMode === 'hybrid' },
+                { type: 'fan_out', label: 'Fan-out', show: execMode === 'hybrid' },
+                { type: 'loop', label: 'Loop', show: execMode === 'hybrid' },
+                { type: 'condition', label: 'Condition', show: execMode === 'hybrid' },
+                { type: 'switch', label: 'Switch', show: execMode === 'hybrid' },
+                { type: 'subworkflow', label: 'Sub-flow', show: execMode === 'hybrid' },
+                { type: 'collaborative_node', label: 'Collab', show: execMode === 'hybrid' },
+              ] as const).filter(b => b.show).map(b => (
+                <button
+                  key={b.type}
+                  type="button"
+                  onClick={() => addNode(b.type)}
+                  style={{
+                    ...MONO, fontSize: 11, fontWeight: 500,
+                    padding: '6px 10px',
+                    background: 'var(--accent-soft)',
+                    color: 'var(--text-primary)',
+                    border: '1px solid transparent',
+                    borderRadius: 8, cursor: 'pointer',
+                    display: 'inline-flex', alignItems: 'center', gap: 4,
+                  }}
+                >
+                  <span style={{ color: 'var(--accent-text)', fontWeight: 700 }}>+</span>
+                  {b.label}
+                </button>
+              ))}
 
-          {saveMsg && (
-            <span style={{ ...MONO, fontSize: 11, color: '#10B981' }}>{saveMsg}</span>
-          )}
+              {connectingFrom && (
+                <span style={{
+                  ...SANS, fontSize: 11, color: '#F59E0B',
+                  padding: '4px 10px', background: '#F59E0B20',
+                  border: '1px solid #F59E0B40', borderRadius: 8,
+                }}>
+                  Click target node — Esc to cancel
+                </span>
+              )}
+            </div>
+
+            <div className="wf-toolbar-view" style={{
+              display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0, marginLeft: 'auto',
+            }}>
+              <button
+                type="button"
+                onClick={execMode === 'hybrid' ? undefined : autoLayout}
+                disabled={execMode === 'hybrid'}
+                title={execMode === 'hybrid' ? 'Auto Layout is disabled in hybrid mode to preserve manual edges' : 'Auto layout'}
+                style={{
+                  ...SANS, fontSize: 13, fontWeight: 500,
+                  padding: '6px 4px',
+                  background: 'none', border: 'none',
+                  color: 'var(--text-primary)',
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                  opacity: execMode === 'hybrid' ? 0.4 : 1,
+                  cursor: execMode === 'hybrid' ? 'not-allowed' : 'pointer',
+                }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                  <rect x="3" y="3" width="18" height="6" rx="1" />
+                  <rect x="3" y="13" width="8" height="8" rx="1" />
+                  <rect x="13" y="13" width="8" height="8" rx="1" />
+                </svg>
+                Auto layout
+              </button>
+
+              <div style={{
+                display: 'inline-flex', alignItems: 'center',
+                border: '1px solid var(--border)', borderRadius: 999,
+                background: 'var(--bg-card)', overflow: 'hidden',
+              }}>
+                <button
+                  type="button"
+                  onClick={zoomOut}
+                  title="Zoom out (Ctrl+scroll)"
+                  style={{
+                    ...SANS, fontSize: 14, lineHeight: 1, padding: '6px 10px',
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    color: 'var(--text-primary)',
+                  }}
+                >−</button>
+                <button
+                  type="button"
+                  onClick={zoomReset}
+                  title="Reset zoom"
+                  style={{
+                    ...SANS, fontSize: 12, fontWeight: 500, minWidth: 44,
+                    padding: '6px 4px', background: 'none', border: 'none',
+                    cursor: 'pointer', color: 'var(--text-primary)',
+                    borderLeft: '1px solid var(--border)',
+                    borderRight: '1px solid var(--border)',
+                  }}
+                >
+                  {Math.round(zoom * 100)}%
+                </button>
+                <button
+                  type="button"
+                  onClick={zoomIn}
+                  title="Zoom in (Ctrl+scroll)"
+                  style={{
+                    ...SANS, fontSize: 14, lineHeight: 1, padding: '6px 10px',
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    color: 'var(--text-primary)',
+                  }}
+                >+</button>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Canvas */}
@@ -3202,11 +3791,4 @@ export default function WorkflowsPage() {
       )}
     </div>
   )
-}
-
-const toolBtn: React.CSSProperties = {
-  ...MONO, fontSize: 11, padding: '4px 10px',
-  background: 'var(--bg-page)', color: 'var(--text-body)',
-  border: '1px solid var(--border)', borderRadius: 5,
-  cursor: 'pointer',
 }
