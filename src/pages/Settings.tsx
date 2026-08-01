@@ -50,7 +50,7 @@ function SectionHeading({ label, title, subtitle }: {
       }}>
         {label}
       </div>
-      <h2 style={{ ...SANS, fontSize: 18, fontWeight: 700, color: 'var(--text-heading)', margin: 0 }}>
+      <h2 style={{ ...SANS, fontSize: 16, fontWeight: 500, color: 'var(--text-heading)', margin: 0 }}>
         {title}
       </h2>
       <p style={{ ...SANS, fontSize: 13, color: 'var(--text-secondary)', marginTop: 4, marginBottom: 0 }}>

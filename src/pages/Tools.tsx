@@ -1435,7 +1435,7 @@ function RightEmptyState({ onEditor, onUpload, compact }: { onEditor: () => void
             <polyline points="8 6 2 12 8 18"/>
           </svg>
         </div>
-        <div style={{ ...SANS, fontSize: 16, fontWeight: 700, color: 'var(--text-heading)', marginBottom: 6 }}>
+        <div style={{ ...SANS, fontSize: 16, fontWeight: 500, color: 'var(--text-heading)', marginBottom: 6 }}>
           Add a Custom Tool
         </div>
         <div style={{ ...SANS, fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, maxWidth: 300 }}>
@@ -1610,7 +1610,7 @@ export default function Tools() {
           <div style={{ ...MONO, fontSize: 9, fontWeight: 700, letterSpacing: '0.14em', color: 'var(--accent)', marginBottom: 4 }}>
             CONFIGURATION
           </div>
-          <h2 style={{ ...SANS, fontSize: 18, fontWeight: 700, color: 'var(--text-heading)', margin: 0 }}>
+          <h2 style={{ ...SANS, fontSize: 16, fontWeight: 500, color: 'var(--text-heading)', margin: 0 }}>
             Tool Management
           </h2>
         </div>

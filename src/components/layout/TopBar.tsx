@@ -79,11 +79,11 @@ export default function TopBar() {
             className="app-topbar-title"
             style={{
               fontFamily: 'var(--font-sans)',
-              fontSize: 20,
-              fontWeight: 650,
+              fontSize: 16,
+              fontWeight: 500,
               color: 'var(--text-heading)',
-              letterSpacing: '-0.02em',
-              lineHeight: 1.15,
+              letterSpacing: '-0.01em',
+              lineHeight: 1.25,
               margin: 0,
             }}
           >

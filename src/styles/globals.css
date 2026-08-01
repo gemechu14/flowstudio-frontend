@@ -615,7 +615,8 @@ optgroup {
   }
 
   .app-topbar-title {
-    font-size: 18px !important;
+    font-size: 15px !important;
+    font-weight: 500 !important;
   }
 
   .dashboard-page {
@@ -1117,7 +1118,8 @@ optgroup {
   }
 
   .agents-header h2 {
-    font-size: 18px !important;
+    font-size: 15px !important;
+    font-weight: 500 !important;
   }
 
   .agents-card-main {
@@ -1167,7 +1169,8 @@ optgroup {
   }
 
   .ds-list-header h2 {
-    font-size: 18px !important;
+    font-size: 15px !important;
+    font-weight: 500 !important;
   }
 
   .ds-new-btn {
@@ -1340,7 +1343,8 @@ optgroup {
   }
 
   .ch-header h2 {
-    font-size: 18px !important;
+    font-size: 15px !important;
+    font-weight: 500 !important;
   }
 }
 
@@ -1403,7 +1407,8 @@ optgroup {
   }
 
   .ct-header h2 {
-    font-size: 18px !important;
+    font-size: 15px !important;
+    font-weight: 500 !important;
   }
 
   .ct-tabs {
@@ -1487,7 +1492,8 @@ optgroup {
   }
 
   .settings-heading h2 {
-    font-size: 17px !important;
+    font-size: 15px !important;
+    font-weight: 500 !important;
   }
 
   .settings-section {

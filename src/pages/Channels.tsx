@@ -1199,7 +1199,7 @@ export default function Channels() {
           <div style={{ ...SANS, fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', color: 'var(--accent)', marginBottom: 6 }}>
             CHANNELS
           </div>
-          <h2 style={{ ...SANS, fontSize: 20, fontWeight: 700, color: 'var(--text-heading)', margin: 0 }}>
+          <h2 style={{ ...SANS, fontSize: 16, fontWeight: 500, color: 'var(--text-heading)', margin: 0 }}>
             Bot Integrations
           </h2>
           <p style={{ ...SANS, fontSize: 13, color: 'var(--text-secondary)', marginTop: 6, marginBottom: 0, maxWidth: 540 }}>

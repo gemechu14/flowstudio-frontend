@@ -356,8 +356,8 @@ function StatCard({
           </div>
         </div>
         <div style={{
-          marginTop: 12, fontFamily: 'var(--font-mono)', fontSize: 32, fontWeight: 750,
-          color: 'var(--text-heading)', lineHeight: 1, letterSpacing: '-0.03em',
+          marginTop: 12, fontFamily: 'var(--font-mono)', fontSize: 24, fontWeight: 600,
+          color: 'var(--text-heading)', lineHeight: 1, letterSpacing: '-0.02em',
         }}>
           {value}
         </div>
@@ -687,13 +687,13 @@ export default function Dashboard() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
                 <div>
                   <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-tertiary)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>Today</div>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: 26, fontWeight: 750, color: 'var(--accent-text)', letterSpacing: '-0.02em', lineHeight: 1 }}>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: 20, fontWeight: 600, color: 'var(--accent-text)', letterSpacing: '-0.02em', lineHeight: 1 }}>
                     {fmt(stats.total_tokens_today)}
                   </div>
                 </div>
                 <div>
                   <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-tertiary)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>This Week</div>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: 26, fontWeight: 750, color: 'var(--accent-text)', letterSpacing: '-0.02em', lineHeight: 1 }}>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: 20, fontWeight: 600, color: 'var(--accent-text)', letterSpacing: '-0.02em', lineHeight: 1 }}>
                     {fmt(stats.total_tokens_week)}
                   </div>
                 </div>

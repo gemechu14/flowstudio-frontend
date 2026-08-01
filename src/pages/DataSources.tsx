@@ -2131,7 +2131,7 @@ export default function DataSources() {
             <div style={{ fontSize: 10, ...MONO, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: 6 }}>
               Data Sources
             </div>
-            <h2 style={{ ...SANS, fontSize: 15, fontWeight: 700, color: 'var(--text-heading)', margin: '0 0 10px' }}>Sources</h2>
+            <h2 style={{ ...SANS, fontSize: 16, fontWeight: 500, color: 'var(--text-heading)', margin: '0 0 10px' }}>Sources</h2>
             <button className="ds-new-btn" onClick={() => setShowCreate(true)} style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
               width: '100%', padding: '9px', borderRadius: 999,

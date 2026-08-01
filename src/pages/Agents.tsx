@@ -360,7 +360,7 @@ export default function Agents() {
             Configuration
           </div>
           <h2 style={{
-            ...SANS, fontSize: 20, fontWeight: 700, color: 'var(--text-heading)', margin: 0,
+            ...SANS, fontSize: 16, fontWeight: 500, color: 'var(--text-heading)', margin: 0,
           }}>Agents</h2>
           <p style={{
             ...SANS, fontSize: 13, color: 'var(--text-secondary)', marginTop: 4, marginBottom: 0,

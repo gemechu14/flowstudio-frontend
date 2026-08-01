@@ -609,7 +609,7 @@ export default function CommunityTools() {
           <div style={{ ...MONO, fontSize: 10, fontWeight: 600, letterSpacing: '0.14em', color: 'var(--accent)', marginBottom: 6 }}>
             TOOL LIBRARY
           </div>
-          <h2 style={{ ...SANS, fontSize: 20, fontWeight: 700, color: 'var(--text-heading)', margin: 0 }}>
+          <h2 style={{ ...SANS, fontSize: 16, fontWeight: 500, color: 'var(--text-heading)', margin: 0 }}>
             Community Tools
           </h2>
           <p style={{ ...SANS, fontSize: 13, color: 'var(--text-secondary)', marginTop: 4, marginBottom: 0 }}>
