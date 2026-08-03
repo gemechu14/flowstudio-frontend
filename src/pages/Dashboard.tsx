@@ -39,7 +39,7 @@ interface Stats {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  completed: '#22C55E',
+  completed: 'var(--accent)', // preview: primary instead of green (#22C55E)
   failed:    '#A1A1AA',
   running:   '#60A5FA',
 }

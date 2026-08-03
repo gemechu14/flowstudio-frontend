@@ -1,0 +1,19 @@
+/* Expand main content width (Read the Docs default is narrow). */
+.wy-nav-content {
+  max-width: none;
+}
+
+/* Keep brand bar readable with FlowStudio title. */
+.wy-side-nav-search {
+  background-color: #2980b9;
+}
+
+.wy-side-nav-search > a {
+  font-size: 100%;
+  font-weight: 700;
+  color: #fcfcfc;
+}
+
+.wy-nav-content-wrap {
+  background: #fcfcfc;
+}

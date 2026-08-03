@@ -675,36 +675,38 @@ function EditorPanel({ onUploaded, editMode, onCancel }: { onUploaded: (t: ToolR
   }
 
   return (
-    <div className="tools-editor-panel" style={{ display: 'flex', flexDirection: 'column', height: '100%', background: IDE.bg, overflow: 'hidden' }}>
+    <div className="tools-editor-panel" style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%', minWidth: 0, background: IDE.bg, overflow: 'hidden' }}>
 
-      {/* Title bar */}
-      <div className="tools-editor-titlebar" style={{ background: IDE.gutter, padding: '9px 16px', borderBottom: `1px solid ${IDE.border}`, display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
-        <div style={{ display: 'flex', gap: 6 }}>
+      {/* Title bar — compact on mobile (sheet header shows title) */}
+      <div className="tools-editor-titlebar" style={{ background: IDE.gutter, padding: '9px 16px', borderBottom: `1px solid ${IDE.border}`, display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0, minWidth: 0 }}>
+        <div className="tools-editor-titlebar-dots" style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
           {['#ff5f57','#febc2e','#28c840'].map(c => (
             <span key={c} style={{ width: 12, height: 12, borderRadius: '50%', background: c, display: 'inline-block' }} />
           ))}
         </div>
-        <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8 }}>
+        <div className="tools-editor-titlebar-center" style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8, minWidth: 0 }}>
           {editMode && (
-            <span style={{ ...MONO, fontSize: 9, color: '#F59E0B', background: '#F59E0B18', border: '1px solid #F59E0B40', padding: '2px 8px', borderRadius: 4, letterSpacing: '0.08em' }}>
+            <span style={{ ...MONO, fontSize: 9, color: '#F59E0B', background: '#F59E0B18', border: '1px solid #F59E0B40', padding: '2px 8px', borderRadius: 4, letterSpacing: '0.08em', flexShrink: 0 }}>
               EDITING
             </span>
           )}
-          <span style={{ ...MONO, fontSize: 11, color: '#6e7191', background: `${IDE.border}aa`, padding: '2px 14px', borderRadius: 4 }}>
+          <span className="tools-editor-titlebar-filename" style={{ ...MONO, fontSize: 11, color: '#6e7191', background: `${IDE.border}aa`, padding: '2px 14px', borderRadius: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }}>
             {filename}
           </span>
         </div>
         <button
+          type="button"
+          className="tools-editor-ai-btn"
           onClick={() => setAiOpen(o => !o)}
           style={{
-            ...MONO, fontSize: 11, padding: '3px 12px', borderRadius: 5, cursor: 'pointer',
+            ...MONO, fontSize: 11, padding: '3px 12px', borderRadius: 5, cursor: 'pointer', flexShrink: 0,
             border: `1px solid ${aiOpen ? '#a78bfa' : IDE.border}`,
             background: aiOpen ? '#a78bfa22' : 'transparent',
             color: aiOpen ? '#a78bfa' : IDE.lineNum,
             transition: 'all 0.15s',
           }}
         >✨ AI</button>
-        <span style={{ ...MONO, fontSize: 10, color: IDE.lineNum }}>{lines.length} lines</span>
+        <span className="tools-editor-titlebar-lines" style={{ ...MONO, fontSize: 10, color: IDE.lineNum, flexShrink: 0 }}>{lines.length} lines</span>
       </div>
 
       {/* Filename + requirements */}
@@ -739,13 +741,13 @@ function EditorPanel({ onUploaded, editMode, onCancel }: { onUploaded: (t: ToolR
         which is what makes the H scrollbar appear.
       */}
       {/* Editor + AI panel side by side */}
-      <div className="tools-editor-body" style={{ display: 'flex', flex: 1, minHeight: 0 }}>
+      <div className="tools-editor-body" style={{ display: 'flex', flex: 1, minHeight: 0, minWidth: 0, width: '100%' }}>
 
         {/* Editor column */}
-        <div className="tools-editor-main" style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
+        <div className="tools-editor-main" style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, maxWidth: '100%' }}>
 
           {/* Code area */}
-          <div style={{ flex: 1, overflow: 'auto', minHeight: 0, background: IDE.bg }}>
+          <div className="tools-editor-code-scroll" style={{ flex: 1, overflow: 'auto', minHeight: 0, minWidth: 0, background: IDE.bg, WebkitOverflowScrolling: 'touch' }}>
             <div style={{ display: 'inline-flex', minWidth: '100%', minHeight: '100%' }}>
               <div style={{
                 ...FONT,
