@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { AuthUser } from '../api/auth'
-import { getToken, BASE_URL } from '../api/client'
+import { getToken, BASE_URL } from '../shared/api/client'
 
 interface AuthContextValue {
   user: AuthUser | null
