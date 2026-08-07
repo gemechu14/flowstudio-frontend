@@ -238,7 +238,7 @@ export default function ToolTester({ tool, onClose }: ToolTesterProps) {
                         transition: 'border-color 0.15s',
                         background: '#fff',
                       }}
-                      onFocus={(e) => { e.target.style.borderColor = 'var(--blue)'; e.target.style.boxShadow = '0 0 0 3px var(--blue-dim)' }}
+                      onFocus={(e) => { e.target.style.borderColor = 'var(--accent)'; e.target.style.boxShadow = '0 0 0 2px var(--accent)' }}
                       onBlur={(e) => { e.target.style.borderColor = 'var(--border-light)'; e.target.style.boxShadow = 'none' }}
                     />
                   </div>

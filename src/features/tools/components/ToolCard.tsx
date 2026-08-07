@@ -41,7 +41,7 @@ export default function ToolCard({ tool, onTest }: ToolCardProps) {
       onMouseEnter={(e) => {
         const el = e.currentTarget
         el.style.boxShadow = 'var(--shadow-card-hover)'
-        el.style.borderColor = isInvalid ? 'rgba(239,68,68,0.35)' : 'var(--blue-border)'
+        el.style.borderColor = isInvalid ? 'rgba(239,68,68,0.35)' : 'var(--accent)'
       }}
       onMouseLeave={(e) => {
         const el = e.currentTarget
@@ -71,8 +71,8 @@ export default function ToolCard({ tool, onTest }: ToolCardProps) {
                 fontWeight: 600,
                 letterSpacing: '0.10em',
                 textTransform: 'uppercase',
-                color: tool.source === 'built-in' ? 'var(--blue-muted)' : 'var(--text-body)',
-                background: tool.source === 'built-in' ? 'var(--blue-dim)' : 'rgba(74,81,99,0.08)',
+                color: tool.source === 'built-in' ? 'var(--btn-upload-text)' : 'var(--text-body)',
+                background: tool.source === 'built-in' ? 'var(--accent)' : 'rgba(74,81,99,0.08)',
                 padding: '2px 7px',
                 borderRadius: 4,
               }}

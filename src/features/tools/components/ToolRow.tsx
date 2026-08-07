@@ -109,7 +109,7 @@ export function ToolRow({ tool, onApprove, onRejectClick, onDelete, onTest, onVi
               </>
             )}
             {tool.status === 'approved' && !submitDone && (
-              <Btn onClick={e => { e.stopPropagation(); setShowSubmit(v => !v) }} variant="success">
+              <Btn onClick={e => { e.stopPropagation(); setShowSubmit(v => !v) }} variant="accent">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
                   <path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/>
@@ -156,9 +156,9 @@ export function ToolRow({ tool, onApprove, onRejectClick, onDelete, onTest, onVi
       {showSubmit && (
         <div style={{
           borderTop: '1px solid var(--border)', padding: '14px 18px',
-          background: 'var(--verified-dim)',
+          background: 'var(--card-bg)',
         }}>
-          <div style={{ ...MONO, fontSize: 10, color: 'var(--verified)', marginBottom: 10, letterSpacing: '0.1em' }}>
+          <div style={{ ...MONO, fontSize: 10, color: 'var(--accent)', marginBottom: 10, letterSpacing: '0.1em' }}>
             CONTRIBUTE TO COMMUNITY
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
@@ -169,7 +169,7 @@ export function ToolRow({ tool, onApprove, onRejectClick, onDelete, onTest, onVi
                 onChange={e => setSubmitCategory(e.target.value)}
                 style={{
                   ...MONO, fontSize: 11,
-                  background: 'var(--card-bg)', color: 'var(--text-primary)',
+                  background: 'var(--bg-hover)', color: 'var(--text-primary)',
                   border: '1px solid var(--border)', borderRadius: 6,
                   padding: '6px 10px', cursor: 'pointer', outline: 'none',
                 }}
@@ -186,7 +186,7 @@ export function ToolRow({ tool, onApprove, onRejectClick, onDelete, onTest, onVi
                 style={{
                   width: '100%', boxSizing: 'border-box',
                   ...SANS, fontSize: 12, padding: '6px 10px',
-                  background: 'var(--card-bg)', color: 'var(--text-primary)',
+                  background: 'var(--bg-hover)', color: 'var(--text-primary)',
                   border: '1px solid var(--border)', borderRadius: 6, outline: 'none',
                 }}
               />
@@ -195,9 +195,10 @@ export function ToolRow({ tool, onApprove, onRejectClick, onDelete, onTest, onVi
               onClick={handleSubmitCommunity}
               disabled={submitting}
               style={{
-                background: 'var(--verified)', border: 'none', color: '#fff',
-                borderRadius: 6, padding: '7px 16px', cursor: 'pointer',
+                background: 'var(--btn-upload-bg)', border: '1px solid var(--btn-upload-border)', color: 'var(--btn-upload-text)',
+                borderRadius: 6, padding: '7px 16px', cursor: submitting ? 'not-allowed' : 'pointer',
                 ...SANS, fontSize: 12, fontWeight: 600, flexShrink: 0,
+                opacity: submitting ? 0.7 : 1,
               }}
             >
               {submitting ? '...' : 'Submit'}
@@ -296,15 +297,16 @@ function Btn({ children, onClick, variant = 'neutral', disabled, iconOnly }: {
   iconOnly?: boolean
 }) {
   const styles = {
-    neutral: { bg: 'var(--bg-hover)', border: 'var(--border)', color: 'var(--text-secondary)' },
-    accent:  { bg: 'var(--bg-hover)', border: 'var(--border)', color: 'var(--text-secondary)' },
-    success: { bg: 'transparent', border: 'var(--border-strong)', color: 'var(--text-secondary)' },
-    danger:  { bg: 'var(--bg-hover)', border: 'var(--border)', color: 'var(--btn-danger-text)' },
-    approve: { bg: 'var(--accent-soft)', border: 'var(--blue-border)', color: 'var(--accent-text)' },
+    neutral: { bg: 'var(--btn-neutral-bg)', border: 'var(--btn-neutral-border)', color: 'var(--btn-neutral-text)' },
+    accent:  { bg: 'var(--btn-accent-bg)', border: 'var(--btn-accent-border)', color: 'var(--btn-accent-text)' },
+    success: { bg: 'var(--btn-success-bg)', border: 'var(--btn-success-border)', color: 'var(--btn-success-text)' },
+    danger:  { bg: 'var(--btn-danger-bg)', border: 'var(--btn-danger-border)', color: 'var(--btn-danger-text)' },
+    approve: { bg: 'var(--accent-soft)', border: 'var(--blue-border)', color: 'var(--accent)' },
   }[variant]
 
   return (
     <button
+      className={variant === 'approve' ? 'tools-approve-btn' : undefined}
       onClick={onClick}
       disabled={disabled}
       style={{
@@ -325,6 +327,7 @@ function Btn({ children, onClick, variant = 'neutral', disabled, iconOnly }: {
         gap: 6,
         lineHeight: 1,
         opacity: disabled ? 0.55 : 1,
+        transition: variant === 'approve' ? 'background 0.15s ease, color 0.15s ease, border-color 0.15s ease' : undefined,
       }}
     >{children}</button>
   )

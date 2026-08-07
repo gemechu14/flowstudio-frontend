@@ -18,7 +18,7 @@ export function AgentActionBtn({
     neutral: { bg: 'var(--bg-hover)', border: 'var(--border)', color: 'var(--text-secondary)' },
     accent:  { bg: 'var(--bg-hover)', border: 'var(--border)', color: 'var(--text-secondary)' },
     danger:  { bg: 'var(--bg-hover)', border: 'var(--border)', color: 'var(--btn-danger-text)' },
-    primary: { bg: 'var(--accent-soft)', border: 'var(--blue-border)', color: 'var(--accent-text)' },
+    primary: { bg: 'var(--accent)', border: 'var(--accent)', color: 'var(--btn-upload-text)' },
   }[variant]
 
   return (

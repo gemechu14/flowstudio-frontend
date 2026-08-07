@@ -78,7 +78,7 @@ export default function ToolUploader({ onUpload }: ToolUploaderProps) {
           onDrop={handleDrop}
           onClick={() => inputRef.current?.click()}
           style={{
-            border: `2px dashed ${isDragging ? 'var(--blue)' : 'rgba(11,16,32,0.18)'}`,
+            border: `2px dashed ${isDragging ? 'var(--accent)' : 'rgba(11,16,32,0.18)'}`,
             borderRadius: 'var(--radius-lg)',
             padding: '32px 24px',
             display: 'flex',
@@ -86,16 +86,16 @@ export default function ToolUploader({ onUpload }: ToolUploaderProps) {
             alignItems: 'center',
             gap: 10,
             cursor: 'pointer',
-            background: isDragging ? 'var(--blue-dim)' : 'rgba(11,16,32,0.02)',
+            background: isDragging ? 'var(--accent)' : 'rgba(11,16,32,0.02)',
             transition: 'all 0.15s ease',
           }}
         >
           <div style={{
             width: 44, height: 44, borderRadius: 'var(--radius-md)',
-            background: isDragging ? 'var(--blue-dim)' : 'rgba(11,16,32,0.05)',
-            border: `1px solid ${isDragging ? 'var(--blue-border)' : 'rgba(11,16,32,0.1)'}`,
+            background: isDragging ? 'var(--btn-upload-text)' : 'rgba(11,16,32,0.05)',
+            border: `1px solid ${isDragging ? 'var(--btn-upload-text)' : 'rgba(11,16,32,0.1)'}`,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: isDragging ? 'var(--blue)' : 'var(--text-body)',
+            color: isDragging ? 'var(--accent)' : 'var(--text-body)',
           }}>
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
               <path d="M10 13V4M10 4L7 7M10 4L13 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -103,9 +103,9 @@ export default function ToolUploader({ onUpload }: ToolUploaderProps) {
             </svg>
           </div>
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 13.5, fontWeight: 500, color: isDragging ? 'var(--blue)' : 'var(--text-dark)' }}>
+            <div style={{ fontSize: 13.5, fontWeight: 500, color: isDragging ? 'var(--btn-upload-text)' : 'var(--text-dark)' }}>
               Drop a <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12.5 }}>.py</span> file here or{' '}
-              <span style={{ color: 'var(--blue)', textDecoration: 'underline' }}>click to browse</span>
+              <span style={{ color: isDragging ? 'var(--btn-upload-text)' : 'var(--accent)', textDecoration: 'underline' }}>click to browse</span>
             </div>
             <div style={{ fontSize: 11.5, color: 'var(--text-body)', marginTop: 4, fontFamily: 'var(--font-mono)' }}>
               Must extend the <code>Tool</code> ABC with a <code>run()</code> method
@@ -126,9 +126,9 @@ export default function ToolUploader({ onUpload }: ToolUploaderProps) {
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               <div style={{
                 width: 36, height: 36, borderRadius: 8,
-                background: 'var(--blue-dim)', border: '1px solid var(--blue-border)',
+                background: 'var(--accent)', border: '1px solid var(--accent)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontFamily: 'var(--font-mono)', fontSize: 9, fontWeight: 700, color: 'var(--blue)',
+                fontFamily: 'var(--font-mono)', fontSize: 9, fontWeight: 700, color: 'var(--btn-upload-text)',
               }}>
                 .PY
               </div>

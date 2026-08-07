@@ -144,9 +144,9 @@ export default function ToolsPage() {
             onClick={() => { setEditTarget(null); setShowAdd(showAdd === 'editor' ? false : 'editor') }}
             style={{
               ...SANS, fontSize: 12, padding: '8px 14px',
-              background: showAdd === 'editor' ? 'var(--accent-soft)' : 'var(--bg-hover)',
-              color: showAdd === 'editor' ? 'var(--accent-text)' : 'var(--text-secondary)',
-              border: `1px solid ${showAdd === 'editor' ? 'var(--blue-border)' : 'var(--border)'}`,
+              background: showAdd === 'editor' ? 'var(--accent)' : 'var(--btn-write-bg)',
+              color: showAdd === 'editor' ? 'var(--btn-upload-text)' : 'var(--btn-write-text)',
+              border: `1px solid ${showAdd === 'editor' ? 'var(--accent)' : 'var(--btn-write-border)'}`,
               borderRadius: 10, cursor: 'pointer', fontWeight: 600,
               display: 'inline-flex', alignItems: 'center', gap: 7,
             }}
@@ -163,9 +163,9 @@ export default function ToolsPage() {
             onClick={() => { setEditTarget(null); setShowAdd(showAdd === 'upload' ? false : 'upload') }}
             style={{
               ...SANS, fontSize: 12, padding: '8px 14px',
-              background: showAdd === 'upload' ? 'var(--bg-hover)' : 'var(--accent-soft)',
-              color: showAdd === 'upload' ? 'var(--text-secondary)' : 'var(--accent-text)',
-              border: `1px solid ${showAdd === 'upload' ? 'var(--border)' : 'var(--blue-border)'}`,
+              background: showAdd === 'upload' ? 'var(--btn-write-bg)' : 'var(--btn-upload-bg)',
+              color: showAdd === 'upload' ? 'var(--btn-write-text)' : 'var(--btn-upload-text)',
+              border: `1px solid ${showAdd === 'upload' ? 'var(--btn-write-border)' : 'var(--btn-upload-border)'}`,
               borderRadius: 10, cursor: 'pointer', fontWeight: 600,
               display: 'inline-flex', alignItems: 'center', gap: 7,
               boxShadow: 'none',
@@ -222,8 +222,8 @@ export default function ToolsPage() {
                   {cnt > 0 && (
                     <span style={{
                       marginLeft: 6, fontSize: 10, padding: '1px 6px',
-                      background: active ? 'var(--accent-soft)' : 'var(--bg-hover)',
-                      color: active ? 'var(--accent)' : 'var(--text-tertiary)',
+                      background: active ? 'var(--accent)' : 'var(--bg-hover)',
+                      color: active ? 'var(--btn-upload-text)' : 'var(--text-tertiary)',
                       borderRadius: 8, fontWeight: 600,
                     }}>{cnt}</span>
                   )}

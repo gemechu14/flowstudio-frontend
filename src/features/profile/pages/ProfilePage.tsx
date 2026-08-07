@@ -124,9 +124,9 @@ function SaveButton({ saving, label = 'Save changes' }: { saving: boolean; label
       style={{
         ...SANS, fontSize: 13, fontWeight: 600,
         padding: '9px 20px', borderRadius: 8,
-        border: '1px solid var(--blue-border)',
-        background: 'var(--accent-soft)',
-        color: 'var(--accent-text)',
+        border: '1px solid var(--accent)',
+        background: 'var(--accent)',
+        color: 'var(--btn-upload-text)',
         cursor: saving ? 'not-allowed' : 'pointer',
         opacity: saving ? 0.7 : 1,
       }}

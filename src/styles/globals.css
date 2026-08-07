@@ -11,8 +11,9 @@
   */
   --blue: #3B82F6;
   --blue-hover: #2563EB;
-  --blue-dim: rgba(59, 130, 246, 0.12);
-  --blue-border: rgba(59, 130, 246, 0.30);
+  /* Soft fills: mix primary into dark surface so soft stays blue-tinted, not muddy */
+  --blue-dim: color-mix(in srgb, #3B82F6 24%, #111113);
+  --blue-border: color-mix(in srgb, #3B82F6 45%, #27272A);
   --blue-secondary: #60A5FA;
   --blue-muted: #93C5FD;
 
@@ -73,7 +74,7 @@
   --border-strong: #3F3F46;
   /* Amber option: --accent: #EC940D; --accent-soft: rgba(236, 148, 13, 0.12); --accent-text: #EC940D; */
   --accent: #3B82F6;
-  --accent-soft: rgba(59, 130, 246, 0.12);
+  --accent-soft: color-mix(in srgb, #3B82F6 24%, #111113);
   --accent-text: #3B82F6;
 
   --sidebar-bg: #111113;
@@ -82,10 +83,10 @@
   --sidebar-text-muted: #A1A1AA;
   --sidebar-text-subtle: #71717A;
   /* Amber option: rgba(236, 148, 13, …) / #EC940D */
-  --sidebar-active-bg: rgba(59, 130, 246, 0.14);
+  --sidebar-active-bg: color-mix(in srgb, #3B82F6 20%, #111113);
   --sidebar-active-text: #3B82F6;
   --sidebar-hover-bg: rgba(255, 255, 255, 0.04);
-  --sidebar-icon-bg: rgba(59, 130, 246, 0.15);
+  --sidebar-icon-bg: color-mix(in srgb, #3B82F6 22%, #111113);
   --sidebar-brand-accent: #3B82F6;
   --sidebar-active-indicator: #3B82F6;
   --sidebar-control-bg: rgba(255, 255, 255, 0.04);
@@ -242,8 +243,8 @@
   */
   --blue: #3B82F6;
   --blue-hover: #2563EB;
-  --blue-dim: rgba(59, 130, 246, 0.12);
-  --blue-border: rgba(59, 130, 246, 0.30);
+  --blue-dim: color-mix(in srgb, #3B82F6 24%, #111113);
+  --blue-border: color-mix(in srgb, #3B82F6 45%, #27272A);
   --blue-secondary: #60A5FA;
   --blue-muted: #93C5FD;
 
@@ -274,7 +275,7 @@
   --border-strong: #3F3F46;
   /* Amber option: --accent: #EC940D; --accent-soft: rgba(236, 148, 13, 0.12); --accent-text: #EC940D; */
   --accent: #3B82F6;
-  --accent-soft: rgba(59, 130, 246, 0.12);
+  --accent-soft: color-mix(in srgb, #3B82F6 24%, #111113);
   --accent-text: #3B82F6;
 
   --sidebar-bg: #111113;
@@ -283,10 +284,10 @@
   --sidebar-text-muted: #A1A1AA;
   --sidebar-text-subtle: #71717A;
   /* Amber option: rgba(236, 148, 13, …) / #EC940D */
-  --sidebar-active-bg: rgba(59, 130, 246, 0.14);
+  --sidebar-active-bg: color-mix(in srgb, #3B82F6 20%, #111113);
   --sidebar-active-text: #3B82F6;
   --sidebar-hover-bg: rgba(255, 255, 255, 0.04);
-  --sidebar-icon-bg: rgba(59, 130, 246, 0.15);
+  --sidebar-icon-bg: color-mix(in srgb, #3B82F6 22%, #111113);
   --sidebar-brand-accent: #3B82F6;
   --sidebar-active-indicator: #3B82F6;
   --sidebar-control-bg: rgba(255, 255, 255, 0.04);
@@ -787,6 +788,38 @@ optgroup {
 }
 
 /* ─── Tools page responsive ─────────────────────────────────── */
+.tools-status-chip--approved {
+  color: var(--accent) !important;
+  background: transparent !important;
+  border-color: transparent !important;
+}
+
+.tools-approve-btn {
+  background: var(--accent-soft) !important;
+  border-color: var(--blue-border) !important;
+  color: var(--accent) !important;
+}
+
+/* Dark: clearer soft fill + brighter primary text (reads like light soft, adapted) */
+:root .tools-approve-btn,
+[data-theme="dark"] .tools-approve-btn {
+  background: color-mix(in srgb, #3B82F6 26%, #111113) !important;
+  border-color: color-mix(in srgb, #3B82F6 50%, #27272A) !important;
+  color: #60A5FA !important;
+}
+
+[data-theme="light"] .tools-approve-btn {
+  background: var(--accent-soft) !important;
+  border-color: var(--blue-border) !important;
+  color: var(--accent) !important;
+}
+
+.tools-approve-btn:hover:not(:disabled) {
+  background: var(--accent) !important;
+  border-color: var(--accent) !important;
+  color: var(--btn-upload-text) !important;
+}
+
 .tools-empty-mobile {
   display: none;
 }

@@ -181,8 +181,8 @@ export default function AgentsPage() {
           style={{
             ...SANS, fontSize: 13, fontWeight: 600, marginTop: 4, flexShrink: 0,
             padding: '8px 16px', borderRadius: 999, cursor: 'pointer',
-            background: 'var(--accent-soft)', color: 'var(--accent-text)',
-            border: '1px solid var(--blue-border)',
+            background: 'var(--accent)', color: 'var(--btn-upload-text)',
+            border: '1px solid var(--accent)',
             display: 'inline-flex', alignItems: 'center', gap: 7,
             boxShadow: 'none',
           }}
@@ -342,8 +342,8 @@ export default function AgentsPage() {
               style={{
                 ...SANS, fontSize: 13, fontWeight: 600,
                 padding: '8px 16px', borderRadius: 999, cursor: 'pointer',
-                background: 'var(--accent-soft)', color: 'var(--accent-text)',
-                border: '1px solid var(--blue-border)',
+                background: 'var(--accent)', color: 'var(--btn-upload-text)',
+                border: '1px solid var(--accent)',
               }}
             >
               Create Agent
@@ -456,7 +456,7 @@ export default function AgentsPage() {
 
                     <div className="agents-card-footer">
                       <div className="agents-card-actions" style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-                        <AgentActionBtn variant="primary" onClick={() => setChatAgent(agent)}>
+                        <AgentActionBtn variant="accent" onClick={() => setChatAgent(agent)}>
                           <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
                           Test
                         </AgentActionBtn>
